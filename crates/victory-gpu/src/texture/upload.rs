@@ -2,7 +2,7 @@
 
 use std::sync::{
     Arc, Mutex,
-    atomic::{AtomicU64, Ordering::Relaxed},
+    atomic::{AtomicBool, AtomicU64, Ordering::Relaxed},
 };
 use windows::Win32::Graphics::Direct3D12::ID3D12Resource;
 
@@ -24,7 +24,9 @@ struct Slots {
 }
 
 static POOL: Mutex<[Vec<Slots>; CLASSES]> = Mutex::new([const { Vec::new() }; CLASSES]);
+static GROW: [Mutex<()>; CLASSES] = [const { Mutex::new(()) }; CLASSES];
 static REUSE: AtomicU64 = AtomicU64::new(0);
+static PRESSURE: AtomicBool = AtomicBool::new(false);
 static CREATED: AtomicU64 = AtomicU64::new(0);
 
 /// The lifetime of a staging allocation, including every command list that
@@ -33,6 +35,9 @@ pub(super) struct Upload {
     chunk: Arc<Chunk>,
     slot: Option<(usize, u32)>,
     pub(super) offset: u64,
+    /// Logical footprint offset represented by the beginning of this lease.
+    pub(super) base: u64,
+    pub(super) gpu: Option<super::gpu_detile::Plan>,
 }
 
 impl Upload {
@@ -61,7 +66,18 @@ impl Upload {
             }),
             slot: None,
             offset: 0,
+            base: 0,
+            gpu: None,
         })
+    }
+
+    /// Allocate only the suffix holding the mapped coarse mips. Base is
+    /// aligned like the original D3D12 placed footprint.
+    pub(super) fn suffix(host: &Host, bytes: u64, base: u64) -> Option<Self> {
+        if base % 512 != 0 || base >= bytes { return None; }
+        let mut upload = Self::new(host, bytes - base)?;
+        upload.base = base;
+        Some(upload)
     }
 
     fn pooled(host: &Host, class: usize, size: u64) -> Option<Self> {
@@ -73,6 +89,23 @@ impl Upload {
             return Some(Self::from_slot(page, class, index, size));
         }
 
+        // Driver allocation can block. No slot is reserved yet, so release
+        // the global pool lock while creating a new chunk.
+        drop(pool);
+        // Serialize growth only within this size class. A concurrent worker
+        // may have supplied free slots while we waited; recheck before allocating.
+        let _grow = GROW[class].lock().unwrap_or_else(|e| e.into_inner());
+        {
+            let mut pool = POOL.lock().unwrap_or_else(|e| e.into_inner());
+            if let Some(page) = pool[class].iter_mut().find(|page| !page.free.is_empty()) {
+                let index = page.free.pop()?;
+                REUSE.fetch_add(1, Relaxed);
+                return Some(Self::from_slot(page, class, index, size));
+            }
+        }
+        if std::env::var_os("VICTORY_LOW_MEMORY").is_some_and(|v| v == "1") {
+            trim_idle_under_pressure(crate::host::available_physical_ram());
+        }
         let (buffer, data) = host.upload_buffer(CHUNK_BYTES)?;
         crate::host::name(&buffer, || "texture staging pool".into());
         let page = Slots {
@@ -83,7 +116,8 @@ impl Upload {
             free: (1..(CHUNK_BYTES / size) as u32).rev().collect(),
         };
         let upload = Self::from_slot(&page, class, 0, size);
-        slots.push(page);
+        let mut pool = POOL.lock().unwrap_or_else(|e| e.into_inner());
+        pool[class].push(page);
         CREATED.fetch_add(1, Relaxed);
         Some(upload)
     }
@@ -93,6 +127,8 @@ impl Upload {
             chunk: page.chunk.clone(),
             slot: Some((class, index)),
             offset: u64::from(index) * size,
+            base: 0,
+            gpu: None,
         }
     }
 
@@ -119,10 +155,10 @@ impl Drop for Upload {
         let capacity = (CHUNK_BYTES >> (MIN_SHIFT as usize + class)) as usize;
         slots[page_index].free.push(index);
         if slots[page_index].free.len() == capacity
-            && slots
+            && (PRESSURE.load(Relaxed) || slots
                 .iter()
                 .enumerate()
-                .any(|(i, page)| i != page_index && page.free.len() == capacity)
+                .any(|(i, page)| i != page_index && page.free.len() == capacity))
         {
             // Keep at most one idle chunk per size class. This Upload still
             // holds the chunk, so final COM release occurs outside the lock.
@@ -134,4 +170,36 @@ impl Drop for Upload {
 #[cfg(feature = "diagnostics")]
 pub(super) fn totals() -> (u64, u64) {
     (CREATED.load(Relaxed), REUSE.load(Relaxed))
+}
+
+/// Release only fully free chunks under physical RAM pressure. Drop COM
+/// resources after releasing the pool lock; leased slots are untouched.
+pub(super) fn trim_idle_under_pressure(available: Option<u64>) {
+    let Some(available) = available else { return };
+    // Idle staging chunks are cheap to recreate, so release them only at
+    // critical RAM pressure; the earlier tier trims larger caches first.
+    let pressured = crate::budget::ram_pressure(Some(available)) == 2;
+    if crate::budget::sticky_pressure() {
+        // Hysteresis avoids repeatedly freeing and recreating a chunk near
+        // the low-memory threshold. Only idle chunks are ever retired.
+        if pressured { PRESSURE.store(true, Relaxed); }
+        else if crate::budget::ram_pressure(Some(available)) == 0 { PRESSURE.store(false, Relaxed); }
+    }
+    if !pressured { return; }
+    let mut retired = Vec::new();
+    {
+        let mut pool = POOL.lock().unwrap_or_else(|e| e.into_inner());
+        for (class, slots) in pool.iter_mut().enumerate() {
+            let capacity = (CHUNK_BYTES >> (MIN_SHIFT as usize + class)) as usize;
+            let mut i = 0;
+            while i < slots.len() {
+                if slots[i].free.len() == capacity {
+                    retired.push(slots.swap_remove(i));
+                } else {
+                    i += 1;
+                }
+            }
+        }
+    }
+    drop(retired);
 }

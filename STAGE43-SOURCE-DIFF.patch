@@ -1,0 +1,382 @@
+--- a/crates/victory-formats/src/texture.rs
++++ b/crates/victory-formats/src/texture.rs
+@@ -275,6 +275,22 @@
+ /// Tables correspond to 32 pipes / 8 packers on Series X, 8 / 4 on Series S.
+ fn render_xor_pattern(series_s: bool, element_bytes: u32) -> [Vec<u32>; 3] {
+     let (x, y): (&[u16], &[u16]) = match (series_s, element_bytes) {
++        (false, 1) => (
++            &[0x1, 0x2, 0x4, 0x8, 0x200, 0x800, 0x1400, 0x4100, 0x9000],
++            &[0x10, 0x20, 0x40, 0x80, 0x300, 0x400, 0x2800, 0x8100, 0x1000],
++        ),
++        (false, 16) => (
++            &[0x10, 0x40, 0x2000, 0x1000, 0x200, 0x800, 0x8400, 0x100, 0x1000],
++            &[0x20, 0x80, 0x4000, 0x8000, 0x300, 0x400, 0x800, 0x100, 0x1000],
++        ),
++        (true, 1) => (
++            &[0x1, 0x2, 0x4, 0x8, 0x200, 0xc00, 0x1100, 0x4000, 0x8000, 0x2000],
++            &[0x10, 0x20, 0x40, 0x80, 0x300, 0x400, 0x2100, 0x8000, 0x4000],
++        ),
++        (true, 16) => (
++            &[0x10, 0x40, 0x800, 0x2000, 0x200, 0x8400, 0x4100],
++            &[0x20, 0x80, 0x1000, 0x4000, 0x300, 0x400, 0x8100, 0x2000],
++        ),
+         (false, 2) => (
+             &[2, 4, 8, 0x80, 0x200, 0x800, 0x1400, 0x8100, 0x1000],
+             &[0x10, 0x20, 0x40, 0x2000, 0x300, 0x400, 0x4800, 0x8100, 0x1000],
+@@ -549,7 +565,8 @@
+             };
+             pattern(kind, element_log2, block_log2).map(|bits| spread(&bits))
+         } else if d.swizzle == Swizzle::SW_64KB_R_X && d.dimension == Dimension::Tex2d
+-            && d.depth == 1 && d.mips == 1 && d.samples == 1 && d.block == 1 {
++            && d.depth == 1 && d.mips == 1 && d.samples == 1 && d.block == 1
++            && (!matches!(d.element_bytes, 1 | 16) || std::env::var_os("VICTORY_RENDER_XOR_EXTRA").is_some_and(|v| v == "1")) {
+             render_xor_pattern(series_s, d.element_bytes)
+         } else {
+             Default::default()
+@@ -570,7 +587,8 @@
+ 
+     /// Whether offsets and copies have a known address equation. Render-XOR
+     /// supports single-layer, single-mip, uncompressed 2D surfaces with
+-    /// two-, four-, or eight-byte elements and one sample. Other XOR and MSAA layouts
++    /// two-, four-, or eight-byte elements and one sample (one- and sixteen-byte
++    /// elements with VICTORY_RENDER_XOR_EXTRA=1). Other XOR and MSAA layouts
+     /// can still be sized without assuming a texel order.
+     pub fn addressable(&self) -> bool {
+         self.desc.swizzle == Swizzle::LINEAR || !self.pattern[0].is_empty()
+@@ -1098,6 +1116,35 @@
+                 let mut output = vec![0x55; linear.len()];
+                 l.detile(&tiled,0,0,&mut output,pitch,0).unwrap();
+                 assert_eq!(linear,output);
++            }
++        }
++    }
++
++    #[test]
++    fn stage43_extra_render_xor_offsets_and_rows() {
++        for series_s in [false, true] {
++            for n in [1, 16] {
++                let mut l = Layout::new_for_model(&desc(513, 357, 1, n, Swizzle::SW_64KB_R_X), series_s).unwrap();
++                l.pattern = render_xor_pattern(series_s, n);
++                let pitch = 513 * n as usize + 32;
++                let linear: Vec<u8> = (0..pitch * 357).map(|i| (i ^ (i >> 8) ^ (i >> 16)) as u8).collect();
++                let mut tiled = vec![0u8; l.size as usize];
++                let mut seen = std::collections::HashSet::new();
++                l.tile(&mut tiled, 0, 0, &linear, pitch, 0).unwrap();
++                for y in 0..357 {
++                    for x in 0..513 {
++                        let at = l.offset(0, x, y, 0).unwrap() as usize;
++                        assert!(seen.insert(at));
++                        let src = y as usize * pitch + x as usize * n as usize;
++                        assert_eq!(&tiled[at..at + n as usize], &linear[src..src + n as usize]);
++                    }
++                }
++                let mut roundtrip = vec![0u8; linear.len()];
++                l.detile(&tiled, 0, 0, &mut roundtrip, pitch, 0).unwrap();
++                for y in 0..357 {
++                    let start = y * pitch;
++                    assert_eq!(&roundtrip[start..start+513*n as usize], &linear[start..start+513*n as usize]);
++                }
+             }
+         }
+     }
+--- a/crates/victory-gpu/src/host.rs
++++ b/crates/victory-gpu/src/host.rs
+@@ -2713,6 +2713,17 @@
+     }
+ 
+     #[test]
++    fn stage43_opaque_completion_is_a_dependency() {
++        use super::*;
++        let mut pending = PendingWrites::default();
++        assert!(pending.is_empty());
++        pending.opaque_completion = true;
++        assert!(!pending.is_empty());
++        assert_eq!(blocked_by(&pending, &[], false), Some(WHY_READ));
++        assert_eq!(pitched_readback_span(usize::MAX - 3, [4, 1, 4]), None);
++    }
++
++    #[test]
+     fn capture_slots_follow_the_dirty_mask_and_preserve_newer_bytes() {
+         let mut piece = CapturedPiece::default();
+         assert_eq!(piece.add((4 << 16) | 0b00101), Some(()));
+@@ -3205,7 +3216,7 @@
+ 
+ impl PendingWrites {
+     fn is_empty(&self) -> bool {
+-        self.buffers.is_empty() && self.textures.is_empty()
++        self.buffers.is_empty() && self.textures.is_empty() && !self.opaque_completion
+     }
+ 
+     fn touches(&self, start: usize, end: usize) -> bool {
+@@ -3220,6 +3231,39 @@
+             join_ranges(&mut self.textures, textures.iter().copied());
+         }
+     }
++}
++
++/// Track all completion writes that CPU preparation can observe. Small
++/// pitched copies can optionally retain separate row intervals instead of
++/// blocking on padding between rows. A malformed/overflowing extent is
++/// opaque, never treated as an empty set of writes.
++fn completion_ranges(deferred: &Deferred, ranges: &mut Vec<(usize, usize)>) -> bool {
++    let mut opaque = false;
++    ranges.extend(deferred.texture_backs.iter().map(crate::texback::Back::destination));
++    static ROWS: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
++    let exact_rows = *ROWS.get_or_init(|| std::env::var_os("VICTORY_EXACT_READBACK_ROWS").is_some_and(|v| v == "1"));
++    for (_, at, geometry, _, _) in &deferred.backs {
++        let [row, count, pitch] = *geometry;
++        match pitched_readback_span(*at, *geometry) {
++            Some(_) if exact_rows && row > 0 && count <= 64 && pitch > row => {
++                // The checked enclosing span proves every row's end fits.
++                for i in 0..count {
++                    let start = *at + i * pitch;
++                    ranges.push((start, start + row));
++                }
++            }
++            Some(span) => ranges.push(span),
++            None => opaque = true,
++        }
++    }
++    for &(at, _, bytes) in &deferred.writes {
++        // Written::write writes a u32 for 4 and a u64 otherwise.
++        match at.checked_add(if bytes == 4 { 4 } else { 8 }) {
++            Some(end) => ranges.push((at, end)),
++            None => opaque = true,
++        }
++    }
++    opaque
+ }
+ 
+ /// The first list whose CPU preparation would read a texture that an
+@@ -3234,7 +3278,8 @@
+             return Some(index);
+         }
+         if index + 1 < runs.len() {
+-            let mut destinations: Vec<_> = list.deferred().texture_backs.iter().map(crate::texback::Back::destination).collect();
++            let mut destinations = Vec::new();
++            pending.opaque_completion |= completion_ranges(&list.deferred(), &mut destinations);
+             if !destinations.is_empty() {
+                 crate::texback::add_destination_aliases(&mut destinations);
+                 join_ranges(&mut pending.textures, destinations);
+@@ -3292,6 +3337,7 @@
+     count: bool,
+     #[cfg(feature = "diagnostics")] mut blocked_fill: Option<&mut Option<(usize, usize, bool)>>,
+ ) -> Option<usize> {
++    if written.opaque_completion { return Some(WHY_READ); }
+     if written.is_empty() {
+         return None;
+     }
+@@ -5572,7 +5618,7 @@
+     fn execute_own(&self, list: &HostList) -> u64 {
+         // This fast path does not retain the caller's list to publish read-backs.
+         // The normal present-copy list never needs one.
+-        if !list.deferred().texture_backs.is_empty() {
++        if { let d = list.deferred(); !d.texture_backs.is_empty() || !d.backs.is_empty() || !d.after.is_empty() } {
+             self.execute(&[list]);
+             return 0;
+         }
+@@ -5969,14 +6015,7 @@
+             let mut texture_writes = Vec::new();
+             let mut opaque_completion = false;
+             for list in runs {
+-                let deferred = list.deferred();
+-                texture_writes.extend(deferred.texture_backs.iter().map(crate::texback::Back::destination));
+-                for (_, at, geometry, _, _) in &deferred.backs {
+-                    match pitched_readback_span(*at, *geometry) {
+-                        Some(span) => texture_writes.push(span),
+-                        None => opaque_completion = true,
+-                    }
+-                }
++                opaque_completion |= completion_ranges(&list.deferred(), &mut texture_writes);
+             }
+             crate::texback::add_destination_aliases(&mut texture_writes);
+             let writes = runs.iter().flat_map(|l| l.deferred().writes.clone()).collect();
+--- a/crates/victory-gpu/src/shader_cache.rs
++++ b/crates/victory-gpu/src/shader_cache.rs
+@@ -84,6 +84,7 @@
+             "VICTORY_WAVE_OWN_BITS",
+             "VICTORY_WAVE_LOCAL",
+             "VICTORY_WAVE_SINGLE_GROUP",
++            "VICTORY_WAVE_PAIR_EXCHANGE",
+             "VICTORY_F16_NEAREST",
+             "VICTORY_STRICT_JOINS",
+             "VICTORY_MESH_OUTPUT_STRICT",
+--- a/crates/victory-gpu/src/texture/gpu_detile.rs
++++ b/crates/victory-gpu/src/texture/gpu_detile.rs
+@@ -411,6 +411,8 @@
+         for (swizzle, element_bytes, block, width, height, mips, depth, first, revision_first, volume) in [
+             (Swizzle::SW_4KB_D, 1, 1, 1537, 1025, 1, 1, 0, 0, false),
+             (Swizzle::SW_64KB_S, 2, 1, 1025, 769, 9, 1, 0, 0, false),
++            (Swizzle::SW_64KB_R_X, 1, 1, 1537, 1025, 1, 1, 0, 0, false),
++            (Swizzle::SW_64KB_R_X, 16, 1, 513, 517, 1, 1, 0, 0, false),
+             (Swizzle::SW_64KB_R_X, 2, 1, 1025, 769, 1, 1, 0, 0, false),
+             (Swizzle::SW_64KB_R_X, 4, 1, 513, 517, 1, 1, 0, 0, false),
+             (Swizzle::SW_64KB_R_X, 8, 1, 513, 517, 1, 1, 0, 0, false),
+@@ -423,6 +425,8 @@
+             (Swizzle::SW_4KB_S, 4, 1, 128, 96, 6, 32, 0, 0, true),
+             (Swizzle::SW_64KB_S, 2, 1, 129, 97, 5, 32, 0, 0, true),
+         ] {
++            if swizzle == Swizzle::SW_64KB_R_X && matches!(element_bytes, 1 | 16)
++                && !std::env::var_os("VICTORY_RENDER_XOR_EXTRA").is_some_and(|v| v == "1") { continue; }
+             let desc = Desc { dimension: if volume { Dimension::Tex3d } else { Dimension::Tex2d }, width, height, depth,
+                 mips, element_bytes, block, samples: 1, swizzle };
+             let layout = Layout::new(&desc).unwrap();
+--- a/crates/victory-shader/src/emit/lower.rs
++++ b/crates/victory-shader/src/emit/lower.rs
+@@ -1369,7 +1369,7 @@
+                                 // lanes 32..63 are the other host wave: masks, lane reads and lane
+                                 // numbers go through two exchange dwords past the program's LDS
+                                 exchange = Some((s.lds_dwords, group <= 32, all));
+-                                s.lds_dwords += 2 * group.div_ceil(64);
++                                s.lds_dwords += (if Self::paired_exchange() { 4 } else { 2 }) * group.div_ceil(64);
+                             }
+                         }
+                     }
+@@ -1982,7 +1982,7 @@
+                     let c = self.cur;
+                     let (lo, hi) = self.exchange_halves(c, rb);
+                     let (lo, hi) = (back(self, lo), back(self, hi));
+-                    match op {
++                    let combined = match op {
+                         Op::AddU | Op::AddF => self.s.m.bin(c, Bin::Add, lo, hi),
+                         Op::Or => self.s.m.bin(c, Bin::Or, lo, hi),
+                         Op::And => self.s.m.bin(c, Bin::And, lo, hi),
+@@ -1999,7 +1999,8 @@
+                             };
+                             self.s.op(c, &format!("binary.{sfx}"), Attr::ReadNone, ty, code, &[lo, hi])
+                         }
+-                    }
++                    };
++                    if let Some(missing) = self.missing_upper(c) { self.s.m.select(c, missing, r, combined) } else { combined }
+                 }
+             }
+         } else {
+@@ -2052,13 +2053,12 @@
+             .op(c, "splitDouble.f64", Attr::ReadNone, split_ty, 102, &[sum]);
+         let mut r_lo = self.s.m.extract(c, split, 0);
+         let mut r_hi = self.s.m.extract(c, split, 1);
+-        if self.exchange.is_some() {
++        if self.exchange.as_ref().is_some_and(|e| !e.1) && !self.local {
+             if !self.all_lanes(self.cur_ir) {
+                 need(self.cur_ir);
+                 return Err("a wave reduction where not every lane runs");
+             }
+-            let (lo0, lo1) = self.exchange_halves(self.cur, r_lo);
+-            let (hi0, hi1) = self.exchange_halves(self.cur, r_hi);
++            let ((lo0, lo1), (hi0, hi1)) = self.exchange_two(self.cur, r_lo, r_hi);
+             let c = self.cur;
+             let d0 = self
+                 .s
+@@ -2070,8 +2070,12 @@
+             let split = self
+                 .s
+                 .op(c, "splitDouble.f64", Attr::ReadNone, split_ty, 102, &[total]);
+-            r_lo = self.s.m.extract(c, split, 0);
+-            r_hi = self.s.m.extract(c, split, 1);
++            let lo = self.s.m.extract(c, split, 0);
++            let hi = self.s.m.extract(c, split, 1);
++            if let Some(missing) = self.missing_upper(c) {
++                r_lo = self.s.m.select(c, missing, r_lo, lo);
++                r_hi = self.s.m.select(c, missing, r_hi, hi);
++            } else { r_lo = lo; r_hi = hi; }
+         }
+         Ok(if high { r_hi } else { r_lo })
+     }
+@@ -3852,6 +3856,62 @@
+         self.s.op(block, "barrier", Attr::NoDuplicate, void, 80, &[mode]);
+     }
+ 
++    fn paired_exchange() -> bool {
++        static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
++        *ON.get_or_init(|| std::env::var_os("VICTORY_WAVE_PAIR_EXCHANGE").is_some_and(|v| v == "1"))
++    }
++
++    /// In a group of full host waves, the last console wave may have only
++    /// a lower half. Do not read an LDS slot that no host wave wrote.
++    fn missing_upper(&mut self, at: usize) -> Option<V> {
++        let group = self.s.threads?.iter().product::<u32>();
++        if group <= 32 || group % 64 != 32 || self.local { return None; }
++        let thread = self.console_thread();
++        let last = self.s.m.i32(group - 32);
++        Some(self.s.m.cmp(at, pred::IUGE, thread, last))
++    }
++
++    /// Two wave-uniform dwords in one exchange, using separate LDS slots.
++    /// The caller has already proved all lanes reach this point.
++    fn exchange_two(&mut self, at: usize, a: V, b: V) -> ((V, V), (V, V)) {
++        if !Self::paired_exchange() || self.local || !self.exchange.as_ref().is_some_and(|e| !e.1) {
++            let a = self.exchange_halves(at, a);
++            let b = self.exchange_halves(at, b);
++            return (a, b);
++        }
++        let slot = self.exchange.as_ref().unwrap().0;
++        let pair = self.exchange_pair(slot);
++        let lane = self.console_lane();
++        let five = self.s.m.i32(5);
++        let half = self.s.m.bin(at, Bin::LShr, lane, five);
++        let first = self.s.m.bin(at, Bin::Add, pair, half);
++        let two = self.s.m.i32(2);
++        let second = self.s.m.bin(at, Bin::Add, first, two);
++        let lds = self.s.lds();
++        let pa = self.s.m.element(at, lds, first);
++        let pb = self.s.m.element(at, lds, second);
++        self.s.m.store(at, pa, a);
++        self.s.m.store(at, pb, b);
++        self.group_sync(at);
++        let missing = self.missing_upper(at);
++        let read = |l: &mut Self, base: V| {
++            let one = l.s.m.i32(1);
++            let hi = l.s.m.bin(at, Bin::Add, base, one);
++            let hi = if let Some(missing) = missing { l.s.m.select(at, missing, base, hi) } else { hi };
++            let lo_ptr = l.s.m.element(at, lds, base);
++            let hi_ptr = l.s.m.element(at, lds, hi);
++            let lo = l.s.m.load(at, lo_ptr);
++            let hi = l.s.m.load(at, hi_ptr);
++            let hi = if let Some(missing) = missing { let zero = l.s.m.i32(0); l.s.m.select(at, missing, zero, hi) } else { hi };
++            (lo, hi)
++        };
++        let a = read(self, pair);
++        let next = self.s.m.bin(at, Bin::Add, pair, two);
++        let b = read(self, next);
++        self.group_sync(at);
++        (a, b)
++    }
++
+     /// `exchange`: each host wave gives `mine` (the same in all its lanes) for its half; both get
+     /// (lower half's, upper half's). A group with no upper half gets 0 for it.
+     fn exchange_halves(&mut self, at: usize, mine: V) -> (V, V) {
+@@ -3884,10 +3944,13 @@
+         self.group_sync(at);
+         let one = self.s.m.i32(1);
+         let k1 = self.s.m.bin(at, Bin::Add, pair, one);
++        let missing = self.missing_upper(at);
++        let k1 = if let Some(missing) = missing { self.s.m.select(at, missing, pair, k1) } else { k1 };
+         let p0 = self.s.m.element(at, lds, pair);
+         let p1 = self.s.m.element(at, lds, k1);
+         let lo = self.s.m.load(at, p0);
+         let hi = self.s.m.load(at, p1);
++        let hi = if let Some(missing) = missing { let zero = self.s.m.i32(0); self.s.m.select(at, missing, zero, hi) } else { hi };
+         // the slots are written again only after every thread read them
+         self.group_sync(at);
+         (lo, hi)
+@@ -3903,8 +3966,8 @@
+         let thread = self.console_thread();
+         let six = self.s.m.i32(6);
+         let wave = self.s.m.bin(e, Bin::LShr, thread, six);
+-        let one = self.s.m.i32(1);
+-        let twice = self.s.m.bin(e, Bin::Shl, wave, one);
++        let shift = self.s.m.i32(if Self::paired_exchange() { 2 } else { 1 });
++        let twice = self.s.m.bin(e, Bin::Shl, wave, shift);
+         let base = self.s.m.i32(slot);
+         let v = self.s.m.bin(e, Bin::Add, base, twice);
+         self.pair = Some(v);
+@@ -7710,8 +7773,7 @@
+                     } else {
+                         let i32t = self.s.t.i32;
+                         let has = self.s.m.cast(c, Cast::ZExt, any, i32t);
+-                        let (lo_has, hi_has) = self.exchange_halves(c, has);
+-                        let (lo, hi) = self.exchange_halves(c, mine);
++                        let ((lo_has, hi_has), (lo, hi)) = self.exchange_two(c, has, mine);
+                         let z = self.s.m.i32(0);
+                         let in_lo = self.s.m.cmp(c, pred::NE, lo_has, z);
+                         let in_hi = self.s.m.cmp(c, pred::NE, hi_has, z);

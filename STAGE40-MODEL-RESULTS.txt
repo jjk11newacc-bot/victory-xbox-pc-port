@@ -1,0 +1,2 @@
+3,000 journal queries and 6,000 stale-page decisions match the full journal
+10,000 singleton query schedules match, including kernel failures

@@ -272,7 +272,8 @@ fn prepare(staging: &Arc<Staging>, copy: &Arc<HostTexture>) -> Option<Job> {
         copy: StagedCopy {
             texture: copy.clone(),
             staging: staging.clone(),
-            upload: last.sampled.as_ref()?.clone(),
+            // The copy-only queue cannot dispatch a GPU detile.
+            upload: last.sampled.as_ref().filter(|u| u.gpu.is_none())?.clone(),
             first: 0,
             activate_tiles: false,
             sparse_claim: None,

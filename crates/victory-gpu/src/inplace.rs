@@ -95,7 +95,7 @@ pub(crate) fn level() -> u8 {
 /// memory, also those the title never touched.
 fn most() -> u64 {
     static MOST: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
-    *MOST.get_or_init(|| std::env::var("VICTORY_INPLACE_MB").ok().and_then(|v| v.trim().parse::<u64>().ok()).unwrap_or(4096) << 20)
+    *MOST.get_or_init(|| std::env::var("VICTORY_INPLACE_MB").ok().and_then(|v| v.trim().parse::<u64>().ok()).unwrap_or_else(|| if std::env::var_os("VICTORY_LOW_MEMORY").is_some_and(|v| v == "1") { 256 } else { 4096 }).saturating_mul(1 << 20))
 }
 
 /// In place now: windows and their bytes, title buffers and their bytes;
@@ -138,13 +138,26 @@ pub(crate) fn place_for(start: u64, len: u64, window: bool) -> Option<Placed> {
     if level() < if window { 1 } else { 2 } {
         return None;
     }
+    // Direct writable buffers are not covered by the asynchronous copy ledger.
+    if !window && crate::host::late() {
+        return None;
+    }
+    // Serialize admission, not the lifetime of the placed resource.
+    static ADMISSION: Mutex<()> = Mutex::new(());
+    let _admission = ADMISSION.lock().unwrap_or_else(|e| e.into_inner());
+    // Account conservatively for the two alignment edges of every heap.
+    let count = STATS[0].load(Ordering::Relaxed).saturating_add(STATS[2].load(Ordering::Relaxed));
+    let used = STATS[1].load(Ordering::Relaxed).saturating_add(STATS[3].load(Ordering::Relaxed))
+        .saturating_add(count.saturating_mul(2 * K64 as u64));
+    let requested = len.max(1).saturating_add(2 * K64 as u64);
+    if crate::host::available_physical_ram().is_some_and(|free| free.saturating_sub(requested) < 3 << 30)
+        || used.saturating_add(requested) > most() {
+        STATS[6].fetch_add(1, Ordering::Relaxed);
+        return None;
+    }
     // View memory: known from the runtime without asking Windows.
     if cover(start as usize, len as usize) != Cover::None {
         STATS[4].fetch_add(1, Ordering::Relaxed);
-        return None;
-    }
-    if STATS[1].load(Ordering::Relaxed) + STATS[3].load(Ordering::Relaxed) + len > most() {
-        STATS[6].fetch_add(1, Ordering::Relaxed);
         return None;
     }
     let host = crate::host::host()?;
@@ -332,9 +345,22 @@ pub fn title_memory_section(section: usize, bytes: u64, committed: bool) {
 pub fn title_memory_view(at: usize, len: usize, section: usize, offset: u64) {
     {
         let mut v = views();
-        v.views.insert(at, (len, section, offset));
-        for k in 0..len.div_ceil(K64) {
-            v.pages.entry((section, offset + (k * K64) as u64)).or_default().push(at + k * K64);
+        // Repeated mapping notifications must not inflate the alias count.
+        // A replacement at the same base must also remove its old reverse index.
+        let old = v.views.insert(at, (len, section, offset));
+        if old != Some((len, section, offset)) {
+            if let Some((old_len, old_section, old_offset)) = old {
+                for k in 0..old_len.div_ceil(K64) {
+                    let key = (old_section, old_offset + (k * K64) as u64);
+                    if let Some(pages) = v.pages.get_mut(&key) {
+                        pages.retain(|&page| page != at + k * K64);
+                        if pages.is_empty() { v.pages.remove(&key); }
+                    }
+                }
+            }
+            for k in 0..len.div_ceil(K64) {
+                v.pages.entry((section, offset + (k * K64) as u64)).or_default().push(at + k * K64);
+            }
         }
     }
     // This view is writable from now on: a guard over the same bytes at
@@ -526,21 +552,17 @@ pub(crate) fn views_of_section(section: usize, offset: u64, len: usize) -> Vec<(
     let v = views();
     let end = offset.saturating_add(len as u64);
     let mut pages: Vec<usize> = Vec::new();
-    let mut at = offset - offset % K64 as u64;
-    while at < end {
-        if let Some(shown) = v.pages.get(&(section, at))
-            && shown.len() <= crate::watch::MANY_VIEWS
-        {
+    let first = offset - offset % K64 as u64;
+    // Walk only mapped physical pages, not every possible page in a sparse range.
+    for (_, shown) in v.pages.range((section, first)..(section, end)) {
+        if shown.len() <= crate::watch::MANY_VIEWS {
             pages.extend(shown.iter().copied());
         }
-        match at.checked_add(K64 as u64) {
-            Some(next) => at = next,
-            None => break,
-        }
     }
+    drop(v); // Sorting and merging need no access to the mapping table.
     pages.sort_unstable();
     pages.dedup();
-    let mut runs: Vec<(usize, usize)> = Vec::with_capacity(pages.len());
+    let mut runs: Vec<(usize, usize)> = Vec::new();
     for page in pages {
         match runs.last_mut() {
             Some((first, bytes)) if *first + *bytes == page => *bytes += K64,
@@ -1297,6 +1319,18 @@ mod tests {
         assert!(a.for_write().is_none() && b.for_write().is_none());
         assert!(new.for_write().is_some());
         assert!(adjacent.for_write().is_some());
+    }
+
+    #[test]
+    fn repeated_view_notifications_do_not_duplicate_aliases() {
+        let at = 0x7_9200_0000usize;
+        let section = 0x123456usize;
+        for _ in 0..8 { title_memory_view(at, K64, section, 0); }
+        assert_eq!(pages_of(at), vec![at]);
+        title_memory_view(at, K64, section + 1, 0);
+        assert!(views_of_section(section, 0, K64).is_empty());
+        assert_eq!(pages_of(at), vec![at]);
+        views_gone(at, K64);
     }
 
     #[test]

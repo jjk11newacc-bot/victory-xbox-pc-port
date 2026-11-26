@@ -275,6 +275,22 @@ pub fn set_series_s_tiling(series_s: bool) {
 /// Tables correspond to 32 pipes / 8 packers on Series X, 8 / 4 on Series S.
 fn render_xor_pattern(series_s: bool, element_bytes: u32) -> [Vec<u32>; 3] {
     let (x, y): (&[u16], &[u16]) = match (series_s, element_bytes) {
+        (false, 1) => (
+            &[0x1, 0x2, 0x4, 0x8, 0x200, 0x800, 0x1400, 0x4100, 0x9000],
+            &[0x10, 0x20, 0x40, 0x80, 0x300, 0x400, 0x2800, 0x8100, 0x1000],
+        ),
+        (false, 16) => (
+            &[0x10, 0x40, 0x2000, 0x1000, 0x200, 0x800, 0x8400, 0x100, 0x1000],
+            &[0x20, 0x80, 0x4000, 0x8000, 0x300, 0x400, 0x800, 0x100, 0x1000],
+        ),
+        (true, 1) => (
+            &[0x1, 0x2, 0x4, 0x8, 0x200, 0xc00, 0x1100, 0x4000, 0x8000, 0x2000],
+            &[0x10, 0x20, 0x40, 0x80, 0x300, 0x400, 0x2100, 0x8000, 0x4000],
+        ),
+        (true, 16) => (
+            &[0x10, 0x40, 0x800, 0x2000, 0x200, 0x8400, 0x4100],
+            &[0x20, 0x80, 0x1000, 0x4000, 0x300, 0x400, 0x8100, 0x2000],
+        ),
         (false, 2) => (
             &[2, 4, 8, 0x80, 0x200, 0x800, 0x1400, 0x8100, 0x1000],
             &[0x10, 0x20, 0x40, 0x2000, 0x300, 0x400, 0x4800, 0x8100, 0x1000],
@@ -549,7 +565,8 @@ impl Layout {
             };
             pattern(kind, element_log2, block_log2).map(|bits| spread(&bits))
         } else if d.swizzle == Swizzle::SW_64KB_R_X && d.dimension == Dimension::Tex2d
-            && d.depth == 1 && d.mips == 1 && d.samples == 1 && d.block == 1 {
+            && d.depth == 1 && d.mips == 1 && d.samples == 1 && d.block == 1
+            && (!matches!(d.element_bytes, 1 | 16) || std::env::var_os("VICTORY_RENDER_XOR_EXTRA").is_some_and(|v| v == "1")) {
             render_xor_pattern(series_s, d.element_bytes)
         } else {
             Default::default()
@@ -570,7 +587,8 @@ impl Layout {
 
     /// Whether offsets and copies have a known address equation. Render-XOR
     /// supports single-layer, single-mip, uncompressed 2D surfaces with
-    /// two-, four-, or eight-byte elements and one sample. Other XOR and MSAA layouts
+    /// two-, four-, or eight-byte elements and one sample (one- and sixteen-byte
+    /// elements with VICTORY_RENDER_XOR_EXTRA=1). Other XOR and MSAA layouts
     /// can still be sized without assuming a texel order.
     pub fn addressable(&self) -> bool {
         self.desc.swizzle == Swizzle::LINEAR || !self.pattern[0].is_empty()
@@ -689,8 +707,33 @@ impl Layout {
         row_pitch: usize,
         depth_pitch: usize,
     ) -> Result<(), Error> {
-        self.walk(tiled.len(), mip, slice, linear.len(), row_pitch, depth_pitch, |t, l, len| {
+        self.walk(tiled.len(), mip, slice, linear.len(), row_pitch, depth_pitch, None, |t, l, len| {
             linear[l..][..len].copy_from_slice(&tiled[t..][..len]);
+        })
+    }
+
+    /// Split a dominant 2D subresource across two disjoint row bands.
+    /// The caller limits concurrent workers. No extra image buffer is needed.
+    pub fn detile_parallel_rows(&self, tiled: &[u8], mip: u32, slice: u32,
+        linear: &mut [u8], row_pitch: usize, depth_pitch: usize) -> Result<(), Error> {
+        let m = self.mips.get(mip as usize).ok_or(Error::Invalid)?;
+        if m.depth != 1 || m.height < 2 || self.desc.swizzle == Swizzle::LINEAR {
+            return self.detile(tiled, mip, slice, linear, row_pitch, depth_pitch);
+        }
+        let middle = m.height / 2;
+        let cut = (middle as usize).checked_mul(row_pitch).ok_or(Error::TooSmall)?;
+        if cut > linear.len() { return Err(Error::TooSmall); }
+        let (a, b) = linear.split_at_mut(cut);
+        let band = |dst: &mut [u8], rows| {
+            self.walk(tiled.len(), mip, slice, dst.len(), row_pitch, depth_pitch, Some(rows), |t, l, len| {
+                dst[l..][..len].copy_from_slice(&tiled[t..][..len]);
+            })
+        };
+        std::thread::scope(|scope| {
+            let worker = scope.spawn(|| band(b, middle..m.height));
+            let first = band(a, 0..middle);
+            let second = worker.join().unwrap_or(Err(Error::Invalid));
+            first.and(second)
         })
     }
 
@@ -704,7 +747,7 @@ impl Layout {
         row_pitch: usize,
         depth_pitch: usize,
     ) -> Result<(), Error> {
-        self.walk(tiled.len(), mip, slice, linear.len(), row_pitch, depth_pitch, |t, l, len| {
+        self.walk(tiled.len(), mip, slice, linear.len(), row_pitch, depth_pitch, None, |t, l, len| {
             tiled[t..][..len].copy_from_slice(&linear[l..][..len]);
         })
     }
@@ -719,10 +762,13 @@ impl Layout {
         linear_len: usize,
         row_pitch: usize,
         depth_pitch: usize,
+        rows: Option<std::ops::Range<u32>>,
         mut copy: impl FnMut(usize, usize, usize),
     ) -> Result<(), Error> {
         let m = self.mips.get(mip as usize).ok_or(Error::Invalid)?;
         let depth = m.depth;
+        let rows = rows.unwrap_or(0..m.height);
+        if rows.start >= rows.end || rows.end > m.height || (depth != 1 && rows != (0..m.height)) { return Err(Error::Invalid); }
         let first = if self.desc.dimension == Dimension::Tex3d {
             if slice != 0 {
                 return Err(Error::Invalid);
@@ -741,7 +787,7 @@ impl Layout {
         let bytes = m.width as usize * n;
         let need = (depth as usize - 1)
             .checked_mul(depth_pitch)
-            .zip((m.height as usize - 1).checked_mul(row_pitch))
+            .zip(((rows.end - rows.start) as usize - 1).checked_mul(row_pitch))
             .and_then(|(depth_offset, row_offset)| depth_offset.checked_add(row_offset))
             .and_then(|offset| offset.checked_add(bytes))
             .ok_or(Error::TooSmall)?;
@@ -751,11 +797,21 @@ impl Layout {
         if self.desc.swizzle == Swizzle::SW_64KB_R_X {
             // The low four byte-address bits are column/element bits only.
             // All supported element sizes therefore have 16-byte runs.
-            for y in 0..m.height {
-                for x in (0..m.width).step_by(16 / n) {
-                    let lx = x as usize * n;
-                    let at = self.render_xor_offset(m, x, y) as usize;
-                    copy(at, y as usize * row_pitch + lx, 16.min(bytes - lx));
+            let [w, h, _] = self.block;
+            let ox = &self.pattern[0];
+            let oy = &self.pattern[1];
+            // Column block and pattern are invariant across rows.
+            let columns: Vec<_> = (0..m.width).step_by(16 / n).map(|x| {
+                let lx = x as usize * n;
+                (u64::from(x / w) * self.alignment, ox[x as usize & (ox.len() - 1)], lx, 16.min(bytes - lx))
+            }).collect();
+            for y in rows.clone() {
+                let row_base = u64::from(y / h) * u64::from(m.pitch / w) * self.alignment;
+                let row_xor = oy[y as usize & (oy.len() - 1)];
+                let linear_row = (y - rows.start) as usize * row_pitch;
+                for &(column_base, column_xor, lx, len) in &columns {
+                    let at = (row_base + column_base + u64::from(column_xor ^ row_xor)) as usize;
+                    copy(at, linear_row + lx, len);
                 }
             }
             return Ok(());
@@ -788,8 +844,14 @@ impl Layout {
         for z in 0..depth {
             let (s, inner) = self.split(first + z);
             let base = u64::from(s) * self.slice_size + m.offset;
-            for y in 0..m.height {
-                let linear_row = z as usize * depth_pitch + y as usize * row_pitch;
+            // Fully packed linear rows can be transferred as one span per
+            // depth slice, without per-row dispatch or copying padding.
+            if linear && row_pitch == bytes && m.pitch as usize * n == bytes {
+                copy(base as usize + rows.start as usize * bytes, z as usize * depth_pitch, bytes * (rows.end - rows.start) as usize);
+                continue;
+            }
+            for y in rows.clone() {
+                let linear_row = z as usize * depth_pitch + (y - rows.start) as usize * row_pitch;
                 if linear {
                     let tiled_row = base + u64::from(y) * u64::from(m.pitch) * n as u64;
                     copy(tiled_row as usize, linear_row, bytes);
@@ -950,6 +1012,24 @@ impl Texture {
 mod tests {
     use super::*;
 
+    #[test]
+    fn parallel_row_bands_match_serial_with_padding_and_mips() {
+        for swizzle in [Swizzle::LINEAR, Swizzle::SW_64KB_D_X, Swizzle::SW_64KB_R_X, Swizzle::SW_4KB_D] {
+            let layout = Layout::new(&desc(513, 357, 5, 4, swizzle)).unwrap();
+            let tiled: Vec<u8> = (0..layout.size as usize).map(|i| (i ^ (i >> 8)) as u8).collect();
+            for mip in 0..5 {
+                let m = layout.mips[mip as usize];
+                let pitch = m.width as usize * 4 + 13;
+                let len = pitch * m.height as usize;
+                let mut serial = vec![0xcc; len];
+                let mut parallel = serial.clone();
+                layout.detile(&tiled, mip, 0, &mut serial, pitch, len).unwrap();
+                layout.detile_parallel_rows(&tiled, mip, 0, &mut parallel, pitch, len).unwrap();
+                assert_eq!(serial, parallel, "mip {mip}, {swizzle:?}");
+            }
+        }
+    }
+
     fn desc(w: u32, h: u32, mips: u32, bpe: u32, swizzle: Swizzle) -> Desc {
         Desc {
             dimension: Dimension::Tex2d,
@@ -961,6 +1041,19 @@ mod tests {
             block: 1,
             samples: 1,
             swizzle,
+        }
+    }
+
+    #[test]
+    fn packed_linear_rows_match_padded_rows() {
+        let l = Layout::new(&desc(64, 7, 1, 4, Swizzle::LINEAR)).unwrap();
+        let tiled: Vec<u8> = (0..l.size).map(|i| (i % 251) as u8).collect();
+        let mut packed = vec![0; 256 * 7];
+        let mut padded = vec![0; 272 * 7];
+        l.detile(&tiled, 0, 0, &mut packed, 256, 256 * 7).unwrap();
+        l.detile(&tiled, 0, 0, &mut padded, 272, 272 * 7).unwrap();
+        for y in 0..7 {
+            assert_eq!(&packed[y*256..(y+1)*256], &padded[y*272..y*272+256]);
         }
     }
 
@@ -1023,6 +1116,35 @@ mod tests {
                 let mut output = vec![0x55; linear.len()];
                 l.detile(&tiled,0,0,&mut output,pitch,0).unwrap();
                 assert_eq!(linear,output);
+            }
+        }
+    }
+
+    #[test]
+    fn stage43_extra_render_xor_offsets_and_rows() {
+        for series_s in [false, true] {
+            for n in [1, 16] {
+                let mut l = Layout::new_for_model(&desc(513, 357, 1, n, Swizzle::SW_64KB_R_X), series_s).unwrap();
+                l.pattern = render_xor_pattern(series_s, n);
+                let pitch = 513 * n as usize + 32;
+                let linear: Vec<u8> = (0..pitch * 357).map(|i| (i ^ (i >> 8) ^ (i >> 16)) as u8).collect();
+                let mut tiled = vec![0u8; l.size as usize];
+                let mut seen = std::collections::HashSet::new();
+                l.tile(&mut tiled, 0, 0, &linear, pitch, 0).unwrap();
+                for y in 0..357 {
+                    for x in 0..513 {
+                        let at = l.offset(0, x, y, 0).unwrap() as usize;
+                        assert!(seen.insert(at));
+                        let src = y as usize * pitch + x as usize * n as usize;
+                        assert_eq!(&tiled[at..at + n as usize], &linear[src..src + n as usize]);
+                    }
+                }
+                let mut roundtrip = vec![0u8; linear.len()];
+                l.detile(&tiled, 0, 0, &mut roundtrip, pitch, 0).unwrap();
+                for y in 0..357 {
+                    let start = y * pitch;
+                    assert_eq!(&roundtrip[start..start+513*n as usize], &linear[start..start+513*n as usize]);
+                }
             }
         }
     }

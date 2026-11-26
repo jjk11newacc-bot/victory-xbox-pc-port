@@ -13,12 +13,17 @@ mod fsr_preset;
 use fsr_preset::FsrPreset;
 
 struct LaunchOptions {
+    nvidia_low_memory: bool,
+    nvidia_performance: bool,
+    nvidia_gpu_detile: bool,
+    nvidia_profile_log: bool,
     warp: bool,
     ray_tracing: Option<bool>,
     static_bvh: bool,
     console: &'static str,
     local_gpu_memory: bool,
     native_1440p: bool,
+    native_1080p: bool,
     render_1080p: bool,
     fsr: Option<FsrPreset>,
     sparse_textures: bool,
@@ -33,12 +38,17 @@ fn launcher_options(
     args: &mut std::iter::Peekable<impl Iterator<Item = std::ffi::OsString>>,
 ) -> anyhow::Result<LaunchOptions> {
     let mut options = LaunchOptions {
+        nvidia_low_memory: false,
+        nvidia_performance: false,
+        nvidia_gpu_detile: false,
+        nvidia_profile_log: false,
         warp: false,
         ray_tracing: None,
         static_bvh: false,
         console: "series-x",
         local_gpu_memory: false,
         native_1440p: false,
+        native_1080p: false,
         render_1080p: false,
         fsr: None,
         sparse_textures: false,
@@ -49,7 +59,18 @@ fn launcher_options(
         lighting_trace: false,
     };
     while let Some(option) = args.peek() {
-        if option == "--warp" {
+        if option == "--nvidia-low-memory" {
+            options.nvidia_low_memory = true;
+        } else if option == "--nvidia-performance" {
+            options.nvidia_low_memory = true;
+            options.nvidia_performance = true;
+        } else if option == "--nvidia-gpu-detile" {
+            options.nvidia_low_memory = true;
+            options.nvidia_gpu_detile = true;
+        } else if option == "--nvidia-profile-log" {
+            options.nvidia_low_memory = true;
+            options.nvidia_profile_log = true;
+        } else if option == "--warp" {
             options.warp = true;
         } else if option == "--no-rt" {
             options.ray_tracing = Some(false);
@@ -59,6 +80,8 @@ fn launcher_options(
             options.static_bvh = true;
         } else if option == "--local-gpu-memory" {
             options.local_gpu_memory = true;
+        } else if option == "--native-1080p" {
+            options.native_1080p = true;
         } else if option == "--native-1440p" || option == "--1080p-to-1440p" {
             options.native_1440p = true;
             options.render_1080p |= option == "--1080p-to-1440p";
@@ -100,8 +123,24 @@ fn launcher_options(
         }
         args.next();
     }
+    if options.nvidia_low_memory {
+        if options.warp || options.ray_tracing == Some(true) || options.static_bvh
+            || options.fsr.is_some() || options.upload_ahead == Some(true)
+        {
+            bail!("--nvidia-low-memory conflicts with WARP, RT, FSR 4K and upload-ahead");
+        }
+        options.ray_tracing = Some(false);
+        // Display mode is independent of adapter selection. In particular,
+        // --nvidia-low-memory alone must not patch an unknown retail image.
+        options.local_gpu_memory = true;
+        options.sparse_textures = true;
+        options.upload_ahead = Some(false);
+    }
     if options.static_bvh && options.ray_tracing.is_some() {
         bail!("Choose one mode from --rt, --no-rt, and --rt-static-bvh");
+    }
+    if options.native_1080p && (options.native_1440p || options.fsr.is_some()) {
+        bail!("Choose native 1080p, a 1440p output mode, or FSR 4K");
     }
     if options.fsr.is_some() && options.native_1440p {
         bail!("Choose an FSR preset at 4K or a 1440p output mode");
@@ -112,15 +151,60 @@ fn launcher_options(
     Ok(options)
 }
 
+// Grouped opt-in CPU/memory profile. Keep risky reclamation, shader lowering,
+// and extended GPU texture layouts independently testable. Explicit environment
+// settings (including "0") override every entry in this table.
+const NVIDIA_PERFORMANCE: &[(&str, &str)] = &[
+    ("VICTORY_INDEXED_WATCH", "1"),
+    ("VICTORY_WATCH_CLEAN_FAST", "1"),
+    ("VICTORY_INDEXED_PENDING", "1"),
+    ("VICTORY_INDEX_WRITE_GROUPS", "1"),
+    ("VICTORY_BATCH_HAZARD_QUERY", "1"),
+    ("VICTORY_BATCH_RAW_WORK", "1"),
+    ("VICTORY_BATCH_PAGE_RANGES", "1"),
+    ("VICTORY_SPARSE_MERGE", "1"),
+    ("VICTORY_SETTLED_BLOCK_MERGE", "1"),
+    ("VICTORY_SPARSE_REFRESH", "1"),
+    ("VICTORY_SHARED_COMPARE_RUNS", "1"),
+    ("VICTORY_PACK_SYNC_READBACK", "1"),
+    ("VICTORY_REUSE_ROOT_DATA", "1"),
+    ("VICTORY_REUSE_GRAPHICS_BINDINGS", "1"),
+    ("VICTORY_COMPACT_MIP_UPLOAD", "1"),
+    ("VICTORY_STICKY_RAM_PRESSURE", "1"),
+    ("VICTORY_TRIM_READBACKS", "1"),
+    ("VICTORY_STRICT_ADMISSION", "1"),
+    ("VICTORY_STREAMING_FULL_BUDGET", "1"),
+    ("VICTORY_STREAMING_SLOW_RECOVERY", "1"),
+    ("VICTORY_MATERIAL_TEXTURE_DEMAND", "1"),
+    ("VICTORY_CARD_WINDOWS_MB", "256"),
+    ("VICTORY_TEXTURE_ROOM_PERCENT", "80"),
+    ("VICTORY_TEXTURE_STAGE_MS", "24"),
+    ("VICTORY_TEXTURE_STAGE_MB", "96"),
+    ("VICTORY_TEXTURE_NO_WAIT", "0"),
+    ("VICTORY_PARALLEL_PRELUDES", "0"),
+    ("VICTORY_PARALLEL_DETILE", "0"),
+    ("VICTORY_WIDE_REFRESH", "0"),
+    ("VICTORY_WIDE_MERGE", "0"),
+];
+
+fn profile_value(name: &str, baseline: &'static str, performance: bool) -> &'static str {
+    if performance {
+        NVIDIA_PERFORMANCE.iter().find(|&&(key, _)| key == name).map_or(baseline, |&(_, value)| value)
+    } else { baseline }
+}
+
 pub(super) fn run(warm: bool) -> anyhow::Result<()> {
     let launcher = std::env::current_exe()?;
     let folder = launcher.parent().context("Launcher folder is missing")?;
     let runtime = folder.join("victory.exe");
     let mut args = std::env::args_os().skip(1).peekable();
     let LaunchOptions {
-        warp, ray_tracing, static_bvh, console, local_gpu_memory, native_1440p, render_1080p, fsr,
+        nvidia_low_memory, nvidia_performance, nvidia_gpu_detile, nvidia_profile_log, warp, ray_tracing, static_bvh, console, local_gpu_memory, native_1440p, native_1080p, render_1080p, fsr,
         sparse_textures, upload_ahead, capture_readbacks, rt_write_stats, rt_store_trace, lighting_trace,
     } = launcher_options(&mut args)?;
+    if nvidia_profile_log && !cfg!(feature = "diagnostics") {
+        bail!("--nvidia-profile-log requires a diagnostics build. Re-run Setup.cmd -Diagnostics to collect detailed counters.");
+    }
     let game = match args.next() {
         Some(path) => PathBuf::from(path),
         None => {
@@ -132,7 +216,7 @@ pub(super) fn run(warm: bool) -> anyhow::Result<()> {
     };
     if args.next().is_some() {
         bail!(
-            "Usage\n{} [--rt | --no-rt | --rt-static-bvh] [--warp] [--console series-x|series-s] [--local-gpu-memory] [--native-1440p | --1080p-to-1440p | --fsr-quality | --fsr-balanced | --fsr-performance] [--sparse-textures] [--upload-ahead | --no-upload-ahead] [--capture-readbacks] [--rt-write-stats] [--rt-store-trace] [--lighting-trace] [game executable]",
+            "Usage\n{} [--nvidia-low-memory | --nvidia-performance] [--nvidia-gpu-detile] [--nvidia-profile-log] [--rt | --no-rt | --rt-static-bvh] [--warp] [--console series-x|series-s] [--local-gpu-memory] [--native-1080p | --native-1440p | --1080p-to-1440p | --fsr-quality | --fsr-balanced | --fsr-performance] [--sparse-textures] [--upload-ahead | --no-upload-ahead] [--capture-readbacks] [--rt-write-stats] [--rt-store-trace] [--lighting-trace] [game executable]",
             launcher.display()
         );
     }
@@ -180,6 +264,80 @@ pub(super) fn run(warm: bool) -> anyhow::Result<()> {
     fs::write(logs.join(latest), path.display().to_string())?;
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
     let mut child = Command::new(&runtime);
+    if nvidia_low_memory {
+        child.env("VICTORY_NVIDIA", "1")
+            .env("VICTORY_LOW_MEMORY", "1")
+            .env_remove("VICTORY_D3D12_WARP")
+            .env("VICTORY_FSR_4K", "0")
+            .env("VICTORY_NATIVE_1440P", "0")
+            .env("VICTORY_NATIVE_1080P", "0")
+            .env("VICTORY_RENDER_1080P", "0")
+            .env("VICTORY_AMBIENT_FALLBACK", "1");
+        // Bound background workers by the host's logical CPUs. On the target
+        // i5-12400F, Windows normally reports 12 threads: performance play
+        // gets two fill + two pipeline workers, while shader warmup may use
+        // four pipeline workers. The six P-cores still run the guest and OS.
+        let cores = std::thread::available_parallelism().map_or(1, |n| n.get());
+        let fill = if nvidia_performance { (cores / 4).clamp(1, 2) } else { cores.min(4) };
+        let compile = if warm { (cores / 2).clamp(1, 4) } else { (cores / 4).clamp(1, 2) };
+        if std::env::var_os("VICTORY_FILL_WORKERS").is_none() {
+            child.env("VICTORY_FILL_WORKERS", fill.to_string());
+        }
+        writeln!(log, "VICTORY_FILL_WORKERS: {}", std::env::var("VICTORY_FILL_WORKERS").unwrap_or_else(|_| fill.to_string()))?;
+        if nvidia_performance {
+            if std::env::var_os("VICTORY_PIPELINE_WORKERS").is_none() {
+                child.env("VICTORY_PIPELINE_WORKERS", compile.to_string());
+            }
+            writeln!(log, "VICTORY_PIPELINE_WORKERS: {}", std::env::var("VICTORY_PIPELINE_WORKERS").unwrap_or_else(|_| compile.to_string()))?;
+        }
+        for name in ["VICTORY_JOIN_COPIES", "VICTORY_WIDE_REFRESH", "VICTORY_TEXTURE_NO_WAIT"] {
+            let value = profile_value(name, "1", nvidia_performance);
+            if std::env::var_os(name).is_none() { child.env(name, value); }
+            writeln!(log, "{name}: {}", std::env::var(name).unwrap_or_else(|_| value.to_owned()))?;
+        }
+        // Reuse existing dependency-aware parallel paths and budgeted VRAM windows.
+        for (name, value) in [
+            ("VICTORY_PARALLEL_PRELUDES", "1"),
+            ("VICTORY_PARALLEL_DETILE", "1"),
+            ("VICTORY_WIDE_MERGE", "1"),
+            // Keep the baseline NVIDIA path inside a conservative 8 GiB
+            // adapter budget too; the former 512 MiB windows and 85% texture
+            // ceiling left less room for the game's render targets and driver.
+            ("VICTORY_CARD_WINDOWS_MB", "256"),
+            ("VICTORY_TEXTURE_ROOM_PERCENT", "80"),
+            ("VICTORY_STRICT_ADMISSION", "1"),
+            ("VICTORY_ADAPTIVE_BUDGET", "1"),
+            ("VICTORY_TEXTURE_CATCHUP", "0"),
+            ("VICTORY_TEXTURE_STAGE_MS", "8"),
+            ("VICTORY_TEXTURE_STAGE_MB", "32"),
+            ("VICTORY_EARLY_TEXTURES_MS", "3"),
+            ("VICTORY_BAKE_TEXTURES_MS", "8"),
+            ("VICTORY_LOCAL_GPU_INPUTS", "1"),
+            ("VICTORY_RANGE_UNION", "1"),
+        ] {
+            let value = profile_value(name, value, nvidia_performance);
+            if std::env::var_os(name).is_none() {
+                child.env(name, value);
+            }
+            writeln!(log, "{name}: {}", std::env::var(name).unwrap_or_else(|_| value.to_owned()))?;
+        }
+        if nvidia_performance {
+            writeln!(log, "NVIDIA performance profile; compare against baseline fallback if needed")?;
+            for &(name, value) in NVIDIA_PERFORMANCE {
+                // Baseline knobs already applied through profile_value above.
+                if matches!(name, "VICTORY_CARD_WINDOWS_MB" | "VICTORY_TEXTURE_ROOM_PERCENT" | "VICTORY_STRICT_ADMISSION" | "VICTORY_TEXTURE_STAGE_MS" | "VICTORY_TEXTURE_STAGE_MB" | "VICTORY_PARALLEL_PRELUDES" | "VICTORY_PARALLEL_DETILE" | "VICTORY_WIDE_REFRESH" | "VICTORY_WIDE_MERGE") { continue; }
+                if std::env::var_os(name).is_none() { child.env(name, value); }
+                writeln!(log, "{name}: {}", std::env::var(name).unwrap_or_else(|_| value.to_owned()))?;
+            }
+        }
+        if nvidia_gpu_detile {
+            // Base detile only: additional layout and dirty-revision switches
+            // require their own parity runs. No shader wave changes here.
+            if std::env::var_os("VICTORY_GPU_DETILE").is_none() { child.env("VICTORY_GPU_DETILE", "1"); }
+            writeln!(log, "VICTORY_GPU_DETILE: {}", std::env::var("VICTORY_GPU_DETILE").unwrap_or_else(|_| "1".into()))?;
+        }
+        writeln!(log, "NVIDIA low-memory profile; RT off; native display patch: {}", native_1080p || native_1440p)?;
+    }
     if let Some(on) = ray_tracing {
         child.env("VICTORY_RAY_TRACING", if on { "1" } else { "0" });
         writeln!(log, "Ray tracing requested: {}", if on { "on" } else { "off" })?;
@@ -193,7 +351,15 @@ pub(super) fn run(warm: bool) -> anyhow::Result<()> {
     if local_gpu_memory {
         child.env("VICTORY_LOCAL_GPU_INPUTS", "1");
     }
+    if native_1080p {
+        child.env("VICTORY_NATIVE_1080P", "1")
+            .env("VICTORY_NATIVE_1440P", "0")
+            .env("VICTORY_RENDER_1080P", "0")
+            .env("VICTORY_FSR_4K", "0");
+        writeln!(log, "Expected scene rendering 1920x1080, output 1920x1080")?;
+    }
     if native_1440p {
+        child.env("VICTORY_NATIVE_1080P", "0");
         child
             .env("VICTORY_NATIVE_1440P", "1")
             .env("VICTORY_RENDER_1080P", if render_1080p { "1" } else { "0" })
@@ -202,6 +368,7 @@ pub(super) fn run(warm: bool) -> anyhow::Result<()> {
         writeln!(log, "Expected scene rendering {expected_render}, output 2560x1440")?;
     }
     if let Some(preset) = fsr {
+        child.env("VICTORY_NATIVE_1080P", "0");
         child.env("VICTORY_FSR_4K", preset.name());
         let provider = folder.join("fidelityfx");
         if std::env::var_os("VICTORY_FIDELITYFX_DIR").is_none()
@@ -212,7 +379,14 @@ pub(super) fn run(warm: bool) -> anyhow::Result<()> {
         let [width, height] = preset.render_size();
         writeln!(log, "FSR {} (SDK mode {}) requested at {width}x{height} scene, 3840x2160 output", preset.name(), preset.mode())?;
     }
-    if (fsr.is_some() || upload_ahead == Some(true)) && std::env::var_os("VICTORY_LOG").is_none() {
+    if nvidia_profile_log && std::env::var_os("VICTORY_MEMORY_PRESSURE_LOG").is_none() {
+        child.env("VICTORY_MEMORY_PRESSURE_LOG", "1");
+        writeln!(log, "VICTORY_MEMORY_PRESSURE_LOG: 1")?;
+    }
+    if nvidia_low_memory && !nvidia_profile_log && std::env::var_os("VICTORY_LOG").is_none() {
+        child.env("VICTORY_LOG", std::env::var("RUST_LOG").unwrap_or_else(|_| "warn".into()));
+        writeln!(log, "Quiet NVIDIA run; use --nvidia-profile-log for diagnostic counters")?;
+    } else if (fsr.is_some() || upload_ahead == Some(true)) && std::env::var_os("VICTORY_LOG").is_none() {
         let filter = std::env::var("RUST_LOG").unwrap_or_else(|_| "warn".into());
         child.env("VICTORY_LOG", format!(
             "{filter},victory::run::native_1440p=info,victory_hle::modules::fidelityfx=info,victory_gpu::host=info,victory_gpu::texture::ahead=info"
@@ -250,7 +424,16 @@ pub(super) fn run(warm: bool) -> anyhow::Result<()> {
         writeln!(log, "Lighting trace request file {}", request.display())?;
     }
     if std::env::var_os("VICTORY_DEBUG_HUD").is_none() {
-        child.env("VICTORY_DEBUG_HUD", "1");
+        child.env("VICTORY_DEBUG_HUD", if nvidia_low_memory && !nvidia_profile_log { "0" } else { "1" });
+    }
+    // Include externally requested experimental flags too, so A/B runs can be reproduced.
+    let mut overrides: Vec<_> = std::env::vars_os().filter(|(key, _)| key.to_string_lossy().starts_with("VICTORY_")).collect();
+    overrides.sort_by(|a, b| a.0.cmp(&b.0));
+    for (key, value) in overrides {
+        let value = value.to_string_lossy();
+        if !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit()) {
+            writeln!(log, "Inherited {}={value}", key.to_string_lossy())?;
+        }
     }
     child
         .current_dir(folder)
@@ -470,6 +653,59 @@ mod tests {
         ] {
             let mut invalid = switches.iter().copied().map(std::ffi::OsString::from).peekable();
             assert!(launcher_options(&mut invalid).is_err());
+        }
+    }
+
+    #[test]
+    fn nvidia_profile_sets_memory_policy_and_rejects_conflicts() {
+        let mut args = ["--nvidia-low-memory", "game.exe"].into_iter().map(std::ffi::OsString::from).peekable();
+        let options = launcher_options(&mut args).unwrap();
+        assert!(options.nvidia_low_memory && options.local_gpu_memory && options.sparse_textures);
+        assert_eq!(options.ray_tracing, Some(false));
+        assert_eq!(options.upload_ahead, Some(false));
+        assert!(!options.native_1080p && !options.native_1440p);
+        assert_eq!(args.next().unwrap(), "game.exe");
+        for flag in ["--warp", "--rt", "--rt-static-bvh", "--fsr-quality", "--upload-ahead"] {
+            for switches in [["--nvidia-low-memory", flag], [flag, "--nvidia-low-memory"]] {
+                let mut args = switches.into_iter().map(std::ffi::OsString::from).peekable();
+                assert!(launcher_options(&mut args).is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn performance_and_gpu_profiles_are_independent() {
+        for (flags, perf, gpu, logging) in [
+            (vec!["--nvidia-performance"], true, false, false),
+            (vec!["--nvidia-gpu-detile"], false, true, false),
+            (vec!["--nvidia-performance", "--nvidia-gpu-detile", "--nvidia-profile-log"], true, true, true),
+        ] {
+            let mut args = flags.into_iter().chain(["--native-1080p", "game.exe"]).map(std::ffi::OsString::from).peekable();
+            let options = launcher_options(&mut args).unwrap();
+            assert!(options.nvidia_low_memory && options.native_1080p);
+            assert_eq!((options.nvidia_performance, options.nvidia_gpu_detile, options.nvidia_profile_log), (perf, gpu, logging));
+            assert_eq!(args.next().unwrap(), "game.exe");
+        }
+        assert_eq!(super::profile_value("VICTORY_CARD_WINDOWS_MB", "256", true), "256");
+        assert_eq!(super::profile_value("VICTORY_CARD_WINDOWS_MB", "256", false), "256");
+        assert_eq!(super::profile_value("VICTORY_GPU_DETILE", "0", true), "0");
+        assert_eq!(super::profile_value("VICTORY_GPU_DETILE", "0", false), "0");
+        assert_eq!(super::profile_value("VICTORY_TEXTURE_NO_WAIT", "1", true), "0");
+        assert_eq!(super::profile_value("VICTORY_TEXTURE_NO_WAIT", "1", false), "1");
+    }
+
+    #[test]
+    fn native_1080p_is_a_distinct_output_mode() {
+        let mut args = ["--nvidia-low-memory", "--native-1080p", "game.exe"].into_iter().map(std::ffi::OsString::from).peekable();
+        let options = launcher_options(&mut args).unwrap();
+        assert!(options.native_1080p);
+        assert!(!options.native_1440p && !options.render_1080p);
+        assert_eq!(args.next().unwrap(), "game.exe");
+        for other in ["--native-1440p", "--1080p-to-1440p", "--fsr-quality"] {
+            for switches in [["--native-1080p", other], [other, "--native-1080p"]] {
+                let mut args = switches.into_iter().map(std::ffi::OsString::from).peekable();
+                assert!(launcher_options(&mut args).is_err());
+            }
         }
     }
 

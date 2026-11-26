@@ -1,0 +1,603 @@
+--- a/NVIDIA-LOW-MEMORY.md
++++ b/NVIDIA-LOW-MEMORY.md
+@@ -50,3 +50,7 @@
+ See VALIDATION.md for the checks actually completed in this environment.
+ 
+ See PERFORMANCE-FINDINGS.md for the archive’s bottleneck evidence and the limits of the local CPU microbenchmark. No 30 FPS result has been established.
++
++## Stage 44 profile selection
++
++Setup installs new experimental and diagnostic shortcuts alongside the original baseline. `--nvidia-low-memory` alone now actually uses stock display; `--native-1080p` remains required for native 1080p. The main low-memory shortcut still passes it. The new performance shortcut explicitly opts in to a group of CPU and RAM optimizations; it is not validated on hardware. Use the original shortcut for the baseline or to roll back the group. Each flag can also be overridden with an environment value (including `0`). The separate GPU Detile shortcut enables only the base GPU detiler on the baseline, not all extensions. See PERFORMANCE-STAGE44.md for the complete audit and testing limitations.
+--- /dev/null
++++ b/PERFORMANCE-STAGE44.md
+@@ -0,0 +1,65 @@
++# Stage 44: audit of Stage 43 against “victory stage41 possible issues.txt”
++
++Target: RTX 3060 Ti 8 GB / 16 GB DDR4 / native 1080p / RT off. This is source, not a runnable game or a compiled Windows build. No FPS estimate is a benchmark. The attached report is a static review of Stage 41; its observations do not automatically apply to Stage 43. No Windows, Cargo, GPU or game execution here.
++
++## Changes
++
++1. `apps/victory/src/play_launcher.rs`: remove the implicit native-1080p choice for the NVIDIA low-memory flag. Existing main shortcut explicitly requests 1080p, stock shortcut now genuinely bypasses native-resolution patch (and may cost more memory). Game executable hash/patch checks remain unchanged. Parser tests cover stock, 1080p and independent profile flags. Add `--nvidia-performance`, `--nvidia-gpu-detile`, `--nvidia-profile-log`. The performance profile opts into 28 existing/new knobs (see `NVIDIA_PERFORMANCE` in the source), including indexed watch/pending, batched raw/page work, sparse merging and refresh, shared comparisons, packed readback, root/binding reuse, compact mips, sticky RAM pressure, readback trimming, strict admission, full streaming accounting and slow recovery. Explicit environment values override the table. Riskier raw-slot reclamation, wave changes and expanded GPU texture modes remain separate; no blanket enable-all. The separate GPU flag opts into only base detile and preserves CPU fallback. Quiet profile defaults to warn (unless RUST_LOG/VICTORY_LOG override) and HUD off; diagnostic flag restores info and memory diagnostics. Numeric inherited runtime settings and profile settings are logged. The experimental bundle is not a verified combination; compare one switch at a time against original baseline if it fails or regresses.
++2. `budget.rs`: optional bounded recovery when frame average >100 ms and backlog >2000. Up to 96 MiB/24 ms instead of 32 MiB/8 ms, no 1.5 s catch-up, fast-frame allowance unchanged. These are admission/time-loop budgets, not hard limits on any single texture or frame. This can improve texture arrival but may increase work in a slow frame. New retry cap uses presented-frame average rather than intervals between staging passes (roughly two seconds, max 120 frames; not a hard wall-clock deadline). Original policy retained when flag off.
++3. `draw.rs`, `descriptor/host.rs`: use new retry cap; optionally alternate oldest/newest retries, including when only one candidate fits, preserving fresh/retry alternation and bounded candidate selection. Do not discard pending descriptors or remove waits. Still does not guarantee that unstreamed game data becomes available. Adds direct Rust queue regression test.
++4. Performance profile uses 256 MiB card windows, 80% texture budget, limited fill and compile workers, disables wide refresh/merge and parallel preludes/detile to test less CPU contention. Existing adaptive budget already derives sparse pool limits from live adapter budget; strict admission is now available through opt-in profile. These are heuristics, not a global VRAM hard cap. Fewer workers can reduce throughput; smaller card windows and budgets may cause texture pop-in or more transfers. Override individually if needed. Material demand is opt-in and may itself add CPU/GPU work; turn off if slower.
++5. `Setup-DexNomRuntime.ps1`: install four additional shortcuts (performance, diagnostic, base GPU detile, performance warmup), default to two build jobs, configurable `-BuildJobs`. Does not reduce live guest memory. `tools/Validate-Stage44.ps1` runs Stage 43 actual tests then static/model checks and actual GPU tests with the new profile; marker required for NVIDIA parity. This was not run in this environment. Existing baseline shortcuts and fallback preserved.
++
++## Report item-by-item disposition
++
++| ID | Stage 44 disposition |
++|---|---|
++| A1 | Confirmed; original profile kept for A/B; explicit performance shortcut turns on selected improvements. Individual gates still default off without the profile. High-risk gates intentionally separate. |
++| A2 | CPU bottleneck plausible; no new measurement. Batched/indexed/binding flags now usable together but no 29x claim. |
++| A3 | Unresolved: no measured gameplay speedup. |
++| A4 | Selective paths enabled in experimental profile; unwatched/uncertain memory still needs comparison. |
++| A5 | Experimental profile opts into root/binding reuse and batching. |
++| A6 | Packed/shared readback selected; true dependencies still require fences. |
++| A7 | Stage 43 added paired exchange and fixes; divergent cross-wave and device removal unresolved; no forced wide-wave setting. |
++| A8 | Necessary barriers retained. Removing them without proof risks GPU corruption. |
++| A9 | Opt-in profile reduces concurrency and disables several competing wide paths; actual CPU topology and effect unmeasured. |
++| A10 | Quiet profile default, diagnostic mode available. Baseline keeps original logging. |
++| A11 | Window allocation reduced to 256 MiB in experimental profile; still not zero-copy. |
++| A12 | Diagnostics still used for setup; overhead unmeasured. |
++| A13 | Hardware-dependent; no changes to BIOS/CPU/RAM. |
++| B1 | RT disabled and ambient fallback retained; not an exact lighting replacement. |
++| B2 | Upstream black materials unresolved; fair queue and material-demand hints may improve streaming-related cases but not shader/material bugs. |
++| B3 | Bounded slow-scene recovery and shared full streaming budget opt-in. |
++| B4 | Remap no-wait still trades latency for delayed refresh; use VICTORY_TEXTURE_NO_WAIT=0 for parity. |
++| B5 | Shorter retry cap at low FPS and fair retry scheduling; partial data protection and existing 500 ms partial poll preserved. |
++| B6 | Report's 2 GiB figure is a maximum; Stage 43 already uses adaptive live budget. Experimental profile adds strict admission, 80% room, 256 MiB windows. No guaranteed total cap. |
++| B7 | Separate base GPU detile shortcut, CPU fallback. |
++| B8 | Actual shader/driver parity still unverified; extended flags not enabled indiscriminately. |
++| B9 | Exact executable hash check deliberately retained. |
++| B10 | Confirmed and fixed parser behavior; stock shortcut no longer patches display. |
++| B11 | UI/viewport and TAA compatibility still need actual gameplay. |
++| B12 | Risky reclamation gates not bundled. Retired readback trim and sticky RAM controls opt in; actual lifetime tests pending. |
++| B13 | Indexed watch/pending opt in via profile, not validated in the game. |
++| B14 | Verified-table setup already exists, hash checks preserved; actual download and build pending. |
++| C1 | Profile caps compile workers; same warmup entry, no guarantee every graphics state precompiles. No unsafe compute-draw skipping. |
++| C2 | Improved optional reclaim and fewer workers; working set target still unverified. |
++| C3 | Sticky RAM pressure available through profile. |
++| C4 | No forced wide-wave or larger GPU detile profile; TDR risk remains. No OS timeout modifications. |
++| C5 | Earlier reclamation retained; leak-free operation not proven. Need repeated scene/long soak. |
++| C6 | Bounded recovery and present-average retry policy; smoothing and clamping remain. |
++| C7 | Reduced workers and wide paths in profile; measure against original. |
++| C8 | Quiet logging; SSD availability external. |
++| C9 | Windows settings/driver/Resizable BAR external. |
++| D1 | Cargo missing; compile still blocked. |
++| D2 | Direct Rust tests added and Windows runner updated; not executed here. |
++| D3 | Stage 43 model rerun passed; Stage 40 timeout not resolved by these tests. |
++| D4 | Earlier unconditional synchronization fixes retained; hardware correctness not verified. |
++| D5 | Setup limits build jobs; pinned Rust/MSVC/SDK prerequisites remain. |
++| E1 | Hardware capability requirement unchanged. |
++| E2 | NVIDIA compatibility still unproven. |
++| E3 | Historical reference machine not equivalent; no promised FPS. |
++| F | Baseline/experimental/GPU/diagnostic shortcuts and actual-test runner available; real A/B remains mandatory. |
++
++## Suggested validation
++
++On Windows install pinned Rust/MSVC/SDK and verified format tables; execute `powershell -File tools/Validate-Stage44.ps1` before using the experimental profile. Run original NVIDIA warmup and baseline at 1080p, save log and scene; compare diagnostic performance profile with same camera and cache state, not quiet vs verbose. Compare individual overrides if needed. Base GPU detile is a separate test; do not enable all extension flags at once. Use original profile to roll back; set explicit environment value 0 to disable a single gate. Verify textures, UI, device errors, dedicated/shared VRAM, private bytes/working set, frame-time distribution, and long-session memory growth. No test of actual FPS, textures, leak-free operation or RAM consumption was possible here. Do not use the experimental profile as a certified fix.
+--- a/Setup-DexNomRuntime.ps1
++++ b/Setup-DexNomRuntime.ps1
+@@ -2,7 +2,8 @@
+ param(
+     [string] $GamePath,
+     [string] $InstallDir = (Join-Path $env:LOCALAPPDATA 'DexNom Runtime'),
+-    [string] $ShortcutDirectory = [Environment]::GetFolderPath('Programs')
++    [string] $ShortcutDirectory = [Environment]::GetFolderPath('Programs'),
++    [ValidateRange(1, 32)] [int] $BuildJobs = 2
+ )
+ 
+ $ErrorActionPreference = 'Stop'
+@@ -47,7 +48,7 @@
+     & (Join-Path $PSScriptRoot 'Initialize-FormatTables.ps1')
+     $targetDir = Join-Path $PSScriptRoot 'target'
+     $target = 'x86_64-pc-windows-msvc'
+-    & cargo build --locked --release -p victory --features diagnostics --bins --target $target --target-dir $targetDir
++    & cargo build --locked --release --jobs $BuildJobs -p victory --features diagnostics --bins --target $target --target-dir $targetDir
+     if ($LASTEXITCODE -ne 0) {
+         throw 'Build failed. Check the compiler output and the C++ workload and Windows SDK listed in the README.'
+     }
+@@ -86,6 +87,10 @@
+ foreach ($entry in @(
+     @{ Name = 'DexNom RayTime'; Arguments = '' }
+     @{ Name = 'DexNom RayTime (NVIDIA Low Memory)'; Arguments = '--nvidia-low-memory --native-1080p' }
++    @{ Name = 'DexNom RayTime (NVIDIA Performance - experimental)'; Arguments = '--nvidia-performance --native-1080p' }
++    @{ Name = 'DexNom RayTime (NVIDIA Performance - diagnostic)'; Arguments = '--nvidia-performance --nvidia-profile-log --native-1080p' }
++    @{ Name = 'DexNom RayTime (NVIDIA GPU Detile - experimental)'; Arguments = '--nvidia-low-memory --nvidia-gpu-detile --native-1080p' }
++    @{ Name = 'DexNom Shader Warmup (NVIDIA Performance)'; Arguments = '--nvidia-performance --native-1080p'; Target = 'victory-warm.exe' }
+     @{ Name = 'DexNom RayTime (NVIDIA Stock Display)'; Arguments = '--nvidia-low-memory' }
+     @{ Name = 'DexNom Shader Warmup (NVIDIA) - run first'; Arguments = '--nvidia-low-memory --native-1080p'; Target = 'victory-warm.exe' }
+     @{ Name = 'DexNom RayTime (Experimental RT)'; Arguments = '--rt' }
+--- a/apps/victory/src/play_launcher.rs
++++ b/apps/victory/src/play_launcher.rs
+@@ -14,6 +14,9 @@
+ 
+ struct LaunchOptions {
+     nvidia_low_memory: bool,
++    nvidia_performance: bool,
++    nvidia_gpu_detile: bool,
++    nvidia_profile_log: bool,
+     warp: bool,
+     ray_tracing: Option<bool>,
+     static_bvh: bool,
+@@ -36,6 +39,9 @@
+ ) -> anyhow::Result<LaunchOptions> {
+     let mut options = LaunchOptions {
+         nvidia_low_memory: false,
++        nvidia_performance: false,
++        nvidia_gpu_detile: false,
++        nvidia_profile_log: false,
+         warp: false,
+         ray_tracing: None,
+         static_bvh: false,
+@@ -55,6 +61,15 @@
+     while let Some(option) = args.peek() {
+         if option == "--nvidia-low-memory" {
+             options.nvidia_low_memory = true;
++        } else if option == "--nvidia-performance" {
++            options.nvidia_low_memory = true;
++            options.nvidia_performance = true;
++        } else if option == "--nvidia-gpu-detile" {
++            options.nvidia_low_memory = true;
++            options.nvidia_gpu_detile = true;
++        } else if option == "--nvidia-profile-log" {
++            options.nvidia_low_memory = true;
++            options.nvidia_profile_log = true;
+         } else if option == "--warp" {
+             options.warp = true;
+         } else if option == "--no-rt" {
+@@ -115,7 +130,8 @@
+             bail!("--nvidia-low-memory conflicts with WARP, RT, FSR 4K and upload-ahead");
+         }
+         options.ray_tracing = Some(false);
+-        if !options.native_1440p { options.native_1080p = true; }
++        // Display mode is independent of adapter selection. In particular,
++        // --nvidia-low-memory alone must not patch an unknown retail image.
+         options.local_gpu_memory = true;
+         options.sparse_textures = true;
+         options.upload_ahead = Some(false);
+@@ -133,6 +149,46 @@
+         bail!("FSR at 4K requires Series X mode");
+     }
+     Ok(options)
++}
++
++// Grouped opt-in CPU/memory profile. Keep risky reclamation, shader lowering,
++// and extended GPU texture layouts independently testable. Explicit environment
++// settings (including "0") override every entry in this table.
++const NVIDIA_PERFORMANCE: &[(&str, &str)] = &[
++    ("VICTORY_INDEXED_WATCH", "1"),
++    ("VICTORY_INDEXED_PENDING", "1"),
++    ("VICTORY_INDEX_WRITE_GROUPS", "1"),
++    ("VICTORY_BATCH_HAZARD_QUERY", "1"),
++    ("VICTORY_BATCH_RAW_WORK", "1"),
++    ("VICTORY_BATCH_PAGE_RANGES", "1"),
++    ("VICTORY_SPARSE_MERGE", "1"),
++    ("VICTORY_SETTLED_BLOCK_MERGE", "1"),
++    ("VICTORY_SPARSE_REFRESH", "1"),
++    ("VICTORY_SHARED_COMPARE_RUNS", "1"),
++    ("VICTORY_PACK_SYNC_READBACK", "1"),
++    ("VICTORY_REUSE_ROOT_DATA", "1"),
++    ("VICTORY_REUSE_GRAPHICS_BINDINGS", "1"),
++    ("VICTORY_COMPACT_MIP_UPLOAD", "1"),
++    ("VICTORY_STICKY_RAM_PRESSURE", "1"),
++    ("VICTORY_TRIM_READBACKS", "1"),
++    ("VICTORY_STRICT_ADMISSION", "1"),
++    ("VICTORY_STREAMING_FULL_BUDGET", "1"),
++    ("VICTORY_STREAMING_SLOW_RECOVERY", "1"),
++    ("VICTORY_MATERIAL_TEXTURE_DEMAND", "1"),
++    ("VICTORY_CARD_WINDOWS_MB", "256"),
++    ("VICTORY_TEXTURE_ROOM_PERCENT", "80"),
++    ("VICTORY_TEXTURE_STAGE_MS", "24"),
++    ("VICTORY_TEXTURE_STAGE_MB", "96"),
++    ("VICTORY_PARALLEL_PRELUDES", "0"),
++    ("VICTORY_PARALLEL_DETILE", "0"),
++    ("VICTORY_WIDE_REFRESH", "0"),
++    ("VICTORY_WIDE_MERGE", "0"),
++];
++
++fn profile_value(name: &str, baseline: &'static str, performance: bool) -> &'static str {
++    if performance {
++        NVIDIA_PERFORMANCE.iter().find(|&&(key, _)| key == name).map_or(baseline, |&(_, value)| value)
++    } else { baseline }
+ }
+ 
+ pub(super) fn run(warm: bool) -> anyhow::Result<()> {
+@@ -141,7 +197,7 @@
+     let runtime = folder.join("victory.exe");
+     let mut args = std::env::args_os().skip(1).peekable();
+     let LaunchOptions {
+-        nvidia_low_memory, warp, ray_tracing, static_bvh, console, local_gpu_memory, native_1440p, native_1080p, render_1080p, fsr,
++        nvidia_low_memory, nvidia_performance, nvidia_gpu_detile, nvidia_profile_log, warp, ray_tracing, static_bvh, console, local_gpu_memory, native_1440p, native_1080p, render_1080p, fsr,
+         sparse_textures, upload_ahead, capture_readbacks, rt_write_stats, rt_store_trace, lighting_trace,
+     } = launcher_options(&mut args)?;
+     let game = match args.next() {
+@@ -155,7 +211,7 @@
+     };
+     if args.next().is_some() {
+         bail!(
+-            "Usage\n{} [--nvidia-low-memory] [--rt | --no-rt | --rt-static-bvh] [--warp] [--console series-x|series-s] [--local-gpu-memory] [--native-1080p | --native-1440p | --1080p-to-1440p | --fsr-quality | --fsr-balanced | --fsr-performance] [--sparse-textures] [--upload-ahead | --no-upload-ahead] [--capture-readbacks] [--rt-write-stats] [--rt-store-trace] [--lighting-trace] [game executable]",
++            "Usage\n{} [--nvidia-low-memory | --nvidia-performance] [--nvidia-gpu-detile] [--nvidia-profile-log] [--rt | --no-rt | --rt-static-bvh] [--warp] [--console series-x|series-s] [--local-gpu-memory] [--native-1080p | --native-1440p | --1080p-to-1440p | --fsr-quality | --fsr-balanced | --fsr-performance] [--sparse-textures] [--upload-ahead | --no-upload-ahead] [--capture-readbacks] [--rt-write-stats] [--rt-store-trace] [--lighting-trace] [game executable]",
+             launcher.display()
+         );
+     }
+@@ -212,19 +268,23 @@
+             .env("VICTORY_NATIVE_1080P", "0")
+             .env("VICTORY_RENDER_1080P", "0")
+             .env("VICTORY_AMBIENT_FALLBACK", "1");
++        let cores = std::thread::available_parallelism().map_or(1, |n| n.get());
++        let fill = if nvidia_performance { (cores / 4).clamp(1, 2) } else { cores.min(4) };
++        let compile = if warm { (cores / 2).clamp(1, 4) } else { (cores / 4).clamp(1, 2) };
+         if std::env::var_os("VICTORY_FILL_WORKERS").is_none() {
+-            let workers = std::thread::available_parallelism().map_or(1, |n| n.get()).min(4);
+-            child.env("VICTORY_FILL_WORKERS", workers.to_string());
+-            writeln!(log, "Independent upload-fill workers: {workers}")?;
+-        }
+-        // Existing opt-in switches documented in victory-gpu (host.rs, texture.rs) as
+-        // removing per-frame CPU stalls: fewer kernel calls for buffer copies, buffer
+-        // refreshes spread over threads, and no multi-second wait on the remap lock.
+-        // None adds a large memory pool. A value already set in the environment wins.
++            child.env("VICTORY_FILL_WORKERS", fill.to_string());
++        }
++        writeln!(log, "VICTORY_FILL_WORKERS: {}", std::env::var("VICTORY_FILL_WORKERS").unwrap_or_else(|_| fill.to_string()))?;
++        if nvidia_performance {
++            if std::env::var_os("VICTORY_PIPELINE_WORKERS").is_none() {
++                child.env("VICTORY_PIPELINE_WORKERS", compile.to_string());
++            }
++            writeln!(log, "VICTORY_PIPELINE_WORKERS: {}", std::env::var("VICTORY_PIPELINE_WORKERS").unwrap_or_else(|_| compile.to_string()))?;
++        }
+         for name in ["VICTORY_JOIN_COPIES", "VICTORY_WIDE_REFRESH", "VICTORY_TEXTURE_NO_WAIT"] {
+-            if std::env::var_os(name).is_none() {
+-                child.env(name, "1");
+-            }
++            let value = profile_value(name, "1", nvidia_performance);
++            if std::env::var_os(name).is_none() { child.env(name, value); }
++            writeln!(log, "{name}: {}", std::env::var(name).unwrap_or_else(|_| value.to_owned()))?;
+         }
+         // Reuse existing dependency-aware parallel paths and budgeted VRAM windows.
+         for (name, value) in [
+@@ -242,13 +302,28 @@
+             ("VICTORY_LOCAL_GPU_INPUTS", "1"),
+             ("VICTORY_RANGE_UNION", "1"),
+         ] {
++            let value = profile_value(name, value, nvidia_performance);
+             if std::env::var_os(name).is_none() {
+                 child.env(name, value);
+             }
+             writeln!(log, "{name}: {}", std::env::var(name).unwrap_or_else(|_| value.to_owned()))?;
+         }
+-        writeln!(log, "CPU-stall switches on: JOIN_COPIES, WIDE_REFRESH, TEXTURE_NO_WAIT")?;
+-        writeln!(log, "Experimental NVIDIA low-memory profile; retired CPU snapshot pool capped at 256 MiB; RT off")?;
++        if nvidia_performance {
++            writeln!(log, "Experimental NVIDIA performance profile; compare against low-memory baseline")?;
++            for &(name, value) in NVIDIA_PERFORMANCE {
++                // Baseline knobs already applied through profile_value above.
++                if matches!(name, "VICTORY_CARD_WINDOWS_MB" | "VICTORY_TEXTURE_ROOM_PERCENT" | "VICTORY_TEXTURE_STAGE_MS" | "VICTORY_TEXTURE_STAGE_MB" | "VICTORY_PARALLEL_PRELUDES" | "VICTORY_PARALLEL_DETILE" | "VICTORY_WIDE_REFRESH" | "VICTORY_WIDE_MERGE") { continue; }
++                if std::env::var_os(name).is_none() { child.env(name, value); }
++                writeln!(log, "{name}: {}", std::env::var(name).unwrap_or_else(|_| value.to_owned()))?;
++            }
++        }
++        if nvidia_gpu_detile {
++            // Base detile only: additional layout and dirty-revision switches
++            // require their own parity runs. No shader wave changes here.
++            if std::env::var_os("VICTORY_GPU_DETILE").is_none() { child.env("VICTORY_GPU_DETILE", "1"); }
++            writeln!(log, "VICTORY_GPU_DETILE: {}", std::env::var("VICTORY_GPU_DETILE").unwrap_or_else(|_| "1".into()))?;
++        }
++        writeln!(log, "NVIDIA low-memory profile; RT off; native display patch: {}", native_1080p || native_1440p)?;
+     }
+     if let Some(on) = ray_tracing {
+         child.env("VICTORY_RAY_TRACING", if on { "1" } else { "0" });
+@@ -291,7 +366,14 @@
+         let [width, height] = preset.render_size();
+         writeln!(log, "FSR {} (SDK mode {}) requested at {width}x{height} scene, 3840x2160 output", preset.name(), preset.mode())?;
+     }
+-    if (nvidia_low_memory || fsr.is_some() || upload_ahead == Some(true)) && std::env::var_os("VICTORY_LOG").is_none() {
++    if nvidia_profile_log && std::env::var_os("VICTORY_MEMORY_PRESSURE_LOG").is_none() {
++        child.env("VICTORY_MEMORY_PRESSURE_LOG", "1");
++        writeln!(log, "VICTORY_MEMORY_PRESSURE_LOG: 1")?;
++    }
++    if nvidia_performance && !nvidia_profile_log && std::env::var_os("VICTORY_LOG").is_none() {
++        child.env("VICTORY_LOG", std::env::var("RUST_LOG").unwrap_or_else(|_| "warn".into()));
++        writeln!(log, "Quiet performance run; use --nvidia-profile-log for baseline counters")?;
++    } else if (nvidia_low_memory || fsr.is_some() || upload_ahead == Some(true)) && std::env::var_os("VICTORY_LOG").is_none() {
+         let filter = std::env::var("RUST_LOG").unwrap_or_else(|_| "warn".into());
+         child.env("VICTORY_LOG", format!(
+             "{filter},victory::run::native_1440p=info,victory_hle::modules::fidelityfx=info,victory_gpu::host=info,victory_gpu::texture::ahead=info"
+@@ -329,7 +411,16 @@
+         writeln!(log, "Lighting trace request file {}", request.display())?;
+     }
+     if std::env::var_os("VICTORY_DEBUG_HUD").is_none() {
+-        child.env("VICTORY_DEBUG_HUD", "1");
++        child.env("VICTORY_DEBUG_HUD", if nvidia_performance && !nvidia_profile_log { "0" } else { "1" });
++    }
++    // Include externally requested experimental flags too, so A/B runs can be reproduced.
++    let mut overrides: Vec<_> = std::env::vars_os().filter(|(key, _)| key.to_string_lossy().starts_with("VICTORY_")).collect();
++    overrides.sort_by(|a, b| a.0.cmp(&b.0));
++    for (key, value) in overrides {
++        let value = value.to_string_lossy();
++        if !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit()) {
++            writeln!(log, "Inherited {}={value}", key.to_string_lossy())?;
++        }
+     }
+     child
+         .current_dir(folder)
+@@ -559,7 +650,7 @@
+         assert!(options.nvidia_low_memory && options.local_gpu_memory && options.sparse_textures);
+         assert_eq!(options.ray_tracing, Some(false));
+         assert_eq!(options.upload_ahead, Some(false));
+-        assert!(options.native_1080p);
++        assert!(!options.native_1080p && !options.native_1440p);
+         assert_eq!(args.next().unwrap(), "game.exe");
+         for flag in ["--warp", "--rt", "--rt-static-bvh", "--fsr-quality", "--upload-ahead"] {
+             for switches in [["--nvidia-low-memory", flag], [flag, "--nvidia-low-memory"]] {
+@@ -567,6 +658,24 @@
+                 assert!(launcher_options(&mut args).is_err());
+             }
+         }
++    }
++
++    #[test]
++    fn performance_and_gpu_profiles_are_independent() {
++        for (flags, perf, gpu, logging) in [
++            (vec!["--nvidia-performance"], true, false, false),
++            (vec!["--nvidia-gpu-detile"], false, true, false),
++            (vec!["--nvidia-performance", "--nvidia-gpu-detile", "--nvidia-profile-log"], true, true, true),
++        ] {
++            let mut args = flags.into_iter().chain(["--native-1080p", "game.exe"]).map(std::ffi::OsString::from).peekable();
++            let options = launcher_options(&mut args).unwrap();
++            assert!(options.nvidia_low_memory && options.native_1080p);
++            assert_eq!((options.nvidia_performance, options.nvidia_gpu_detile, options.nvidia_profile_log), (perf, gpu, logging));
++            assert_eq!(args.next().unwrap(), "game.exe");
++        }
++        assert_eq!(super::profile_value("VICTORY_CARD_WINDOWS_MB", "512", true), "256");
++        assert_eq!(super::profile_value("VICTORY_CARD_WINDOWS_MB", "512", false), "512");
++        assert_eq!(super::profile_value("VICTORY_GPU_DETILE", "0", true), "0");
+     }
+ 
+     #[test]
+--- a/crates/victory-gpu/src/budget.rs
++++ b/crates/victory-gpu/src/budget.rs
+@@ -33,13 +33,32 @@
+     }
+     p.last = Some(now);
+ }
++fn recovery_allowance(ms: u64, backlog: u64) -> (u64, u64) {
++    // Allow limited recovery in a badly starved streaming scene, but never
++    // spend the old 1.5 s catch-up budget. Fast frames keep the original cap.
++    if ms > 100 && backlog > 2000 {
++        ((ms / 4).clamp(32, 96), (ms / 12).clamp(8, 24))
++    } else { allowance(ms, backlog) }
++}
+ fn allowance(ms: u64, backlog: u64) -> (u64,u64) {
+     if ms == 0 { (32, 8) } else if ms <= 40 { (16, 3) } else if ms <= 100 { (24, 5) } else if backlog > 2000 { (32, 8) } else { (24, 5) }
++}
++pub(crate) fn slow_recovery_enabled() -> bool {
++    static ON: OnceLock<bool> = OnceLock::new();
++    *ON.get_or_init(|| std::env::var_os("VICTORY_STREAMING_SLOW_RECOVERY").is_some_and(|v| v == "1"))
++}
++fn retry_frames_for(ms: u64) -> u64 { (2000 / ms.max(1)).clamp(1, 120) }
++/// Queue retries use presented frames rather than the number of staging passes.
++pub(crate) fn retry_frames(fallback: u64) -> u64 {
++    if !enabled() || !slow_recovery_enabled() { return fallback; }
++    let p = PACING.lock().unwrap_or_else(|e| e.into_inner());
++    if p.average_ms == 0 { fallback.min(16) } else { retry_frames_for(p.average_ms) }
+ }
+ pub(crate) fn remaining(frame: u64, backlog: u64) -> (u64,u64) {
+     let mut p = PACING.lock().unwrap_or_else(|e| e.into_inner());
+     if p.frame != frame { p.frame = frame; p.spent_us = 0; }
+-    let (mb, ms) = allowance(p.average_ms, backlog);
++    let recover = slow_recovery_enabled();
++    let (mb, ms) = if recover { recovery_allowance(p.average_ms, backlog) } else { allowance(p.average_ms, backlog) };
+     (mb * MIB, (ms * 1000).saturating_sub(p.spent_us))
+ }
+ pub(crate) fn charge(frame: u64, us: u64) {
+@@ -50,6 +69,16 @@
+ mod tests {
+     use super::*;
+     #[test] fn limits() { assert_eq!(ceiling(8<<30, 90), 7<<30); assert_eq!(ceiling(512*MIB,90),0); assert_eq!(window_cap(8<<30),512*MIB); assert!(pool_cap(8<<30)<2<<30); }
++    #[test] fn slow_recovery_is_bounded() {
++        assert_eq!(recovery_allowance(33, 10000), (16, 3));
++        assert_eq!(recovery_allowance(1000, 100), (24, 5));
++        assert_eq!(recovery_allowance(1000, 10000), (96, 24));
++        assert_eq!(recovery_allowance(120, 10000), (32, 10));
++        assert_eq!(retry_frames_for(1000), 2);
++        assert_eq!(retry_frames_for(250), 8);
++        assert_eq!(retry_frames_for(33), 60);
++        assert_eq!(retry_frames_for(1), 120);
++    }
+     #[test] fn pacing() { assert_eq!(allowance(33,3000),(16,3)); assert_eq!(allowance(200,3000),(32,8)); }
+ }
+ 
+--- a/crates/victory-gpu/src/descriptor/host.rs
++++ b/crates/victory-gpu/src/descriptor/host.rs
+@@ -747,17 +747,29 @@
+     }
+ 
+     fn due_at(&self, frame: u64, now_ms: u64, max: usize) -> Vec<(u32, u64, bool)> {
++        self.due_with_policy(frame, now_ms, max, crate::budget::enabled() && crate::budget::slow_recovery_enabled())
++    }
++
++    fn due_with_policy(&self, frame: u64, now_ms: u64, max: usize, fair: bool) -> Vec<(u32, u64, bool)> {
+         let mut again = Vec::new();
+         let mut fresh = Vec::new();
+         for (&index, w) in self.slots.iter().filter(|(_, w)| w.is_due(frame, now_ms)) {
+             let class = if w.looks > 0 || w.mapped > 0 { &mut again } else { &mut fresh };
+             class.push((index, w.write, w.recovered));
+         }
+-        // A pass consumes at most max entries. Keep only the newest retries
+-        // and the two ends of the fresh queue before sorting.
++        // Keep both ends of the retry queue in recovery mode: continuously
++        // arriving newer retries otherwise starve older missing textures.
++        // A pass consumes at most max entries. Keep bounded candidates before sorting.
+         if max == 0 { return Vec::new(); }
+         let key = |&(_, write, _): &(u32, u64, bool)| write;
+-        if again.len() > max {
++        if fair {
++            if again.len() > max.saturating_mul(2) {
++                again.select_nth_unstable_by_key(max, key);
++                let cut = again.len() - max;
++                again[max..].select_nth_unstable_by_key(cut - max, key);
++                again.drain(max..cut);
++            }
++        } else if again.len() > max {
+             let cut = again.len() - max;
+             again.select_nth_unstable_by_key(cut, key);
+             again.drain(..cut);
+@@ -772,14 +784,18 @@
+         fresh.sort_unstable_by_key(key);
+         let count = max.min(again.len() + fresh.len());
+         let mut fresh = fresh.into_iter();
++        let mut again = again.into_iter();
++        let mut recent_retry = !fair || frame & 2 == 0;
+         // A time-limited pass may stop after one slot. Rotate its first
+         // choice across frames as well as rotating within each pass.
+         let mut retry = frame & 1 == 0;
+-        let mut newest = again.is_empty() || frame & 2 == 0;
++        let mut newest = again.as_slice().is_empty() || frame & 2 == 0;
+         let mut order = Vec::with_capacity(count);
+         while order.len() < count {
+-            if !again.is_empty() && (retry || fresh.len() == 0) {
+-                order.push(again.pop().unwrap());
++            if !again.as_slice().is_empty() && (retry || fresh.len() == 0) {
++                let next = if recent_retry { again.next_back() } else { again.next() };
++                order.push(next.unwrap());
++                if fair { recent_retry = !recent_retry; }
+             } else {
+                 let next = if newest { fresh.next_back() } else { fresh.next() };
+                 order.push(next.unwrap());
+@@ -4484,6 +4500,21 @@
+     }
+ 
+     #[test]
++    fn fair_retry_queue_serves_old_and_new_even_if_only_one_slot_fits() {
++        let mut q = TextureQueue::default();
++        for index in 0..100 {
++            q.written(index, 0, 0, false);
++            let write = q.slots[&index].write;
++            q.later(index, write, 0, 1, false);
++        }
++        assert_eq!(q.due_with_policy(4, 0, 1, true)[0].0, 99);
++        assert_eq!(q.due_with_policy(6, 0, 1, true)[0].0, 0);
++        assert_eq!(q.due_with_policy(6, 0, 1, false)[0].0, 99);
++        let order: Vec<_> = q.due_with_policy(4, 0, 4, true).into_iter().map(|v| v.0).collect();
++        assert_eq!(order, [99, 0, 98, 1]);
++    }
++
++    #[test]
+     fn texture_queue_keeps_first_looks_in_a_retry_backlog() {
+         let mut q = TextureQueue::default();
+         for index in 0..10 {
+--- a/crates/victory-gpu/src/draw.rs
++++ b/crates/victory-gpu/src/draw.rs
+@@ -2126,7 +2126,7 @@
+         static PASSED: AtomicU64 = AtomicU64::new(0);
+         let now = crate::host::now_ms();
+         let took = now.saturating_sub(PASSED.swap(now, Ordering::Relaxed)).max(1);
+-        let most = (4000 / took).clamp(16, 256);
++        let most = crate::budget::retry_frames((4000 / took).clamp(16, 256));
+         // What a table entry of a texture a shader samples says.
+         let sampled = UsedResource {
+             kind: ResourceType::Srv,
+--- /dev/null
++++ b/tools/Validate-Stage44.ps1
+@@ -0,0 +1,8 @@
++$ErrorActionPreference = 'Stop'
++Push-Location (Join-Path $PSScriptRoot '..')
++try {
++    & (Join-Path $PSScriptRoot 'Validate-Stage43.ps1')
++    & python (Join-Path $PSScriptRoot 'check_stage44.py') --hardware
++    if ($LASTEXITCODE -ne 0) { throw "Stage 44 checks failed ($LASTEXITCODE)" }
++    Write-Host 'Stage 44 actual test suite and NVIDIA detile parity completed. Gameplay/FPS still needs measurement.'
++} finally { Pop-Location }
+--- /dev/null
++++ b/tools/check_stage44.py
+@@ -0,0 +1,89 @@
++"""Static launcher integration checks + independent pacing/queue reference models.
++Run --hardware on Windows to execute the actual Rust test suite under the new profile.
++No FPS claims. The Python portion does not compile Rust or execute D3D12.
++"""
++from pathlib import Path
++import os, random, re, subprocess, sys
++root = Path(__file__).resolve().parents[1]
++launcher = (root / 'apps/victory/src/play_launcher.rs').read_text()
++setup = (root / 'Setup-DexNomRuntime.ps1').read_text()
++profile = dict(re.findall(r'\("(VICTORY_[A-Z_0-9]+)", "([0-9]+)"\)', launcher.split('const NVIDIA_PERFORMANCE:', 1)[1].split('];', 1)[0]))
++assert len(profile) == 28, len(profile)
++source = '\n'.join(p.read_text(errors='replace') for p in (root / 'crates').rglob('*.rs'))
++for name in profile:
++    assert f'"{name}"' in source, name
++assert 'if !options.native_1440p { options.native_1080p = true; }' not in launcher
++assert "Name = 'DexNom RayTime (NVIDIA Stock Display)'; Arguments = '--nvidia-low-memory'" in setup
++assert "Name = 'DexNom RayTime (NVIDIA Performance - experimental)'; Arguments = '--nvidia-performance --native-1080p'" in setup
++assert 'VICTORY_GPU_DETILE' not in profile
++assert not {'VICTORY_WAVE_WIDE', 'VICTORY_RECLAIM_RAW_SLOTS', 'VICTORY_GPU_ONLY_TEXTURES'} & profile.keys()
++assert profile['VICTORY_TEXTURE_STAGE_MB'] == '96' and profile['VICTORY_TEXTURE_STAGE_MS'] == '24'
++print(f'Static integration: {len(profile)} runtime switches found, display and GPU profile separation passed')
++
++def allowance(ms, backlog):
++    if not ms: return 32, 8
++    if ms <= 40: return 16, 3
++    if ms <= 100: return 24, 5
++    if backlog > 2000: return 32, 8
++    return 24, 5
++
++def recover(ms, backlog):
++    if ms > 100 and backlog > 2000:
++        return max(32, min(96, ms//4)), max(8, min(24, ms//12))
++    return allowance(ms, backlog)
++
++rng = random.Random(44)
++for _ in range(30000):
++    ms, backlog = rng.randrange(2001), rng.randrange(50000)
++    mb, time = recover(ms, backlog)
++    assert 0 < mb <= 96 and 0 < time <= 24
++    if ms <= 100 or backlog <= 2000: assert (mb,time) == allowance(ms,backlog)
++    else: assert time <= ms//12
++    retry = max(1, min(120, 2000//max(1, ms)))
++    assert 1 <= retry <= 120
++    if ms: assert retry*ms <= max(2000, ms)
++print('30,000 independent pacing / retry model cases passed')
++
++def select(retry, fresh, cap, frame, fair, bounded):
++    retry, fresh = sorted(retry), sorted(fresh)
++    if bounded:
++        if fair and len(retry)>2*cap: retry=retry[:cap]+retry[-cap:]
++        elif not fair and len(retry)>cap: retry=retry[-cap:]
++        if len(fresh)>2*cap: fresh=fresh[:cap]+fresh[-cap:]
++    from collections import deque
++    retry,fresh=deque(retry),deque(fresh)
++    turn = frame%2 == 0; newest=not fresh or not retry or frame&2 == 0
++    # Rust's initial fresh direction is based on whether retries exist.
++    newest=not retry or frame&2 == 0
++    recent=not fair or frame&2 == 0
++    result=[]
++    while len(result)<cap and (retry or fresh):
++        if retry and (turn or not fresh):
++            result.append(retry.pop() if recent else retry.popleft())
++            if fair: recent=not recent
++        else:
++            result.append(fresh.pop() if newest else fresh.popleft()); newest=not newest
++        turn=not turn
++    return result
++for _ in range(20000):
++    ids=list(range(rng.randrange(1,400))); rng.shuffle(ids)
++    split=rng.randrange(len(ids)+1); retry,fresh=ids[:split],ids[split:]
++    cap=rng.randrange(1,80); frame=rng.randrange(100)
++    for fair in [True,False]:
++        actual=select(retry,fresh,cap,frame,fair,True)
++        assert actual==select(retry,fresh,cap,frame,fair,False)
++        assert len(actual)==min(cap,len(ids)) and len(set(actual))==len(actual)
++assert select(list(range(100)),[],1,6,True,True)==[0]
++assert select(list(range(100)),[],1,6,False,True)==[99]
++print('40,000 independent bounded queue comparisons passed')
++if '--hardware' in sys.argv:
++    if os.name != 'nt': raise SystemExit('Windows + NVIDIA required')
++    env={k:v for k,v in os.environ.items() if not k.startswith('VICTORY_')}
++    env.update(profile, VICTORY_NVIDIA='1', VICTORY_LOW_MEMORY='1', VICTORY_ADAPTIVE_BUDGET='1', VICTORY_REQUIRE_GPU_TEST='1')
++    subprocess.run(['cargo','test','--locked','-p','victory-gpu','--features','diagnostics','--','--test-threads=1'], cwd=root, env=env, check=True)
++    # Run exact parity test separately and require proof that it executed.
++    env['VICTORY_RENDER_XOR_EXTRA']='1'
++    cmd=['cargo','test','--locked','-p','victory-gpu','--features','diagnostics','texture::gpu_detile::tests::gpu_detile_readback_matches_cpu_rows','--','--exact','--nocapture']
++    completed=subprocess.run(cmd,cwd=root,env=env,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
++    print(completed.stdout)
++    if completed.returncode or 'STAGE42_GPU_DETILE_PARITY_OK' not in completed.stdout: raise SystemExit('Real NVIDIA parity failed or did not run')

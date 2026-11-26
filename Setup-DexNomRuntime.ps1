@@ -2,7 +2,9 @@
 param(
     [string] $GamePath,
     [string] $InstallDir = (Join-Path $env:LOCALAPPDATA 'DexNom Runtime'),
-    [string] $ShortcutDirectory = [Environment]::GetFolderPath('Programs')
+    [string] $ShortcutDirectory = [Environment]::GetFolderPath('Programs'),
+    [ValidateRange(1, 32)] [int] $BuildJobs = 2,
+    [switch] $Diagnostics
 )
 
 $ErrorActionPreference = 'Stop'
@@ -47,7 +49,9 @@ try {
     & (Join-Path $PSScriptRoot 'Initialize-FormatTables.ps1')
     $targetDir = Join-Path $PSScriptRoot 'target'
     $target = 'x86_64-pc-windows-msvc'
-    & cargo build --locked --release -p victory --features diagnostics --bins --target $target --target-dir $targetDir
+    $buildArgs = @('build','--locked','--release','--jobs',"$BuildJobs",'-p','victory','--bins','--target',$target,'--target-dir',$targetDir)
+    if ($Diagnostics) { $buildArgs += @('--features','diagnostics') }
+    & cargo @buildArgs
     if ($LASTEXITCODE -ne 0) {
         throw 'Build failed. Check the compiler output and the C++ workload and Windows SDK listed in the README.'
     }
@@ -81,17 +85,36 @@ try {
 
 $launcher = Join-Path $InstallDir 'victory-play.exe'
 Write-Host "Installed DexNom RayTime in $InstallDir"
+if ($Diagnostics) {
+    Write-Host 'Installed a diagnostics-enabled build. Re-run Setup.cmd without -Diagnostics for the lower-overhead release build.'
+} else {
+    Write-Host 'Installed a release build without diagnostic instrumentation. Use Setup.cmd -Diagnostics when collecting detailed counters.'
+}
 [IO.Directory]::CreateDirectory($ShortcutDirectory) | Out-Null
 $shell = New-Object -ComObject WScript.Shell
-foreach ($entry in @(
+$shortcuts = @(
     @{ Name = 'DexNom RayTime'; Arguments = '' }
+    @{ Name = 'DexNom RayTime (NVIDIA Low Memory)'; Arguments = '--nvidia-performance --native-1080p' }
+    @{ Name = 'DexNom RayTime (NVIDIA Baseline fallback)'; Arguments = '--nvidia-low-memory --native-1080p' }
+    @{ Name = 'DexNom RayTime (NVIDIA Performance)'; Arguments = '--nvidia-performance --native-1080p' }
+    @{ Name = 'DexNom RayTime (NVIDIA GPU Detile - experimental)'; Arguments = '--nvidia-low-memory --nvidia-gpu-detile --native-1080p' }
+    @{ Name = 'DexNom Shader Warmup (NVIDIA Performance)'; Arguments = '--nvidia-performance --native-1080p'; Target = 'victory-warm.exe' }
+    @{ Name = 'DexNom RayTime (NVIDIA Stock Display)'; Arguments = '--nvidia-performance' }
+    @{ Name = 'DexNom Shader Warmup (NVIDIA) - run first'; Arguments = '--nvidia-performance --native-1080p'; Target = 'victory-warm.exe' }
     @{ Name = 'DexNom RayTime (Experimental RT)'; Arguments = '--rt' }
     @{ Name = 'DexNom RayTime (FSR Quality 4K)'; Arguments = '--rt --console series-x --local-gpu-memory --fsr-quality --sparse-textures --no-upload-ahead --capture-readbacks --rt-write-stats' }
-)) {
+)
+if ($Diagnostics) {
+    $shortcuts += @{ Name = 'DexNom RayTime (NVIDIA Performance - diagnostic)'; Arguments = '--nvidia-performance --nvidia-profile-log --native-1080p' }
+} else {
+    $diagnosticShortcut = Join-Path $ShortcutDirectory 'DexNom RayTime (NVIDIA Performance - diagnostic).lnk'
+    if ([IO.File]::Exists($diagnosticShortcut)) { [IO.File]::Delete($diagnosticShortcut) }
+}
+foreach ($entry in $shortcuts) {
     $shortcut = $shell.CreateShortcut((Join-Path $ShortcutDirectory ($entry.Name + '.lnk')))
-    $shortcut.TargetPath = $launcher
+    $shortcut.TargetPath = if ($entry.Target) { Join-Path $InstallDir $entry.Target } else { $launcher }
     $shortcut.Arguments = $entry.Arguments
     $shortcut.WorkingDirectory = $InstallDir
     $shortcut.Save()
 }
-Write-Host "Open DexNom RayTime from $ShortcutDirectory. The FSR Quality 4K shortcut uses the tested ray-tracing profile."
+Write-Host "Open DexNom RayTime from $ShortcutDirectory. The FSR Quality 4K shortcut uses the Series X ray-tracing profile."

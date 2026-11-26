@@ -1,0 +1,381 @@
+--- a/crates/victory-gpu/src/draw.rs
++++ b/crates/victory-gpu/src/draw.rs
+@@ -242,7 +242,7 @@
+ /// Exact translated graphics root constants, not guest root arguments.
+ /// A cache hit skips only the D3D12 setter, never resource preparation.
+ #[derive(Default)]
+-struct GraphicsRootData(Vec<Option<Vec<u32>>>);
++struct GraphicsRootData(Vec<Option<Vec<u32>>>, Vec<Option<(u8, u64)>>);
+ 
+ impl GraphicsRootData {
+     fn changed(&mut self, param: u32, words: &[u32]) -> bool {
+@@ -257,7 +257,35 @@
+         true
+     }
+ 
+-    fn invalidate(&mut self) { self.0.clear(); }
++    // Root parameter types are fixed by the bound root signature. Keep the
++    // exact GPU VA/handle, never skip the resource lookup or hazard work.
++    fn binding_changed(&mut self, param: u32, kind: u8, value: u64) -> bool {
++        static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
++        if !*ON.get_or_init(|| std::env::var_os("VICTORY_REUSE_GRAPHICS_BINDINGS").is_some_and(|v| v == "1")) { return true; }
++        self.record_binding(param, kind, value)
++    }
++    fn record_binding(&mut self, param: u32, kind: u8, value: u64) -> bool {
++        if param >= 64 { return true; }
++        let i = param as usize;
++        if self.1.len() <= i { self.1.resize(i + 1, None); }
++        let old = self.1[i].replace((kind, value));
++        old != Some((kind, value))
++    }
++    fn invalidate(&mut self) { self.0.clear(); self.1.clear(); }
++}
++
++#[test]
++fn graphics_binding_cache_retains_only_exact_values_until_invalidation() {
++    let mut state = GraphicsRootData::default();
++    assert!(state.record_binding(1, 0, 0));
++    assert!(!state.record_binding(1, 0, 0));
++    assert!(state.record_binding(1, 1, 0));
++    assert!(state.record_binding(1, 1, 256));
++    assert!(!state.record_binding(1, 1, 256));
++    assert!(state.record_binding(2, 1, 256));
++    state.invalidate();
++    assert!(state.record_binding(1, 1, 256));
++    assert!(state.record_binding(64, 1, 256));
+ }
+ 
+ /// What one title list has set, and what its host list was last given.
+@@ -1377,7 +1405,7 @@
+                             unsafe {
+                                 if compute {
+                                     l.SetComputeRootShaderResourceView(param, m.directory);
+-                                } else {
++                                } else if self.graphics_root_data.binding_changed(param, 1, m.directory) {
+                                     l.SetGraphicsRootShaderResourceView(param, m.directory);
+                                 }
+                             }
+@@ -1395,7 +1423,7 @@
+                             let address = buffer.GetGPUVirtualAddress();
+                             if compute {
+                                 l.SetComputeRootShaderResourceView(param, address);
+-                            } else {
++                            } else if self.graphics_root_data.binding_changed(param, 1, address) {
+                                 l.SetGraphicsRootShaderResourceView(param, address);
+                             }
+                         }
+@@ -1410,7 +1438,7 @@
+                             Some(gpu) => unsafe {
+                                 if compute {
+                                     l.SetComputeRootShaderResourceView(param, gpu);
+-                                } else {
++                                } else if self.graphics_root_data.binding_changed(param, 1, gpu) {
+                                     l.SetGraphicsRootShaderResourceView(param, gpu);
+                                 }
+                             },
+@@ -1453,14 +1481,14 @@
+                         ));
+                     }
+                     // SAFETY: an open list; the address is in live memory.
+-                    unsafe {
++                    if compute || self.graphics_root_data.binding_changed(param, u8::from(srv), gpu) { unsafe {
+                         match (compute, srv) {
+                             (false, false) => l.SetGraphicsRootConstantBufferView(param, gpu),
+                             (false, true) => l.SetGraphicsRootShaderResourceView(param, gpu),
+                             (true, false) => l.SetComputeRootConstantBufferView(param, gpu),
+                             (true, true) => l.SetComputeRootShaderResourceView(param, gpu),
+                         }
+-                    }
++                    } }
+                 }
+             }
+             for &(slot, param) in &stage.root_uavs {
+@@ -1472,7 +1500,7 @@
+                         unsafe {
+                             if compute {
+                                 l.SetComputeRootUnorderedAccessView(param, m.faults);
+-                            } else {
++                            } else if self.graphics_root_data.binding_changed(param, 2, m.faults) {
+                                 l.SetGraphicsRootUnorderedAccessView(param, m.faults);
+                             }
+                         }
+@@ -1556,7 +1584,7 @@
+             unsafe {
+                 if compute {
+                     list.list.SetComputeRootUnorderedAccessView(param, gpu);
+-                } else {
++                } else if self.graphics_root_data.binding_changed(param, 2, gpu) {
+                     list.list.SetGraphicsRootUnorderedAccessView(param, gpu);
+                 }
+             }
+@@ -1608,7 +1636,7 @@
+         unsafe {
+             if compute {
+                 list.list.SetComputeRootDescriptorTable(param, handle);
+-            } else {
++            } else if self.graphics_root_data.binding_changed(param, 3, handle.ptr) {
+                 list.list.SetGraphicsRootDescriptorTable(param, handle);
+             }
+         }
+@@ -1692,7 +1720,7 @@
+         unsafe {
+             if compute {
+                 list.list.SetComputeRootDescriptorTable(param, handle);
+-            } else {
++            } else if self.graphics_root_data.binding_changed(param, 3, handle.ptr) {
+                 list.list.SetGraphicsRootDescriptorTable(param, handle);
+             }
+         }
+--- a/crates/victory-gpu/src/memory.rs
++++ b/crates/victory-gpu/src/memory.rs
+@@ -268,7 +268,7 @@
+         let bytes: u64 = self.copies.iter().zip(&live)
+             .filter(|(_, used)| !**used).map(|(copy, _)| copy.span().1).sum();
+         if dead == 0 { return; }
+-        if dead < 16 && bytes < (64 << 20)
++        if self.copies.len() < SPECULATIVE_COPIES && dead < 16 && bytes < (64 << 20)
+             && crate::host::available_physical_ram().is_none_or(|free| free >= (2 << 30)) { return; }
+         let Some(epoch) = self.slot_epoch.checked_add(1) else { return };
+         let Some(next) = Self::table(u64::from(MEMORY_PAGES) * 2, "compacted directory") else { return };
+--- a/crates/victory-gpu/src/pipeline/make.rs
++++ b/crates/victory-gpu/src/pipeline/make.rs
+@@ -74,6 +74,17 @@
+ pub(super) fn trim_registry() {
+     static ON: OnceLock<bool> = OnceLock::new();
+     if !*ON.get_or_init(|| std::env::var_os("VICTORY_TRIM_PIPELINE_REGISTRY").is_some_and(|v| v == "1")) { return; }
++    // Promoted early jobs have a second queue entry. A long requested
++    // backlog otherwise keeps completed PSOs and shader data alive.
++    static CLEAN_FRAME: AtomicU64 = AtomicU64::new(u64::MAX);
++    let frame = crate::frame::current();
++    if CLEAN_FRAME.swap(frame, Ordering::Relaxed) != frame && frame % 32 == 0 {
++        let mut retired = Vec::new();
++        if let Ok(mut queue) = QUEUE.try_lock() {
++            queue.prune_promoted(&mut retired);
++        }
++        drop(retired); // final COM release outside queue lock
++    }
+     let Ok(mut known) = PENDING.try_lock() else { return };
+     let before = known.len();
+     known.retain(|_, entry| entry.strong_count() != 0);
+@@ -518,6 +529,15 @@
+             self.early.push_back(p.clone());
+         }
+         Some(prev == NOT_QUEUED)
++    }
++
++    fn prune_promoted(&mut self, retired: &mut Vec<Arc<Pending>>) {
++        for queue in [&mut self.early, &mut self.early_depth] {
++            queue.retain(|p| {
++                if p.queue_state.load(Ordering::Relaxed) == EARLY { true }
++                else { retired.push(p.clone()); false }
++            });
++        }
+     }
+ 
+     fn pop(&mut self) -> Option<Arc<Pending>> {
+@@ -757,6 +777,10 @@
+         assert_eq!(queue.push(&promoted, REQUESTED), Some(false));
+         assert_eq!(queue.push(&promoted, REQUESTED), None);
+ 
++        let mut retired = Vec::new();
++        queue.prune_promoted(&mut retired);
++        assert_eq!(retired.len(), 1);
++        assert!(Arc::ptr_eq(&retired[0], &promoted));
+         assert!(Arc::ptr_eq(&queue.pop().unwrap(), &requested));
+         assert!(Arc::ptr_eq(&queue.pop().unwrap(), &promoted));
+         assert_eq!(queue.push(&promoted, REQUESTED), None);
+--- a/crates/victory-gpu/src/texture/gpu_detile.rs
++++ b/crates/victory-gpu/src/texture/gpu_detile.rs
+@@ -1,4 +1,4 @@
+-//! Experimental direct-queue detile of addressable 2D texture subresources. The CPU supplies raw tiled bytes and two axis offset tables
++//! Experimental direct-queue detile of addressable texture subresources. The CPU supplies raw tiled bytes and two axis offset tables
+ //! derived from the existing address equation; the GPU writes pitched rows.
+ use std::sync::{OnceLock, atomic::{AtomicU64, Ordering::{Acquire, Release, Relaxed}}};
+ use victory_formats::texture::{Dimension, Layout, Swizzle};
+@@ -110,11 +110,12 @@
+ 
+     fn for_part(layout: &Layout, bytes: usize, mip: u32, slice: u32) -> Option<Self> {
+         let d = &layout.desc;
+-        if d.dimension != Dimension::Tex2d || slice >= layout.slices
+-            || d.samples != 1 || !matches!(d.block, 1 | 4) || layout.thick
++        let m = layout.mips.get(mip as usize)?;
++        let depth = if d.dimension == Dimension::Tex3d { m.depth } else { layout.slices };
++        if !matches!(d.dimension, Dimension::Tex2d | Dimension::Tex3d) || slice >= depth
++            || d.samples != 1 || !matches!(d.block, 1 | 4)
+             || !layout.addressable() || d.swizzle == Swizzle::LINEAR
+             || !matches!(d.element_bytes, 1 | 2 | 4 | 8 | 16) { return None; }
+-        let m = layout.mips.get(mip as usize)?;
+         if m.width == 0 || m.height == 0 || m.width > 16384 || m.height > 16384 { return None; }
+         let offset = |x, y| u32::try_from(layout.offset(mip, x, y, slice).ok()?).ok();
+         let origin = offset(0, 0)?;
+@@ -180,6 +181,10 @@
+     if output_base % 512 != 0 || output_bytes < 1 << 20 || output_bytes > 16 << 20 { return None; }
+     let layout = &staging.layout;
+     let d = &layout.desc;
++    let volume = d.dimension == Dimension::Tex3d;
++    static VOLUME: OnceLock<bool> = OnceLock::new();
++    if volume && (!extended || first != 0 || staging.first != 0 || (check_budget && !*VOLUME.get_or_init(||
++        std::env::var_os("VICTORY_GPU_DETILE_VOLUME").is_some_and(|v| v == "1")))) { return None; }
+     static SMALL_ELEMENTS: OnceLock<bool> = OnceLock::new();
+     if d.element_bytes < 4 && (!extended || (check_budget && !*SMALL_ELEMENTS.get_or_init(||
+         std::env::var_os("VICTORY_GPU_DETILE_SMALL_ELEMENTS").is_some_and(|v| v == "1")))) { return None; }
+@@ -187,7 +192,7 @@
+         || d.block != 1 || d.depth != 1) { return None; }
+     if staging.first >= staging.mips || staging.footprints.len() != staging.rows.len()
+         || staging.mips != d.mips || (staging.first != 0 && layout.slices != 1)
+-        || staging.footprints.len() as u32 != (staging.mips - staging.first).checked_mul(layout.slices)?
++        || staging.footprints.len() as u32 != (staging.mips - staging.first).checked_mul(if volume { 1 } else { layout.slices })?
+         || staging.footprints.len() > 192 { return None; }
+     // A job describes one disjoint placed footprint. BCn uses block units,
+     // not texel units. The existing Layout oracle supplies the guest addresses.
+@@ -199,26 +204,34 @@
+     for (i, (footprint, &rows)) in staging.footprints.iter().zip(&staging.rows).enumerate() {
+         let (mip, slice) = staging.part(i);
+         if mip < first { continue; }
+-        let axes = Axes::for_part(layout, tiled.len(), mip, slice)?;
+         let m = layout.mips.get(mip as usize)?;
+         let f = footprint.Footprint;
+         let row_bytes = m.width.checked_mul(d.element_bytes)?;
+-        let next = footprint.Offset.checked_add(u64::from(f.RowPitch) * u64::from(rows))?;
+-        if f.Depth != 1 || f.RowPitch < row_bytes || f.RowPitch % 4 != 0
++        let depth = if volume { m.depth } else { 1 };
++        let depth_pitch = u64::from(f.RowPitch).checked_mul(u64::from(rows))?;
++        let next = footprint.Offset.checked_add(depth_pitch.checked_mul(u64::from(depth))?)?;
++        if f.Depth != depth || depth == 0 || f.RowPitch < row_bytes || f.RowPitch % 4 != 0
+             || rows != m.height || f.Width.div_ceil(d.block) != m.width
+             || f.Height.div_ceil(d.block) != m.height || footprint.Offset % 512 != 0
+             || footprint.Offset < end || next > staging.bytes { return None; }
+         end = next;
+-        let col_at = raw.checked_add(u32::try_from(tables.len()).ok()?.checked_mul(4)?)?;
+-        tables.extend_from_slice(&axes.columns);
+-        let row_at = raw.checked_add(u32::try_from(tables.len()).ok()?.checked_mul(4)?)?;
+-        tables.extend_from_slice(&axes.rows);
+-        // Prevent an oversized CPU metadata table for pathological arrays.
+-        if tables.len() > (2 << 20) / 4 { return None; }
+-        // An unprovable envelope disables pruning for this job, never the upload.
+-        job_sources.push(axes.source_bounds(d.element_bytes, tiled.len()).unwrap_or((0, tiled.len())));
+-        jobs.push([row_bytes, m.height, f.RowPitch, d.element_bytes, col_at, row_at,
+-            axes.origin, u32::from(axes.xor), u32::try_from(footprint.Offset.checked_sub(output_base)?).ok()?]);
++        // One independent job per depth plane; the existing shader writes
++        // pitched rows and the footprint's Depth handles the final copy.
++        // Bound metadata and dispatch count before allocating GPU memory.
++        for z in 0..depth {
++            if jobs.len() >= 2048 { return None; }
++            let axes = Axes::for_part(layout, tiled.len(), mip, if volume { z } else { slice })?;
++            let col_at = raw.checked_add(u32::try_from(tables.len()).ok()?.checked_mul(4)?)?;
++            tables.extend_from_slice(&axes.columns);
++            let row_at = raw.checked_add(u32::try_from(tables.len()).ok()?.checked_mul(4)?)?;
++            tables.extend_from_slice(&axes.rows);
++            // Prevent an oversized CPU metadata table for pathological arrays.
++            if tables.len() > (2 << 20) / 4 { return None; }
++            // An unprovable envelope disables pruning for this job, never the upload.
++            job_sources.push(axes.source_bounds(d.element_bytes, tiled.len()).unwrap_or((0, tiled.len())));
++            jobs.push([row_bytes, m.height, f.RowPitch, d.element_bytes, col_at, row_at,
++                axes.origin, u32::from(axes.xor), u32::try_from(footprint.Offset.checked_sub(output_base)?.checked_add(depth_pitch.checked_mul(u64::from(z))?)?).ok()?]);
++        }
+     }
+     if jobs.is_empty() { return None; }
+     let input_bytes = u64::from(raw) + tables.len() as u64 * 4;
+@@ -378,19 +391,21 @@
+             assert!(std::env::var_os("VICTORY_D3D12_WARP").is_none(), "requested WARP unavailable");
+             return;
+         };
+-        for (swizzle, element_bytes, block, width, height, mips, depth, first, revision_first) in [
+-            (Swizzle::SW_4KB_D, 1, 1, 1537, 1025, 1, 1, 0, 0),
+-            (Swizzle::SW_64KB_S, 2, 1, 1025, 769, 9, 1, 0, 0),
+-            (Swizzle::SW_64KB_R_X, 2, 1, 1025, 769, 1, 1, 0, 0),
+-            (Swizzle::SW_64KB_R_X, 4, 1, 513, 517, 1, 1, 0, 0),
+-            (Swizzle::SW_64KB_R_X, 8, 1, 513, 517, 1, 1, 0, 0),
+-            (Swizzle::SW_4KB_D, 16, 1, 513, 517, 1, 1, 0, 0),
+-            (Swizzle::SW_64KB_S, 8, 4, 2049, 1537, 10, 1, 0, 0),
+-            (Swizzle::SW_4KB_D, 16, 4, 1025, 1025, 10, 2, 0, 0),
+-            (Swizzle::SW_64KB_S, 4, 1, 2049, 1025, 11, 1, 1, 1),
+-            (Swizzle::SW_64KB_S, 4, 1, 4097, 2049, 12, 1, 0, 2),
++        for (swizzle, element_bytes, block, width, height, mips, depth, first, revision_first, volume) in [
++            (Swizzle::SW_4KB_D, 1, 1, 1537, 1025, 1, 1, 0, 0, false),
++            (Swizzle::SW_64KB_S, 2, 1, 1025, 769, 9, 1, 0, 0, false),
++            (Swizzle::SW_64KB_R_X, 2, 1, 1025, 769, 1, 1, 0, 0, false),
++            (Swizzle::SW_64KB_R_X, 4, 1, 513, 517, 1, 1, 0, 0, false),
++            (Swizzle::SW_64KB_R_X, 8, 1, 513, 517, 1, 1, 0, 0, false),
++            (Swizzle::SW_4KB_D, 16, 1, 513, 517, 1, 1, 0, 0, false),
++            (Swizzle::SW_64KB_S, 8, 4, 2049, 1537, 10, 1, 0, 0, false),
++            (Swizzle::SW_4KB_D, 16, 4, 1025, 1025, 10, 2, 0, 0, false),
++            (Swizzle::SW_64KB_S, 4, 1, 2049, 1025, 11, 1, 1, 1, false),
++            (Swizzle::SW_64KB_S, 4, 1, 4097, 2049, 12, 1, 0, 2, false),
++            (Swizzle::SW_4KB_S, 4, 1, 128, 96, 6, 32, 0, 0, true),
++            (Swizzle::SW_64KB_S, 2, 1, 129, 97, 5, 32, 0, 0, true),
+         ] {
+-            let desc = Desc { dimension: Dimension::Tex2d, width, height, depth,
++            let desc = Desc { dimension: if volume { Dimension::Tex3d } else { Dimension::Tex2d }, width, height, depth,
+                 mips, element_bytes, block, samples: 1, swizzle };
+             let layout = Layout::new(&desc).unwrap();
+             let size = layout.bytes_from(first) as usize;
+@@ -398,7 +413,7 @@
+             let mut footprints = Vec::new();
+             let mut rows = Vec::new();
+             let mut bytes = 0u64;
+-            for _slice in 0..depth {
++            for _slice in 0..if volume { 1 } else { depth } {
+                 for mip in first..mips {
+                     let m = &layout.mips[mip as usize];
+                     let pitch = (m.width * element_bytes).next_multiple_of(256);
+@@ -406,9 +421,9 @@
+                     footprints.push(D3D12_PLACED_SUBRESOURCE_FOOTPRINT { Offset: offset,
+                         Footprint: D3D12_SUBRESOURCE_FOOTPRINT {
+                             Width: (width >> mip).max(1), Height: (height >> mip).max(1),
+-                            Depth: 1, RowPitch: pitch, ..Default::default() } });
++                            Depth: m.depth, RowPitch: pitch, ..Default::default() } });
+                     rows.push(m.height);
+-                    bytes = offset + u64::from(pitch) * u64::from(m.height);
++                    bytes = offset + u64::from(pitch) * u64::from(m.height) * u64::from(m.depth);
+                 }
+             }
+             super::super::STAGED[0].fetch_add(1, Relaxed);
+@@ -440,7 +455,7 @@
+                 let pitch = fp.Footprint.RowPitch as usize;
+                 let len = pitch * staging.rows[i] as usize;
+                 let offset = (fp.Offset - plan.output_base) as usize;
+-                staging.layout.detile(&tiled, mip, slice, &mut expected[offset..offset + len], pitch, len).unwrap();
++                staging.layout.detile(&tiled, mip, slice, &mut expected[offset..offset + len * fp.Footprint.Depth as usize], pitch, len).unwrap();
+             }
+             unsafe {
+                 let mut data = std::ptr::null_mut();
+@@ -451,12 +466,34 @@
+                     if mip < revision_first { continue; }
+                     let m = &staging.layout.mips[mip as usize];
+                     let row = (m.width * element_bytes) as usize;
+-                    for y in 0..m.height as usize {
+-                        let start = (fp.Offset - plan.output_base) as usize + y * fp.Footprint.RowPitch as usize;
+-                        assert_eq!(&actual[start..start + row], &expected[start..start + row], "{swizzle:?}, mip {mip}, slice {slice}, row {y}");
++                    for z in 0..m.depth as usize { for y in 0..m.height as usize {
++                        let start = (fp.Offset - plan.output_base) as usize + (z * m.height as usize + y) * fp.Footprint.RowPitch as usize;
++                        assert_eq!(&actual[start..start + row], &expected[start..start + row], "{swizzle:?}, mip {mip}, slice {slice}, depth {z}, row {y}");
++                    }}
++                }
++                readback.Unmap(0, Some(&D3D12_RANGE::default()));
++            }
++        }
++    }
++
++    #[test]
++    fn volume_axes_match_every_cpu_address() {
++        for swizzle in [Swizzle::SW_4KB_S, Swizzle::SW_64KB_S] {
++            for element_bytes in [1, 2, 4, 8, 16] {
++                let desc = Desc { dimension: Dimension::Tex3d, width: 33, height: 19, depth: 9,
++                    mips: 5, element_bytes, block: 1, samples: 1, swizzle };
++                let layout = Layout::new(&desc).unwrap();
++                for (mip, m) in layout.mips.iter().enumerate() {
++                    for z in 0..m.depth {
++                        let axes = Axes::for_part(&layout, layout.size as usize, mip as u32, z).unwrap();
++                        let (lo, hi) = axes.source_bounds(element_bytes, layout.size as usize).unwrap();
++                        for y in 0..m.height { for x in 0..m.width {
++                            let at = u64::from(axes.columns[x as usize]) + u64::from(axes.rows[y as usize]) - u64::from(axes.origin);
++                            assert_eq!(at, layout.offset(mip as u32, x, y, z).unwrap());
++                            assert!(lo as u64 <= at && at + u64::from(element_bytes) <= hi as u64);
++                        }}
+                     }
+                 }
+-                readback.Unmap(0, Some(&D3D12_RANGE::default()));
+             }
+         }
+     }

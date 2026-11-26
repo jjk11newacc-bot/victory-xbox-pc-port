@@ -1452,7 +1452,6 @@ pub(crate) fn host_made<'a>(
 #[cfg(windows)]
 pub(crate) fn room() -> bool {
     use std::sync::atomic::Ordering::Relaxed;
-    const FLOOR: u64 = 2 << 30;
     const WITHOUT_BUDGET: u64 = 4 << 30;
     static LIMIT: std::sync::OnceLock<Option<u64>> = std::sync::OnceLock::new();
     let limit = *LIMIT.get_or_init(|| {
@@ -1460,15 +1459,16 @@ pub(crate) fn room() -> bool {
         mb.trim().parse::<u64>().ok().map(|mb| mb << 20)
     });
     let filled = KINDS[1].load(Relaxed);
-    if let Some(limit) = limit {
-        return filled < limit;
+    if limit.is_some_and(|limit| filled >= limit) {
+        return false;
     }
-    if filled < FLOOR {
-        return true;
-    }
+    // An explicit texture cap must not bypass the adapter-wide budget.
     match crate::host::host().and_then(|h| h.video_memory()) {
-        Some([budget, used, ..]) => used < budget / 100 * room_percent(),
-        None => filled < WITHOUT_BUDGET,
+        Some([budget, used, ..]) if budget != 0 => {
+            let cap = if crate::budget::enabled() { crate::budget::ceiling(budget, room_percent()) } else { budget / 100 * room_percent() };
+            used < cap
+        },
+        _ => filled < limit.unwrap_or(WITHOUT_BUDGET).min(WITHOUT_BUDGET),
     }
 }
 

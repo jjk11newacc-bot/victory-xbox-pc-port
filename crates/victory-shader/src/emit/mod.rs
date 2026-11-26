@@ -472,19 +472,24 @@ pub fn emit(
                 Some((p, st, io, res))
             })
         };
-        let forms = [
-            ("without early-outs", form(ir::without_early_outs(p))),
-            ("without skips", form(ir::without_skips(p, false))),
-        ];
-        for (name, f) in &forms {
-            if let Some((p, st, io, res)) = f {
-                let again = emit_program(c, native, p, st, io, res);
-                report(name, &again);
-                if done(&again) {
-                    return again.map(|(shader, _)| shader);
-                }
+        // Build the second IR only if the first exact retry fails.
+        let early = form(ir::without_early_outs(p));
+        if let Some((p, st, io, res)) = &early {
+            let again = emit_program(c, native, p, st, io, res);
+            report("without early-outs", &again);
+            if done(&again) {
+                return again.map(|(shader, _)| shader);
             }
         }
+        let skips = form(ir::without_skips(p, false));
+        if let Some((p, st, io, res)) = &skips {
+            let again = emit_program(c, native, p, st, io, res);
+            report("without skips", &again);
+            if done(&again) {
+                return again.map(|(shader, _)| shader);
+            }
+        }
+        let forms = [("without early-outs", early), ("without skips", skips)];
         // Off unless asked for (`VICTORY_WAVE_WIDE=1`), for a console wave run as two host
         // waves: this form puts group barriers inside branches and loops, and runs 121-124
         // lost the card in a submission of two programs that had just moved to it

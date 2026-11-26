@@ -161,6 +161,7 @@ static WHOLE: Mutex<Option<HashMap<(usize, usize), (u64, u64)>>> = Mutex::new(No
 /// `us`.
 pub(crate) fn whole(src: usize, len: usize, us: u64) {
     add(C::WholeUs, us);
+    if aggregate_only() { return; }
     let mut map = WHOLE.lock().unwrap_or_else(|e| e.into_inner());
     let e = map.get_or_insert_with(HashMap::new).entry((src, len)).or_insert((0, 0));
     e.0 += 1;
@@ -249,10 +250,21 @@ pub(crate) fn barrier_test() -> u8 {
 /// Per range compared after a submission (start, length): times, and the
 /// bytes of it written back to the title.
 static COMPARED: Mutex<Option<HashMap<(usize, usize), (u64, u64)>>> = Mutex::new(None);
+static COMPARED_TOTAL: Mutex<(u64, u64)> = Mutex::new((0, 0));
+fn aggregate_only() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("VICTORY_AGGREGATE_COPY_STATS").is_some_and(|v| v == "1"))
+}
 
 /// `len` bytes at `src` were compared after a submission and `written` of
 /// them put back into title memory.
 pub(crate) fn compared(src: usize, len: usize, written: usize) {
+    if aggregate_only() {
+        let mut totals = COMPARED_TOTAL.lock().unwrap_or_else(|e| e.into_inner());
+        totals.0 = totals.0.saturating_add(len as u64);
+        totals.1 = totals.1.saturating_add(written as u64);
+        return;
+    }
     let mut map = COMPARED.lock().unwrap_or_else(|e| e.into_inner());
     let e = map.get_or_insert_with(HashMap::new).entry((src, len)).or_insert((0, 0));
     e.0 += 1;
@@ -261,6 +273,7 @@ pub(crate) fn compared(src: usize, len: usize, written: usize) {
 
 /// A copy of `len` bytes from `src` (memory type `kind`) took `us`.
 pub(crate) fn range(src: usize, len: usize, us: u64, kind: u32) {
+    if aggregate_only() { return; }
     let mut map = RANGES.lock().unwrap_or_else(|e| e.into_inner());
     let e = map
         .get_or_insert_with(HashMap::new)
@@ -1277,6 +1290,14 @@ pub(crate) fn log(frames: f64) {
     // it shaders had written.
     let compared = COMPARED.lock().unwrap_or_else(|e| e.into_inner()).take();
     let mut compared: Vec<_> = compared.into_iter().flatten().collect();
+    let (declared, published) = compared.iter().fold((0u64, 0u64), |(d, p), &((_, len), (n, written))| {
+        (d.saturating_add((len as u64).saturating_mul(n)), p.saturating_add(written))
+    });
+    let (declared, published) = if aggregate_only() {
+        std::mem::take(&mut *COMPARED_TOTAL.lock().unwrap_or_else(|e| e.into_inner()))
+    } else { (declared, published) };
+    tracing::info!("guest writeback per frame: {:.2} MiB declared/compared, {:.2} MiB published (merged spans, not exact changed bytes)",
+        declared as f64 / 1048576.0 / frames, published as f64 / 1048576.0 / frames);
     compared.sort_by_key(|&((_, len), (n, _))| std::cmp::Reverse(len as u64 * n));
     tracing::info!("  compared after submissions: {} ranges; the largest follow", compared.len());
     for ((src, len), (n, written)) in compared.into_iter().take(8) {

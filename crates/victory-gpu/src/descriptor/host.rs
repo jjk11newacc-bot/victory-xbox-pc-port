@@ -20,6 +20,8 @@ struct RawPageRun {
     base: u32,
     slots: u32,
     populated: u32,
+    epoch: u64,
+    lease: Arc<()>,
 }
 
 pub(crate) struct HostHeap {
@@ -72,6 +74,8 @@ pub(crate) struct HostHeap {
     /// Runs grow geometrically. Older reservations stay valid until this
     /// heap is destroyed because recorded command lists still use their base.
     raw_pages: Mutex<Option<RawPageRun>>,
+    raw_retired: Mutex<Vec<RawPageRun>>,
+    raw_collect_frame: std::sync::atomic::AtomicU64,
     /// Title slots holding buffer views. Such a view gets its host slot
     /// (and its memory a host copy) only when something reads it: a draw
     /// through a table, or [`HostHeap::buffer_slots`] for shaders that pick
@@ -209,6 +213,34 @@ impl Endpoints {
     }
 }
 
+/// Sweep descriptor endpoints to retain only covered intervals. Adjacent
+/// intervals are joined; duplicate and overlapping descriptors count once.
+fn covered_ranges(endpoints: &Endpoints) -> Vec<(u64, u64)> {
+    let mut starts = endpoints.starts.iter().peekable();
+    let mut ends = endpoints.ends.iter().peekable();
+    let mut active = 0usize;
+    let mut begin = 0;
+    let mut result = Vec::new();
+    while starts.peek().is_some() || ends.peek().is_some() {
+        let at = match (starts.peek(), ends.peek()) {
+            (Some((a, _)), Some((b, _))) => (**a).min(**b),
+            (Some((a, _)), None) => **a,
+            (None, Some((b, _))) => **b,
+            _ => break,
+        };
+        let previous = active;
+        if starts.peek().is_some_and(|(a, _)| **a == at) {
+            active += *starts.next().unwrap().1;
+        }
+        if ends.peek().is_some_and(|(b, _)| **b == at) {
+            active -= *ends.next().unwrap().1;
+        }
+        if previous == 0 && active != 0 { begin = at; }
+        if previous != 0 && active == 0 { result.push((begin, at)); }
+    }
+    result
+}
+
 impl BufferRanges {
     pub(crate) fn clear(&mut self) {
         self.slots.clear();
@@ -240,6 +272,27 @@ impl BufferRanges {
 
     pub(crate) fn len(&self) -> usize {
         self.slots.len()
+    }
+
+    /// Experimental: avoid refreshing large holes between descriptor views.
+    /// Unwatched copies retain their original single-span refresh semantics.
+    pub(crate) fn sparse_spans(&self) -> Vec<(Arc<crate::shadow::Shadow>, u64, u64)> {
+        let mut result = Vec::new();
+        for (shadow, endpoints) in self.copies.values() {
+            let Some((from, to)) = endpoints.bounds() else { continue };
+            if shadow.unwatched() {
+                result.push((shadow.clone(), from, to));
+                continue;
+            }
+            let ranges = covered_ranges(endpoints);
+            // Avoid a dispatch explosion for highly fragmented views.
+            if ranges.len() > 32 || ranges.is_empty() {
+                result.push((shadow.clone(), from, to));
+            } else {
+                result.extend(ranges.into_iter().map(|(a, b)| (shadow.clone(), a, b)));
+            }
+        }
+        result
     }
 
     pub(crate) fn spans(&self) -> Vec<(Arc<crate::shadow::Shadow>, u64, u64)> {
@@ -653,8 +706,11 @@ impl TextureQueue {
             .filter(|(_, r)| r.due <= frame)
             .map(|(&index, &r)| (index, r))
             .collect();
+        if max < due.len() {
+            due.select_nth_unstable_by_key(max, |&(index, r)| (r.due, index));
+            due.truncate(max);
+        }
         due.sort_unstable_by_key(|&(index, r)| (r.due, index));
-        due.truncate(max);
         due
     }
 
@@ -691,24 +747,55 @@ impl TextureQueue {
     }
 
     fn due_at(&self, frame: u64, now_ms: u64, max: usize) -> Vec<(u32, u64, bool)> {
+        self.due_with_policy(frame, now_ms, max, crate::budget::enabled() && crate::budget::slow_recovery_enabled())
+    }
+
+    fn due_with_policy(&self, frame: u64, now_ms: u64, max: usize, fair: bool) -> Vec<(u32, u64, bool)> {
         let mut again = Vec::new();
         let mut fresh = Vec::new();
         for (&index, w) in self.slots.iter().filter(|(_, w)| w.is_due(frame, now_ms)) {
             let class = if w.looks > 0 || w.mapped > 0 { &mut again } else { &mut fresh };
             class.push((index, w.write, w.recovered));
         }
-        again.sort_unstable_by_key(|&(_, write, _)| write);
-        fresh.sort_unstable_by_key(|&(_, write, _)| write);
+        // Keep both ends of the retry queue in recovery mode: continuously
+        // arriving newer retries otherwise starve older missing textures.
+        // A pass consumes at most max entries. Keep bounded candidates before sorting.
+        if max == 0 { return Vec::new(); }
+        let key = |&(_, write, _): &(u32, u64, bool)| write;
+        if fair {
+            if again.len() > max.saturating_mul(2) {
+                again.select_nth_unstable_by_key(max, key);
+                let cut = again.len() - max;
+                again[max..].select_nth_unstable_by_key(cut - max, key);
+                again.drain(max..cut);
+            }
+        } else if again.len() > max {
+            let cut = again.len() - max;
+            again.select_nth_unstable_by_key(cut, key);
+            again.drain(..cut);
+        }
+        if fresh.len() > max.saturating_mul(2) {
+            fresh.select_nth_unstable_by_key(max, key);
+            let cut = fresh.len() - max;
+            fresh[max..].select_nth_unstable_by_key(cut - max, key);
+            fresh.drain(max..cut);
+        }
+        again.sort_unstable_by_key(key);
+        fresh.sort_unstable_by_key(key);
         let count = max.min(again.len() + fresh.len());
         let mut fresh = fresh.into_iter();
+        let mut again = again.into_iter();
+        let mut recent_retry = !fair || frame & 2 == 0;
         // A time-limited pass may stop after one slot. Rotate its first
         // choice across frames as well as rotating within each pass.
         let mut retry = frame & 1 == 0;
-        let mut newest = again.is_empty() || frame & 2 == 0;
+        let mut newest = again.as_slice().is_empty() || frame & 2 == 0;
         let mut order = Vec::with_capacity(count);
         while order.len() < count {
-            if !again.is_empty() && (retry || fresh.len() == 0) {
-                order.push(again.pop().unwrap());
+            if !again.as_slice().is_empty() && (retry || fresh.len() == 0) {
+                let next = if recent_retry { again.next_back() } else { again.next() };
+                order.push(next.unwrap());
+                if fair { recent_retry = !recent_retry; }
             } else {
                 let next = if newest { fresh.next_back() } else { fresh.next() };
                 order.push(next.unwrap());
@@ -717,6 +804,30 @@ impl TextureQueue {
             retry = !retry;
         }
         order
+    }
+
+    fn demand_due(&self, frame: u64, now: u64, max: usize, wanted: &[(u32, u64, bool)]) -> Vec<(u32, u64, bool)> {
+        let mut normal = self.due_at(frame, now, max);
+        let mut priority = Vec::new();
+        let first = (frame % 4) as usize;
+        let quota = max.saturating_sub(first).div_ceil(4);
+        for &item in wanted {
+            let (index, write, recovered) = item;
+            if priority.len() >= quota { break; }
+            if self.slots.get(&index).is_some_and(|w| w.write == write && w.recovered == recovered && w.is_due(frame, now)) && !priority.contains(&item) {
+                priority.push(item);
+            }
+        }
+        normal.retain(|item| !priority.contains(item));
+        let mut normal = normal.into_iter();
+        let mut priority = priority.into_iter();
+        let mut out = Vec::with_capacity(max);
+        for pos in 0..max {
+            let next = if pos % 4 == first { priority.next().or_else(|| normal.next()) } else { normal.next().or_else(|| priority.next()) };
+            let Some(item) = next else { break; };
+            out.push(item);
+        }
+        out
     }
 
     /// The entry of `index` if it is still the write the pass was handed.
@@ -1065,6 +1176,8 @@ impl HostHeap {
             strides,
             addresses: std::sync::OnceLock::new(),
             raw_pages: Mutex::new(None),
+            raw_retired: Mutex::new(Vec::new()),
+            raw_collect_frame: std::sync::atomic::AtomicU64::new(u64::MAX),
             buffers: Mutex::default(),
             changed: Mutex::default(),
             buffer_pass: Mutex::default(),
@@ -1184,6 +1297,16 @@ impl HostHeap {
         let started = std::time::Instant::now();
         #[cfg(feature = "diagnostics")]
         crate::copystat::add(crate::copystat::C::DynamicAsked, 1);
+        if crate::memory::reclaim_raw_slots() {
+            use std::sync::atomic::Ordering::Relaxed;
+            let frame = crate::frame::current();
+            if self.raw_collect_frame.load(Relaxed) != frame
+                && let Ok(mut retired) = self.raw_retired.try_lock()
+            {
+                self.raw_collect_frame.store(frame, Relaxed);
+                self.collect_raw_runs(&mut retired);
+            }
+        }
         let mut guard = self.next.lock().unwrap_or_else(|e| e.into_inner());
         let (next, taken) = &mut *guard;
         let enough = self.free.load(std::sync::atomic::Ordering::Relaxed) >= n
@@ -1331,6 +1454,14 @@ impl HostHeap {
         (if max == 0 { Vec::new() } else { textures.due(frame, max) }, textures.census(frame))
     }
 
+    /// Admit validated material requests even when they fell outside the normal
+    /// bounded selection. Reserve three out of four positions for ordinary work.
+    pub(crate) fn texture_slots_demand_due(&self, frame: u64, max: usize, wanted: &[(u32, u64, bool)]) -> (Vec<(u32, u64, bool)>, [u64; 6]) {
+        let textures = self.textures.lock().unwrap_or_else(|e| e.into_inner());
+        let now = crate::host::now_ms();
+        (textures.demand_due(frame, now, max, wanted), textures.census(frame))
+    }
+
     pub(crate) fn material_write_stamp(&self) -> crate::material_demand::Mark {
         self.material_epochs.get_or_init(|| (0..self.count).map(|_| Default::default()).collect());
         crate::material_demand::Mark {
@@ -1434,10 +1565,9 @@ impl HostHeap {
     /// host copy then kept what the memory held at the first look for the
     /// rest of the run. A changed one goes back into the queue. Returns how
     /// many were unchanged and changed, and how many wait for a look.
-    pub(crate) fn texture_slots_rechecked(&self, frame: u64) -> [u64; 3] {
+    pub(crate) fn texture_slots_rechecked(&self, frame: u64, span: std::time::Duration) -> [u64; 3] {
         /// Looks per pass (each reads 48 KiB), and the time they may take.
         const MOST: usize = 256;
-        const SPAN: std::time::Duration = std::time::Duration::from_millis(15);
         let (due, waiting) = {
             let textures = self.textures.lock().unwrap_or_else(|e| e.into_inner());
             (textures.rechecks_due(frame, MOST), textures.rechecks.len() as u64)
@@ -1445,7 +1575,7 @@ impl HostHeap {
         let began = std::time::Instant::now();
         let mut found = [0, 0, waiting];
         for (index, seen) in due {
-            if began.elapsed() > SPAN {
+            if began.elapsed() > span {
                 break;
             }
             let changed = crate::texture::fingerprint(seen.at.0, seen.at.1) != seen.print;
@@ -2108,11 +2238,11 @@ impl HostHeap {
         let end = (at as usize + n as usize).min(guard.1.len());
         if let Some(slots) = guard.1.get_mut(at as usize..end) {
             let given = slots.iter().filter(|taken| **taken).count() as u32;
+            static EAGER: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+            let eager = *EAGER.get_or_init(|| std::env::var_os("VICTORY_EAGER_DESCRIPTOR_RELEASE").is_some_and(|v| v == "1"));
             if discarded
                 && given != 0
-                && self
-                    .texture_pressure
-                    .load(std::sync::atomic::Ordering::Relaxed)
+                && (eager || self.texture_pressure.load(std::sync::atomic::Ordering::Relaxed))
             {
                 // Discarded lists cannot replay these descriptors. Clear
                 // their GPU-visible contents before releasing references or
@@ -2303,7 +2433,33 @@ impl HostHeap {
     }
 
     pub(crate) fn raw_page_views(&self, copies: &[Arc<crate::shadow::Shadow>]) -> Option<(u32, u32)> {
+        self.raw_page_views_impl(copies, 0, None)
+    }
+
+    pub(crate) fn raw_page_views_leased(&self, copies: &[Arc<crate::shadow::Shadow>], epoch: u64, list: &crate::host::HostList) -> Option<(u32, u32)> {
+        self.raw_page_views_impl(copies, epoch, Some(list))
+    }
+
+    fn collect_raw_runs(&self, retired: &mut Vec<RawPageRun>) {
+        retired.retain(|old| {
+            if Arc::strong_count(&old.lease) != 1 { return true; }
+            // Only the owner remains; no recorded/in-flight list can replay
+            // this range. Clear resource references even without VRAM pressure.
+            for i in 0..=old.populated { self.null_raw_uav_at(old.base + i); }
+            self.release(old.base, old.slots, false);
+            false
+        });
+    }
+
+    fn raw_page_views_impl(&self, copies: &[Arc<crate::shadow::Shadow>], epoch: u64, list: Option<&crate::host::HostList>) -> Option<(u32, u32)> {
         let mut run = self.raw_pages.lock().unwrap_or_else(|e| e.into_inner());
+        let mut retired = list.map(|_| self.raw_retired.lock().unwrap_or_else(|e| e.into_inner()));
+        if let Some(retired) = retired.as_mut() {
+            if run.as_ref().is_some_and(|old| old.epoch != epoch) {
+                retired.push(run.take().unwrap());
+            }
+            self.collect_raw_runs(retired);
+        }
         let requested = u32::try_from(copies.len()).ok()?;
         let needed = requested.saturating_add(1);
         if run.as_ref().is_none_or(|r| needed > r.slots && r.slots < self.dynamic) {
@@ -2323,7 +2479,11 @@ impl HostHeap {
                 if let Some(old) = run.as_ref() {
                     tracing::info!(previous = old.slots, slots, "grew raw memory descriptor run");
                 }
-                *run = Some(RawPageRun { base, slots, populated: 0 });
+                let old = run.replace(RawPageRun { base, slots, populated: 0, epoch, lease: Arc::new(()) });
+                if let (Some(old), Some(retired)) = (old, retired.as_mut()) {
+                    retired.push(old);
+                    self.collect_raw_runs(retired);
+                }
             }
         }
         let run = run.as_mut()?;
@@ -2338,6 +2498,7 @@ impl HostHeap {
             self.raw_uav_at(run.base + 1 + n as u32, &shadow.buffer, 0, width);
         }
         run.populated = run.populated.max(count);
+        if let Some(list) = list { list.keep_raw_lease(&run.lease); }
         Some((run.base, count))
     }
 
@@ -3961,6 +4122,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn sparse_descriptor_coverage_matches_byte_oracle() {
+        let mut endpoints = Endpoints::default();
+        let input = [(1, 8), (1, 8), (5, 12), (12, 16), (32, 40), (36, 45)];
+        for (a, b) in input { endpoints.insert(a, b); }
+        let ranges = covered_ranges(&endpoints);
+        assert_eq!(ranges, [(1, 16), (32, 45)]);
+        for byte in 0..64 {
+            assert_eq!(input.iter().any(|&(a,b)| a <= byte && byte < b),
+                ranges.iter().any(|&(a,b)| a <= byte && byte < b));
+        }
+        endpoints.remove(1, 8);
+        assert_eq!(covered_ranges(&endpoints), ranges);
+    }
+
+    #[test]
     fn cached_buffer_spans_track_duplicate_slots_and_a_replaced_owner() {
         let Some(_) = host() else { return };
         #[repr(align(256))]
@@ -4307,6 +4483,35 @@ mod tests {
             memory[at] ^= 1;
         }
         assert_ne!(print(&memory[..100]), print(&memory[..200]));
+    }
+
+    #[test]
+    fn demand_admits_outside_selection_without_stale_or_duplicate_writes() {
+        let mut q = TextureQueue::default();
+        for index in 0..100 { q.written(index, 0, 0, false); }
+        let normal = q.due_at(0, 0, 8);
+        let index = (0..100).find(|i| !normal.iter().any(|v| v.0 == *i)).unwrap();
+        let item = (index, q.slots[&index].write, false);
+        let out = q.demand_due(0, 0, 8, &[(index, 0, false), item, item]);
+        assert_eq!(out[0], item);
+        assert_eq!(&out[1..], &normal[..7]);
+        assert_eq!(q.demand_due(0, 0, 8, &[]), normal);
+        assert!(q.demand_due(0, 0, 0, &[item]).is_empty());
+    }
+
+    #[test]
+    fn fair_retry_queue_serves_old_and_new_even_if_only_one_slot_fits() {
+        let mut q = TextureQueue::default();
+        for index in 0..100 {
+            q.written(index, 0, 0, false);
+            let write = q.slots[&index].write;
+            q.later(index, write, 0, 1, false);
+        }
+        assert_eq!(q.due_with_policy(4, 0, 1, true)[0].0, 99);
+        assert_eq!(q.due_with_policy(6, 0, 1, true)[0].0, 0);
+        assert_eq!(q.due_with_policy(6, 0, 1, false)[0].0, 99);
+        let order: Vec<_> = q.due_with_policy(4, 0, 4, true).into_iter().map(|v| v.0).collect();
+        assert_eq!(order, [99, 0, 98, 1]);
     }
 
     #[test]
@@ -4793,6 +4998,26 @@ mod tests {
         finer[2] = desc[2];
         finer[10] += 0x10000;
         assert!(!compatible_sparse_view(&old, &View::Placed(false, resource, finer)));
+    }
+
+    #[test]
+    fn raw_descriptor_runs_survive_closed_list_replay_until_reset() {
+        let Some(host) = host() else { return };
+        let Some(heap) = HostHeap::new(false, 4) else { return };
+        let a = host.new_list().unwrap();
+        let b = host.new_list().unwrap();
+        let old = heap.raw_page_views_leased(&[], 0, &a).unwrap();
+        a.close();
+        // Simulate an epoch change: retired slots remain reserved while a
+        // closed list can replay, even if it has not been submitted yet.
+        let new = heap.raw_page_views_leased(&[], 1, &b).unwrap();
+        assert_ne!(old.0, new.0);
+        assert_eq!(heap.raw_retired.lock().unwrap().len(), 1);
+        let before = heap.free.load(std::sync::atomic::Ordering::Relaxed);
+        a.reset();
+        assert_eq!(heap.raw_page_views_leased(&[], 1, &b), Some(new));
+        assert!(heap.raw_retired.lock().unwrap().is_empty());
+        assert_eq!(heap.free.load(std::sync::atomic::Ordering::Relaxed), before + super::FIRST_RAW_PAGE_SLOTS);
     }
 
     #[test]

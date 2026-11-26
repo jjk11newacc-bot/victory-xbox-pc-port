@@ -131,6 +131,11 @@ struct AdapterDescription {
 }
 const _: () = assert!(size_of::<AdapterDescription>() == 0x130);
 
+// This is the guest-facing Xbox adapter identity, not the physical host GPU.
+// Keep reporting the console's AMD identity to title code; the D3D12 host
+// adapter is selected independently in host.rs (NVIDIA for the PC profile).
+// Replacing this with the host vendor ID would change what the Xbox guest sees
+// and can select the wrong guest-specific behavior.
 const AMD: u32 = 0x1002;
 
 extern "system" fn adapter_description(_: This, out: *mut AdapterDescription) -> HRESULT {

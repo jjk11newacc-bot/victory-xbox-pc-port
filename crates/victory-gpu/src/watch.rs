@@ -39,6 +39,8 @@ struct Journal {
     asked: u64,
     /// Page number → the asking that last found it written.
     written: BTreeMap<usize, u64>,
+    // Conservative maximum write generation per 16 MiB of guest memory.
+    generations: BTreeMap<usize, u64>,
     /// Room for the kernel's answer.
     found: Vec<usize>,
     /// Page ranges asked ahead for a submission's refreshes ([`ask_ahead`])
@@ -46,6 +48,8 @@ struct Journal {
     /// from the journal, without another kernel call.
     ahead: Vec<(usize, usize)>,
     ahead_asked: u64,
+    // Sorted starts with prefix maximum ends, rebuilt after each batch.
+    ahead_index: Vec<(usize, usize)>,
     /// The ahead asking stands for a whole submission ([`ask_once`]): no
     /// other ahead asking is made, and `ahead` stays, until
     /// [`ask_once_end`].
@@ -55,12 +59,61 @@ struct Journal {
 const EMPTY_JOURNAL: Journal = Journal {
     asked: 0,
     written: BTreeMap::new(),
+    generations: BTreeMap::new(),
     found: Vec::new(),
     ahead: Vec::new(),
     ahead_asked: 0,
+    ahead_index: Vec::new(),
     kept: false,
 };
 static JOURNAL: Mutex<Journal> = Mutex::new(EMPTY_JOURNAL);
+
+// A chunk maximum is only a rejection test, never proof that a specific
+// page changed. Keep maxima even when an older ahead query records a page.
+const GENERATION_CHUNK: usize = 256;
+pub(crate) fn indexed_generations() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("VICTORY_INDEXED_WATCH").is_some_and(|v| v == "1"))
+}
+fn record_write(j: &mut Journal, page: usize, now: u64) {
+    j.written.insert(page, now);
+    if indexed_generations() || cfg!(test) {
+        let latest = j.generations.entry(page / GENERATION_CHUNK).or_default();
+        *latest = (*latest).max(now);
+    }
+}
+fn journal_since(j: &Journal, first: usize, last: usize, since: u64, indexed: bool) -> Vec<(usize, u64)> {
+    if first >= last { return Vec::new(); }
+    if !indexed || since == 0 || last - first < GENERATION_CHUNK {
+        return j.written.range(first..last).filter_map(|(&p, &w)| (w > since).then_some((p,w))).collect();
+    }
+    let mut result = Vec::new();
+    for (&chunk, &latest) in j.generations.range(first / GENERATION_CHUNK..=(last - 1) / GENERATION_CHUNK) {
+        if latest <= since { continue; }
+        let lo = first.max(chunk * GENERATION_CHUNK);
+        let hi = last.min((chunk + 1) * GENERATION_CHUNK);
+        result.extend(j.written.range(lo..hi).filter_map(|(&p,&w)| (w > since).then_some((p,w))));
+    }
+    result
+}
+
+// A query must fit inside one successful kernel asking, not merely the
+// union of adjacent ranges. Prefix maxima preserve exactly that predicate.
+fn index_ahead(j: &mut Journal) {
+    j.ahead_index.clear();
+    j.ahead_index.extend_from_slice(&j.ahead);
+    j.ahead_index.sort_unstable();
+    let mut max_end = 0;
+    for (_, end) in &mut j.ahead_index {
+        max_end = max_end.max(*end);
+        *end = max_end;
+    }
+}
+
+fn ahead_contains(j: &Journal, first: usize, last: usize) -> bool {
+    let i = j.ahead_index.partition_point(|&(start, _)| start <= first);
+    i != 0 && j.ahead_index[i - 1].1 >= last
+}
 
 /// Ranges of one submission closer than this are asked about together:
 /// walking the pages between them costs less than another kernel call (a
@@ -87,6 +140,7 @@ pub(crate) fn ask_ahead(ranges: impl Iterator<Item = (usize, usize)>) {
     let pieces = watched_pieces(ranges);
     if pieces.len() >= 2 {
         ask_groups(&mut j, &pieces);
+        index_ahead(&mut j);
     }
 }
 
@@ -96,6 +150,7 @@ fn watched_pieces(ranges: impl Iterator<Item = (usize, usize)>) -> Vec<(usize, u
         .map(|(start, end)| (start / PAGE, end.div_ceil(PAGE)))
         .collect();
     pieces.sort_unstable();
+    pieces.dedup();
     pieces
 }
 
@@ -103,6 +158,7 @@ fn ask_groups(j: &mut Journal, pieces: &[(usize, usize)]) {
     j.asked += 1;
     j.ahead_asked = j.asked;
     j.ahead.clear();
+    j.ahead_index.clear();
     let mut i = 0;
     while i < pieces.len() {
         let first = pieces[i].0;
@@ -150,6 +206,7 @@ pub(crate) fn ask_ahead_done() {
     let mut j = JOURNAL.lock().unwrap_or_else(|e| e.into_inner());
     if !j.kept {
         j.ahead.clear();
+        j.ahead_index.clear();
     }
 }
 
@@ -184,10 +241,9 @@ pub(crate) fn ask_once(ranges: &[(usize, usize)]) {
     if !once() {
         return;
     }
-    let mut pieces = watched_pieces(ranges.iter().copied());
+    let pieces = watched_pieces(ranges.iter().copied());
     // Distinct host copies can ask for the same guest pages. In particular,
     // don't retry a failed GetWriteWatch for every copy with that span.
-    pieces.dedup();
     let mut j = JOURNAL.lock().unwrap_or_else(|e| e.into_inner());
     let j = &mut *j;
     ask_groups(j, &pieces);
@@ -196,11 +252,26 @@ pub(crate) fn ask_once(ranges: &[(usize, usize)]) {
     // such range asked again at each of its 70 flushes (run 76: 2,300
     // askings a frame with the switch on, as without it). They are asked
     // here, once; what is not write-watched stays with `writes`.
-    for (first, last) in pieces {
-        if !j.ahead.iter().any(|&(a, b)| a <= first && last <= b) && ask_kernel(j, first, last) {
-            j.ahead.push((first, last));
+    if indexed_generations() {
+        // `pieces` are sorted by start. The successful group index is
+        // fixed for this loop; every newly successful singleton starts at
+        // or before the next candidate, so its largest end suffices.
+        index_ahead(j);
+        let mut single_end = 0;
+        for (first, last) in pieces {
+            if last > single_end && !ahead_contains(j, first, last) && ask_kernel(j, first, last) {
+                j.ahead.push((first, last));
+                single_end = single_end.max(last);
+            }
+        }
+    } else {
+        for (first, last) in pieces {
+            if !j.ahead.iter().any(|&(a, b)| a <= first && last <= b) && ask_kernel(j, first, last) {
+                j.ahead.push((first, last));
+            }
         }
     }
+    index_ahead(j);
     j.kept = !j.ahead.is_empty();
 }
 
@@ -211,6 +282,7 @@ pub(crate) fn ask_once_end() {
     if j.kept {
         j.kept = false;
         j.ahead.clear();
+        j.ahead_index.clear();
     }
 }
 
@@ -225,7 +297,7 @@ pub(crate) fn wrote(at: usize, len: usize) {
     j.asked += 1;
     let now = j.asked;
     for page in at / PAGE..at.saturating_add(len).div_ceil(PAGE) {
-        j.written.insert(page, now);
+        record_write(&mut j, page, now);
     }
 }
 
@@ -285,10 +357,10 @@ fn ask_kernel(j: &mut Journal, first: usize, last: usize) -> bool {
 
 fn note_kernel_writes(j: &mut Journal, count: usize, now: u64) {
     let mut previous = None;
-    for &address in &j.found[..count] {
-        let page = address / PAGE;
+    for i in 0..count {
+        let page = j.found[i] / PAGE;
         if previous != Some(page) {
-            j.written.insert(page, now);
+            record_write(j, page, now);
             previous = Some(page);
         }
     }
@@ -300,12 +372,13 @@ fn note_kernel_writes(j: &mut Journal, count: usize, now: u64) {
 /// written, with the number of the asking that stands (as [`writes`] gives
 /// it). `None` if the kernel would have to be asked.
 pub(crate) fn asked(start: usize, end: usize) -> Option<(u64, Vec<(usize, u64)>)> {
+    asked_since(start, end, 0)
+}
+pub(crate) fn asked_since(start: usize, end: usize, since: u64) -> Option<(u64, Vec<(usize, u64)>)> {
     let (first, last) = (start / PAGE, end.div_ceil(PAGE));
     let j = JOURNAL.lock().unwrap_or_else(|e| e.into_inner());
-    j.ahead
-        .iter()
-        .any(|&(a, b)| a <= first && last <= b)
-        .then(|| (j.ahead_asked, j.written.range(first..last).map(|(&p, &w)| (p, w)).collect()))
+    ahead_contains(&j, first, last)
+        .then(|| (j.ahead_asked, journal_since(&j, first, last, since, indexed_generations())))
 }
 
 /// The pages of `[start, end)` (whole pages) as last written, for pages
@@ -314,19 +387,21 @@ pub(crate) fn asked(start: usize, end: usize) -> Option<(u64, Vec<(usize, u64)>)
 /// kernel just reported. `None` if the memory is not write-watched (nor,
 /// with `guarded`, view memory, which is then guarded).
 pub(crate) fn writes(start: usize, end: usize, guarded: bool) -> Option<(u64, Vec<(usize, u64)>)> {
+    writes_since(start, end, guarded, 0)
+}
+/// Same kernel/guard query as `writes`; omit only generations already held
+/// by the caller. A zero watermark preserves the complete journal answer.
+pub(crate) fn writes_since(start: usize, end: usize, guarded: bool, since: u64) -> Option<(u64, Vec<(usize, u64)>)> {
     use windows_sys::Win32::System::Memory::GetWriteWatch;
     const WRITE_WATCH_FLAG_RESET: u32 = 1;
     let (first, last) = (start / PAGE, end.div_ceil(PAGE));
     let mut j = JOURNAL.lock().unwrap_or_else(|e| e.into_inner());
     let j = &mut *j;
     // Asked ahead with the submission's other ranges: the journal has it.
-    if j.ahead.iter().any(|&(a, b)| a <= first && last <= b) {
+    if ahead_contains(j, first, last) {
         return Some((
             j.ahead_asked,
-            j.written
-                .range(first..last)
-                .map(|(&p, &w)| (p, w))
-                .collect(),
+            journal_since(j, first, last, since, indexed_generations()),
         ));
     }
     let mut count = (last - first) * PAGE / KERNEL_PAGE;
@@ -370,14 +445,11 @@ pub(crate) fn writes(start: usize, end: usize, guarded: bool) -> Option<(u64, Ve
     let now = j.asked;
     note_kernel_writes(j, count, now);
     for page in guarded {
-        j.written.insert(page, now);
+        record_write(j, page, now);
     }
     Some((
         now,
-        j.written
-            .range(first..last)
-            .map(|(&p, &w)| (p, w))
-            .collect(),
+        journal_since(j, first, last, since, indexed_generations()),
     ))
 }
 
@@ -997,6 +1069,43 @@ mod tests {
         MEM_COMMIT, MEM_RELEASE, MEM_RESERVE, PAGE_READWRITE, VirtualAlloc, VirtualFree,
     };
     const MEM_WRITE_WATCH: u32 = 0x20_0000;
+
+    #[test]
+    fn generation_index_preserves_exact_filtered_journal() {
+        let mut j = EMPTY_JOURNAL;
+        let mut seed = 1234u64;
+        for i in 1..=12000u64 {
+            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+            let page = (seed >> 32) as usize % 8192;
+            record_write(&mut j, page, if i % 7 == 0 { i / 2 } else { i });
+            if i % 11 == 0 {
+                let from = seed as usize % 8192;
+                let to = (from + 1 + ((seed >> 24) as usize % 4096)).min(8192);
+                let since = i / 2;
+                assert_eq!(journal_since(&j, from, to, since, true), journal_since(&j, from, to, since, false));
+            }
+        }
+    }
+
+    #[test]
+    fn indexed_ahead_matches_single_range_containment() {
+        let mut j = EMPTY_JOURNAL;
+        j.ahead.extend([(9, 12), (1, 8), (2, 4), (8, 9), (3, 10)]);
+        index_ahead(&mut j);
+        for first in 0..15 {
+            for last in first..16 {
+                assert_eq!(ahead_contains(&j, first, last),
+                    j.ahead.iter().any(|&(a, b)| a <= first && last <= b));
+            }
+        }
+    }
+
+    #[test]
+    fn duplicate_guest_ranges_are_coalesced_without_losing_distinct_ranges() {
+        assert_eq!(watched_pieces([(0, PAGE), (1, PAGE), (0, PAGE),
+            (PAGE, 2 * PAGE), (0, 2 * PAGE)].into_iter()),
+            vec![(0, 1), (0, 2), (1, 2)]);
+    }
 
     #[test]
     fn kernel_pages_fold_into_guest_pages_without_losing_writes() {

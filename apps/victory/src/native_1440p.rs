@@ -6,15 +6,14 @@ use victory_loader::PreparedImage;
 use super::fsr_preset::FsrPreset;
 
 const RETAIL_BUILD: &str = "b99f876b74d4a77f03af5f878223b27bd647b5c35a79d5decd9f716504239e93";
-const WIDTH: u32 = 2560;
-const HEIGHT: u32 = 1440;
 const SDR_MODE: u32 = 0x0615_c100;
 const STOCK_SDR_MODE: [u8; 16] = [0, 15, 0, 0, 112, 8, 0, 0, 60, 0, 0, 0, 1, 0, 0, 0];
 
-pub(super) fn prepare(image: &mut PreparedImage, render_1080p: bool) -> Result<()> {
+pub(super) fn prepare(image: &mut PreparedImage, render_1080p: bool, output_1080p: bool) -> Result<()> {
+    let (width, height) = if output_1080p { (1920u32, 1080u32) } else { (2560u32, 1440u32) };
     ensure!(
         image.original_hash.to_hex().as_str() == RETAIL_BUILD,
-        "Native 1440p is unavailable for this retail game build"
+        "Native display profile is unavailable for this retail game build"
     );
 
     let mode = field::<16>(image, SDR_MODE)?;
@@ -22,22 +21,22 @@ pub(super) fn prepare(image: &mut PreparedImage, render_1080p: bool) -> Result<(
         *mode == STOCK_SDR_MODE,
         "Unexpected Series X SDR mode"
     );
-    mode[..4].copy_from_slice(&WIDTH.to_le_bytes());
-    mode[4..8].copy_from_slice(&HEIGHT.to_le_bytes());
+    mode[..4].copy_from_slice(&width.to_le_bytes());
+    mode[4..8].copy_from_slice(&height.to_le_bytes());
 
     // Two 64 KiB-aligned, tiled RGBA8 scanout buffers. The reservation is
     // rounded to 2 MiB, matching the title's allocation check.
     let texture = Texture::new(&TextureDesc {
         dimension: Dimension::Tex2d,
-        width: WIDTH,
-        height: HEIGHT,
+        width,
+        height,
         depth_or_array: 1,
         mips: 1,
         format: 28,
         samples: 1,
         swizzle: Swizzle::SW_64KB_D_X,
     })
-    .map_err(|error| anyhow::anyhow!("Native 1440p SDR layout: {error:?}"))?;
+    .map_err(|error| anyhow::anyhow!("Native SDR layout: {error:?}"))?;
     let pool_size =
         u32::try_from((texture.size.next_multiple_of(64 * 1024) * 2).next_multiple_of(2 << 20))?;
     let reservation = field::<5>(image, 0x0247_ad4a)?;
@@ -55,13 +54,13 @@ pub(super) fn prepare(image: &mut PreparedImage, render_1080p: bool) -> Result<(
     let (render_width, render_height) = if render_1080p {
         (1920, 1080)
     } else {
-        (WIDTH, HEIGHT)
+        (width, height)
     };
-    *scale = (render_width as f32 / WIDTH as f32).to_le_bytes();
+    *scale = (render_width as f32 / width as f32).to_le_bytes();
 
     // Settings uses a separate viewport setter to lay out its preview
     // panels. It loads the legacy UI dimensions, which stay at 3840×2160
-    // even when the game has allocated a native 1440p UI surface. Read the
+    // even when the game has allocated a native-resolution UI surface. Read the
     // selected SDR mode for that viewport, before calculating its centre.
     const UI_VIEWPORT_LOAD: u32 = 0x0580_48d4;
     let viewport = field::<8>(image, UI_VIEWPORT_LOAD)?;
@@ -72,8 +71,8 @@ pub(super) fn prepare(image: &mut PreparedImage, render_1080p: bool) -> Result<(
     let displacement = (SDR_MODE as i32) - (UI_VIEWPORT_LOAD as i32 + 8);
     viewport[4..].copy_from_slice(&displacement.to_le_bytes());
     tracing::info!(
-        output_width = WIDTH,
-        output_height = HEIGHT,
+        output_width = width,
+        output_height = height,
         expected_render_width = render_width,
         expected_render_height = render_height,
         pool_size,
@@ -154,6 +153,60 @@ fn field<const N: usize>(image: &mut PreparedImage, rva: u32) -> Result<&mut [u8
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn synthetic_display_image() -> PreparedImage {
+        let entries = [SDR_MODE, 0x0247_ad4a, 0x028f_1e7e, 0x0580_48d4];
+        let info = victory_pe::ImageInfo {
+            machine: 0x8664, characteristics: 0, timestamp: 0, subsystem: 0,
+            dll_characteristics: 0, image_base: 0, size_of_image: 0x0700_0000,
+            entry_rva: 0, stack_reserve: 0, stack_commit: 0,
+            sections: entries.into_iter().enumerate().map(|(i, rva)| victory_pe::SectionInfo {
+                name: format!("field{i}"), rva, virtual_size: 32, file_offset: (i * 32) as u32,
+                file_size: 32, characteristics: 0,
+            }).collect(),
+            imports: vec![], delay_imports: vec![], exports: vec![], tls: None,
+            has_relocations: false, has_exception_table: false, has_load_config: false, codeview: None,
+        };
+        let mut image = PreparedImage { info, bytes: vec![0; 128], original_hash: RETAIL_BUILD.parse().unwrap() };
+        *field::<16>(&mut image, SDR_MODE).unwrap() = STOCK_SDR_MODE;
+        *field::<5>(&mut image, 0x0247_ad4a).unwrap() = [0xb9, 0, 0, 0, 4];
+        *field::<4>(&mut image, 0x028f_1e7e).unwrap() = (2.0f32 / 3.0).to_le_bytes();
+        *field::<8>(&mut image, 0x0580_48d4).unwrap() = [0xc5, 0xfb, 0x10, 0x0d, 0x10, 0xf0, 0x13, 0x05];
+        image
+    }
+
+    #[test]
+    fn native_display_dimensions_scale_scanout_and_ui_are_consistent() {
+        for (render1080, output1080, width, height, scale) in [
+            (false, true, 1920u32, 1080u32, 1.0f32),
+            (false, false, 2560, 1440, 1.0),
+            (true, false, 2560, 1440, 0.75),
+        ] {
+            let mut image = synthetic_display_image();
+            prepare(&mut image, render1080, output1080).unwrap();
+            assert_eq!(*field::<4>(&mut image, SDR_MODE).unwrap(), width.to_le_bytes());
+            assert_eq!(*field::<4>(&mut image, SDR_MODE + 4).unwrap(), height.to_le_bytes());
+            assert_eq!(*field::<4>(&mut image, 0x028f_1e7e).unwrap(), scale.to_le_bytes());
+            let texture = Texture::new(&TextureDesc { dimension: Dimension::Tex2d, width, height,
+                depth_or_array: 1, mips: 1, format: 28, samples: 1, swizzle: Swizzle::SW_64KB_D_X }).unwrap();
+            let bytes = (texture.size.next_multiple_of(64 * 1024) * 2).next_multiple_of(2 << 20) as u32;
+            assert_eq!(*field::<4>(&mut image, 0x0247_ad4b).unwrap(), bytes.to_le_bytes());
+            let disp = i32::from_le_bytes(*field::<4>(&mut image, 0x0580_48d8).unwrap());
+            assert_eq!(0x0580_48dc_u32.wrapping_add_signed(disp), SDR_MODE);
+        }
+    }
+
+    #[test]
+    fn native_display_rejects_wrong_build_and_unexpected_fields() {
+        let mut image = synthetic_display_image();
+        image.original_hash = blake3::hash(b"not the supported image");
+        assert!(prepare(&mut image, false, true).is_err());
+        for address in [SDR_MODE, 0x0247_ad4a, 0x028f_1e7e, 0x0580_48d4] {
+            let mut image = synthetic_display_image();
+            field::<1>(&mut image, address).unwrap()[0] ^= 1;
+            assert!(prepare(&mut image, false, true).is_err());
+        }
+    }
 
     #[test]
     fn fsr_presets_leave_the_stock_scanout_and_settings_viewport() {

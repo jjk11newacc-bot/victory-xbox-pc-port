@@ -71,6 +71,10 @@ opt-level = 2
 
 [profile.release]
 debug = "line-tables-only"
+# The runtime is CPU-bound (per-draw work, memory scans, texture detiling), so
+# cross-crate inlining pays off. Thin LTO keeps build memory and time reasonable on 16 GB.
+lto = "thin"
+codegen-units = 1
 
 # The development build: release code generation plus the `diagnostics`
 # feature (`cargo build --profile diag -p victory --features diagnostics`),

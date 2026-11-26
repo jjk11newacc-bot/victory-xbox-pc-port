@@ -25,8 +25,11 @@ use windows_sys::Win32::System::Threading::GetCurrentProcess;
 use crate::host::{HostList, host};
 use crate::object::This;
 
+pub(crate) static COMPACT_UPLOAD_SAVED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 pub(crate) mod ahead;
 mod upload;
+mod gpu_detile;
 
 macro_rules! once {
     ($($arg:tt)*) => {{
@@ -80,9 +83,14 @@ pub(crate) struct StagedCopy {
 impl StagedCopy {
     pub(crate) fn sparse_limit(&self, local: Option<[u64; 4]>) -> u64 {
         const MAX_POOL: u64 = 2 << 30;
-        let headroom = local.map_or(0, |[budget, used, ..]| (budget / 10 * 9).saturating_sub(used));
+        let adaptive = crate::budget::enabled();
+        let headroom = local.map_or(0, |[budget, used, ..]| {
+            let cap = if adaptive { crate::budget::ceiling(budget, 90) } else { budget / 10 * 9 };
+            cap.saturating_sub(used)
+        });
+        let max_pool = if adaptive { local.map_or(MAX_POOL, |[budget, ..]| crate::budget::pool_cap(budget)) } else { MAX_POOL };
         self.texture.sparse.as_ref().map_or(0, |sparse| {
-            sparse.tiles.pool_bytes().saturating_add(headroom).min(MAX_POOL)
+            sparse.tiles.pool_bytes().saturating_add(headroom).min(max_pool.max(sparse.tiles.pool_bytes()))
         })
     }
 
@@ -118,7 +126,12 @@ impl StagedCopy {
         }
     }
 
+    pub(crate) fn tracks_gpu_input(&self) -> bool {
+        self.upload.gpu.as_ref().is_some_and(|plan| plan.tracks_input())
+    }
+
     pub(crate) fn submitted(&self, fence: u64) {
+        if let Some(plan) = &self.upload.gpu { plan.submitted(fence); }
         if let Some(sparse) = &self.texture.sparse {
             sparse.submitted(fence, self.first);
             let mut last = self.staging.last.lock().unwrap_or_else(|e| e.into_inner());
@@ -132,12 +145,19 @@ impl StagedCopy {
     }
 
     pub(crate) fn record(&self, list: &ID3D12GraphicsCommandList) {
+        if let Some(plan) = &self.upload.gpu { plan.record(list, &self.upload); }
         for (i, footprint) in self.staging.footprints.iter().enumerate() {
             if self.staging.part(i).0 < self.first {
                 continue;
             }
             let mut footprint = *footprint;
-            footprint.Offset += self.upload.offset;
+            let buffer = if let Some(plan) = &self.upload.gpu {
+                footprint.Offset -= plan.output_base;
+                &plan.output
+            } else {
+                footprint.Offset = footprint.Offset - self.upload.base + self.upload.offset;
+                self.upload.buffer()
+            };
             let dst = D3D12_TEXTURE_COPY_LOCATION {
                 // SAFETY: borrowed pointers, never released by the locations.
                 pResource: unsafe { std::mem::transmute_copy(&self.texture.texture) },
@@ -145,13 +165,14 @@ impl StagedCopy {
                 Anonymous: D3D12_TEXTURE_COPY_LOCATION_0 { SubresourceIndex: self.staging.subresource(i) },
             };
             let src = D3D12_TEXTURE_COPY_LOCATION {
-                pResource: unsafe { std::mem::transmute_copy(self.upload.buffer()) },
+                pResource: unsafe { std::mem::transmute_copy(buffer) },
                 Type: D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
                 Anonymous: D3D12_TEXTURE_COPY_LOCATION_0 { PlacedFootprint: footprint },
             };
             // SAFETY: an open list and live resources in their copy states.
             unsafe { list.CopyTextureRegion(&dst, 0, 0, 0, &src, None) };
         }
+        if let Some(plan) = &self.upload.gpu { plan.finish(list); }
     }
 }
 
@@ -160,6 +181,8 @@ impl StagedCopy {
 #[derive(Default)]
 struct Last {
     hash: Option<blake3::Hash>,
+    // Fingerprints belong only to the current sampled staging allocation.
+    mip_hashes: Vec<Option<blake3::Hash>>,
     asked: u64,
     /// The latest successful detile, if it was staged outside the main list.
     sampled: Option<Arc<upload::Upload>>,
@@ -170,6 +193,7 @@ struct Last {
     inline_current: bool,
     /// The frame a partly mapped texture was last read in.
     partial: Option<u64>,
+    partial_time: Option<std::time::Instant>,
     /// The texture was found changed without a write the guard saw
     /// ([`Staging::unseen_write`]): it is hashed at every check until this
     /// frame.
@@ -202,6 +226,15 @@ impl SparseCopyProgress {
 }
 
 impl Last {
+    fn require_cpu_revision(&mut self) {
+        if self.sampled.is_none() && !self.inline_current {
+            self.has_data = false;
+            self.hash = None;
+            self.asked = 0;
+            self.mip_hashes.clear();
+        }
+    }
+
     /// A write published during a submission can have a newer number than
     /// the write-watch query used for that submission.
     fn advance_watch(&mut self, queried: u64, writes: &[(usize, u64)]) -> bool {
@@ -212,10 +245,12 @@ impl Last {
     }
 
     fn partial_due(&mut self, frame: u64, reported_write: bool) -> bool {
-        if !reported_write && self.partial.is_some_and(|last| frame.saturating_sub(last) < 30) {
+        if !reported_write && self.partial.is_some_and(|last| frame.saturating_sub(last) < 30)
+            && self.partial_time.is_some_and(|last| last.elapsed() < std::time::Duration::from_millis(500)) {
             return false;
         }
         self.partial = Some(frame);
+        self.partial_time = Some(std::time::Instant::now());
         true
     }
 }
@@ -502,7 +537,13 @@ fn with_read<R>(size: usize, f: impl FnOnce(&mut [u8]) -> R) -> R {
         if read.len() < size {
             read.resize(size, 0);
         }
-        f(&mut read[..size])
+        let result = f(&mut read[..size]);
+        // Avoid retaining a large streaming allocation on every worker.
+        if read.capacity() > 64 * 1024 * 1024
+            && crate::budget::ram_pressure(crate::host::available_physical_ram()) > 0 {
+            *read = Vec::new();
+        }
+        result
     })
 }
 
@@ -580,29 +621,67 @@ pub(crate) fn let_go() -> [u64; 2] {
 pub(crate) fn let_go_idle() {
     use std::sync::atomic::Ordering::Relaxed;
     const IDLE_FRAMES: u64 = 4;
-    let mut map = STAGING.lock().unwrap_or_else(|e| e.into_inner());
-    let Some(map) = map.as_mut() else {
+    let available = crate::host::available_physical_ram();
+    upload::trim_idle_under_pressure(available);
+    let mut guard = STAGING.lock().unwrap_or_else(|e| e.into_inner());
+    let Some(map) = guard.as_mut() else {
         return;
     };
     if map.is_empty() {
         return;
     }
-    let idle_ms = crate::host::ram_idle_ms(crate::host::available_physical_ram());
+    let idle_ms = crate::host::ram_idle_ms(available);
     // A list that recorded an upload or a check holds the staging until it
     // is reset: one only the table holds is named by no list, recorded or
     // running.
     let (mut went, mut bytes) = (0u64, 0u64);
+    let mut retired = Vec::new();
+    let mut released_uploads = Vec::new();
+    let mut released_bytes = 0u64;
+    static RECLAIM: OnceLock<bool> = OnceLock::new();
+    let reclaim = *RECLAIM.get_or_init(|| std::env::var_os("VICTORY_GPU_ONLY_TEXTURES").is_some_and(|v| v == "1"));
+    static PRESSURE: OnceLock<bool> = OnceLock::new();
+    let pressure_reclaim = *PRESSURE.get_or_init(|| std::env::var_os("VICTORY_TEXTURE_PRESSURE_RECLAIM").is_some_and(|v| v == "1"))
+        && (crate::budget::ram_pressure(available) > 0
+            || host().and_then(|h| h.video_memory()).is_some_and(|[budget, used, ..]| budget.saturating_sub(used) < 768 << 20));
+    let reclaim = reclaim || pressure_reclaim;
     map.retain(|_, s| {
         let keep = Arc::strong_count(s) > 1
             || !crate::host::long_ago(s.used.load(Relaxed), idle_ms, IDLE_FRAMES);
+        // Keep the revision fingerprint and watch state, but release the
+        // redundant CPU upload after all recorded/in-flight users are gone.
+        // Never touch inline allocations or incomplete sparse revisions.
+        if keep && reclaim && Arc::strong_count(s) == 1
+            && s.inline.get().is_none() && s.uploaded.load(Relaxed)
+            && !s.dirty.load(Relaxed) {
+            let mut last = s.last.lock().unwrap_or_else(|e| e.into_inner());
+            if last.first == s.first && last.has_data && !last.inline_current
+                && last.sampled.as_ref().is_some_and(|u| Arc::strong_count(u) == 1) {
+                if let Some(upload) = last.sampled.take() {
+                    released_bytes += upload.gpu.as_ref().map_or(s.bytes - upload.base, |plan| plan.input_bytes);
+                    released_uploads.push(upload);
+                    last.mip_hashes.clear();
+                    last.sparse_copies = Default::default();
+                }
+            }
+        }
         if !keep {
             LET_GO[0].fetch_add(1, Relaxed);
             LET_GO[1].fetch_add(s.bytes, Relaxed);
             went += 1;
             bytes += s.bytes;
+            retired.push(Arc::clone(s));
         }
         keep
     });
+    drop(guard);
+    drop(retired);
+    let released_count = released_uploads.len();
+    drop(released_uploads);
+    if released_count > 0 {
+        upload::trim_idle_under_pressure(available);
+        crate::host::trail(|| format!("GPU-only textures: released {released_count} CPU staging leases ({} KiB)", released_bytes >> 10));
+    }
     if went > 0 {
         crate::host::trail(|| format!("sweep: {went} staging buffers of textures let go ({} KiB), held by no list", bytes >> 10));
     }
@@ -838,6 +917,30 @@ fn upload_texture(list: &HostList, resource: This, texture: &ID3D12Resource, fir
     true
 }
 
+// A compact lease represents [base, bytes) in the full footprint space.
+// Reject invalid geometry rather than constructing an out-of-bounds pointer.
+fn compact_suffix_base(bytes: u64, selected: impl Iterator<Item = (u64, Option<u64>)>) -> u64 {
+    let mut base = bytes;
+    for (offset, len) in selected {
+        if offset % 512 != 0 || len.is_none_or(|n| n == 0 || offset.checked_add(n).is_none_or(|end| end > bytes)) {
+            return 0;
+        }
+        base = base.min(offset);
+    }
+    if base >= bytes { 0 } else { base }
+}
+
+#[cfg(test)]
+#[test]
+fn compact_suffix_preserves_padded_footprints() {
+    let bytes = 16 * 1024;
+    assert_eq!(compact_suffix_base(bytes, [(8192, Some(4096)), (12288, Some(4096))].into_iter()), 8192);
+    assert_eq!(compact_suffix_base(bytes, [(8193, Some(4096))].into_iter()), 0);
+    assert_eq!(compact_suffix_base(bytes, [(12288, Some(4097))].into_iter()), 0);
+    assert_eq!(compact_suffix_base(bytes, [(8192, None)].into_iter()), 0);
+    assert_eq!(compact_suffix_base(bytes, std::iter::empty()), 0);
+}
+
 impl Staging {
     fn inline_upload(&self) -> Option<&upload::Upload> {
         if self.inline.get().is_none() {
@@ -860,8 +963,25 @@ impl Staging {
         if !last.inline_current {
             let from = last.sampled.as_ref().expect("latest sampled staging");
             let to = self.inline.get().expect("inline staging is recorded");
-            // SAFETY: distinct slots, and this submission owns both CPU mappings.
-            unsafe { std::ptr::copy_nonoverlapping(from.data(), to.data(), self.bytes as usize) };
+            if let Some(plan) = &from.gpu {
+                // A raw GPU revision may also be needed by an inline copy.
+                // Reconstruct linear rows from its immutable raw snapshot,
+                // not from guest memory that could already have changed.
+                let tiled = unsafe { std::slice::from_raw_parts(from.data(), plan.raw_bytes) };
+                if plan.first > self.first {
+                    // Match the legacy partial CPU revision's zero-filled fine
+                    // footprints when a previously recorded inline copy needs it.
+                    unsafe { to.data().write_bytes(0, self.bytes as usize); }
+                    if !self.detile_selected(tiled, to.data(), &[], &[], plan.first, 0) { return; }
+                } else if !self.detile_into(tiled, to.data()) { return; }
+            } else {
+                // SAFETY: distinct slots, and this submission owns both CPU mappings.
+                unsafe {
+                    let base = from.base as usize;
+                    if base != 0 { to.data().write_bytes(0, base); }
+                    std::ptr::copy_nonoverlapping(from.data(), to.data().add(base), self.bytes as usize - base);
+                };
+            }
             last.inline_current = true;
         }
         self.mark_uploaded();
@@ -882,7 +1002,7 @@ impl Staging {
             return None;
         }
         if last.sampled.is_none() {
-            let inline = self.inline.get().expect("latest bytes staged inline");
+            let inline = self.inline.get().filter(|_| last.inline_current)?;
             let upload = upload::Upload::new(host()?, self.bytes)?;
             // SAFETY: a new exclusive slot; the inline staging is CPU-stable.
             unsafe { std::ptr::copy_nonoverlapping(inline.data(), upload.data(), self.bytes as usize) };
@@ -943,22 +1063,32 @@ impl Staging {
         let Some(end) = start.checked_add(size) else { return 0 };
         let mut last = waited(0, || self.last.lock().unwrap_or_else(|e| e.into_inner()));
         let last = &mut *last;
-        if let Some((now, written)) = waited(1, || crate::watch::writes(start, end, false)) {
-            if !last.advance_watch(now, &written) {
-                return 0;
+        if !sampled {
+            last.require_cpu_revision();
+        }
+        if let Some((now, written)) = waited(1, || crate::watch::writes_since(start, end, false, if crate::watch::indexed_generations() { last.asked } else { 0 })) {
+            let changed = last.advance_watch(now, &written);
+            if !changed && last.has_data {
+                if last.first == self.first || !last.partial_due(crate::frame::current(), false) {
+                    return 0;
+                }
             }
-            // Read through the copy, which stands unmapped pages: memory of
-            // big pools is too slow to ask page by page.
+            if changed {
+                last.partial = None;
+                last.partial_time = None;
+            }
+            // Require a complete kernel read for watched memory. A partial
+            // copy with zero-filled holes must not replace a valid revision.
             with_read(size, |read| {
-                crate::host::copy_mapped(read.as_mut_ptr(), self.memory, size, false);
-                // A failed mapped read can yield only zeros. Keep any
-                // earlier image and retry when its backing is readable.
-                if sampled && read.iter().all(|&b| b == 0) && !committed(self.memory, size) {
+                if !crate::host::read_into(self.memory, read) {
                     last.asked = 0;
                     return;
                 }
-                if !self.detile(last, read, sampled) {
-                    last.asked = 0;
+                // A write notification can cover padding or unchanged bytes.
+                // Avoid detiling again if the complete staged revision matches.
+                let hash = blake3::hash(read);
+                if !last.has_data || last.hash != Some(hash) || last.first != self.first {
+                    self.detile_hashed(last, read, hash, sampled);
                 }
             });
             #[cfg(feature = "diagnostics")]
@@ -983,7 +1113,7 @@ impl Staging {
         let mut unseen = false;
         let mut reported_write = false;
         if *GUARD.get_or_init(|| std::env::var_os("VICTORY_TEXTURE_GUARD").is_none_or(|v| v != "0"))
-            && let Some((now, written)) = waited(1, || crate::watch::writes(start, end, true))
+            && let Some((now, written)) = waited(1, || crate::watch::writes_since(start, end, true, if crate::watch::indexed_generations() { last.asked } else { 0 }))
         {
             const HASH_EVERY: u64 = 8;
             reported_write = last.advance_watch(now, &written);
@@ -993,7 +1123,10 @@ impl Staging {
             // planes of a movie), through a view of its own.
             let desc = &self.layout.desc;
             let film = desc.swizzle.0 == 0 && desc.mips == 1;
-            if !reported_write && !turn && !film && frame >= last.unguarded {
+            let partial_retry = last.partial_time.is_some_and(|t| {
+                t.elapsed() >= std::time::Duration::from_millis(500)
+            });
+            if !reported_write && !turn && !film && !partial_retry && last.has_data && frame >= last.unguarded {
                 return 0;
             }
             unseen = !reported_write;
@@ -1030,44 +1163,82 @@ impl Staging {
                 let Some(first) = (self.first + 1..self.mips).find(|&level| {
                     committed(self.memory, self.layout.bytes_from(level) as usize)
                 }) else {
+                    // Keep the timed partial poll, but do not let the guard
+                    // suppress it for eight more frames after a failed read.
+                    last.unguarded = frame.saturating_add(8);
+                    last.asked = 0;
                     return 0;
                 };
                 first
             } else {
-                self.first
+                // A non-tail layout cannot safely expose a partially mapped
+                // revision. Preserve the previous image until it is complete.
+                last.asked = 0;
+                return 0;
             };
+            // The committed coarse prefix is sufficient for these mips.
+            // Do not read, hash, zero-fill or detile missing fine levels.
+            let prefix = self.layout.bytes_from(first) as usize;
+            // SAFETY: the prefix passed committed() above and the mapping
+            // read guard remains held until this function returns.
+            let tiled = unsafe { std::slice::from_raw_parts(self.memory, prefix) };
+            let hash = blake3::hash(tiled);
             #[cfg(feature = "diagnostics")]
-            crate::copystat::add(crate::copystat::C::TexHashed, size as u64);
-            let changed = with_read(size, |read| {
-                crate::host::copy_mapped(read.as_mut_ptr(), self.memory, size, false);
-                let hash = blake3::hash(read);
-                if last.hash == Some(hash) && last.first == first {
-                    return false;
-                }
-                if !use_mip_tail && read.iter().all(|&b| b == 0) {
-                    last.hash = Some(hash);
-                    return false;
-                }
-                if self.detile_hashed(last, read, hash, sampled) {
-                    last.first = first;
-                    true
-                } else {
-                    false
-                }
-            });
-            #[cfg(feature = "diagnostics")]
-            if changed {
-                crate::copystat::add(crate::copystat::C::TexChanged, size as u64);
+            crate::copystat::add(crate::copystat::C::TexHashed, prefix as u64);
+            if last.has_data && last.hash == Some(hash) && last.first == first {
+                return prefix;
             }
-            let _ = changed;
-            return size;
+            // Publish only after every coarse subresource succeeds. A fresh
+            // revision protects the previous image and any in-flight copies.
+            if let Some(upload) = gpu_detile::prepare_partial(self, tiled, first) {
+                last.sampled = Some(Arc::new(upload));
+                last.mip_hashes.clear();
+                last.inline_current = false;
+                last.has_data = true;
+                last.sparse_copies = Default::default();
+                last.first = first;
+                last.hash = Some(hash);
+                self.dirty.store(true, std::sync::atomic::Ordering::Relaxed);
+                #[cfg(feature = "diagnostics")]
+                crate::copystat::add(crate::copystat::C::TexChanged, prefix as u64);
+                return prefix;
+            }
+            let base = self.partial_upload_base(first);
+            let Some(upload) = host().and_then(|host| upload::Upload::suffix(host, self.bytes, base)) else {
+                last.asked = 0;
+                return prefix;
+            };
+            // Inline fallback may copy the entire staging slot. Initialize
+            // it so skipped footprints never expose stale pooled bytes.
+            // SAFETY: this fresh upload owns self.bytes writable bytes.
+            unsafe { upload.data().write_bytes(0, (self.bytes - base) as usize) };
+            if !self.detile_selected(tiled, upload.data(), &[], &[], first, base) {
+                last.asked = 0;
+                return prefix;
+            }
+            if base != 0 {
+                COMPACT_UPLOAD_SAVED.fetch_add(base, std::sync::atomic::Ordering::Relaxed);
+            }
+            last.sampled = Some(Arc::new(upload));
+            last.mip_hashes.clear();
+            last.inline_current = false;
+            last.has_data = true;
+            last.sparse_copies = Default::default();
+            last.first = first;
+            last.hash = Some(hash);
+            self.dirty.store(true, std::sync::atomic::Ordering::Relaxed);
+            #[cfg(feature = "diagnostics")]
+            crate::copystat::add(crate::copystat::C::TexChanged, prefix as u64);
+            return prefix;
         }
+        last.partial = None;
+        last.partial_time = None;
         if through_copy() {
             return with_title(self.memory, size, |tiled| {
                 let hash = blake3::hash(tiled);
                 #[cfg(feature = "diagnostics")]
                 crate::copystat::add(crate::copystat::C::TexHashed, size as u64);
-                if last.hash == Some(hash) && last.first == self.first {
+                if last.has_data && last.hash == Some(hash) && last.first == self.first {
                     return size;
                 }
                 if unseen && last.hash.is_some() {
@@ -1088,7 +1259,7 @@ impl Staging {
         let hash = blake3::hash(tiled);
         #[cfg(feature = "diagnostics")]
         crate::copystat::add(crate::copystat::C::TexHashed, size as u64);
-        if last.hash == Some(hash) && last.first == self.first {
+        if last.has_data && last.hash == Some(hash) && last.first == self.first {
             return size;
         }
         if unseen && last.hash.is_some() {
@@ -1147,7 +1318,7 @@ impl Staging {
                 return false;
             }
             let hash = blake3::hash(read);
-            if last.hash != Some(hash) || last.first != self.first {
+            if !last.has_data || last.hash != Some(hash) || last.first != self.first {
                 return self.detile_hashed(last, read, hash, sampled);
             }
             true
@@ -1176,9 +1347,26 @@ impl Staging {
     /// Inline copies already name their slot in the main list.
     fn detile(&self, last: &mut Last, tiled: &[u8], sampled: bool) -> bool {
         if sampled {
-            if let Some(upload) = last.sampled.as_mut().and_then(Arc::get_mut) {
+            let reused_gpu = last.sampled.as_mut().and_then(Arc::get_mut)
+                .is_some_and(|upload| gpu_detile::refresh(self, tiled, upload));
+            let gpu_ready = reused_gpu || if let Some(upload) = gpu_detile::prepare(self, tiled) {
+                last.sampled = Some(Arc::new(upload));
+                true
+            } else { false };
+            if gpu_ready {
+                last.mip_hashes.clear();
+                last.inline_current = false;
+                last.has_data = true;
+                last.sparse_copies = Default::default();
+                last.first = self.first;
+                self.dirty.store(true, std::sync::atomic::Ordering::Relaxed);
+                return true;
+            }
+            let hashes = self.mip_hashes(tiled);
+            if let Some(upload) = last.sampled.as_mut().filter(|u| u.base == 0 && u.gpu.is_none()).and_then(Arc::get_mut) {
                 // Reuse the slot only after all queue references are gone.
-                if !self.detile_into(tiled, upload.data()) {
+                if !self.detile_selected(tiled, upload.data(), &last.mip_hashes, &hashes, self.first, 0) {
+                    last.mip_hashes.clear();
                     last.sampled = None;
                     last.sparse_copies = Default::default();
                     last.has_data = last.inline_current;
@@ -1192,11 +1380,14 @@ impl Staging {
                 }
                 last.sampled = Some(Arc::new(upload));
             }
+            last.mip_hashes = hashes;
             last.inline_current = false;
         } else {
+            last.mip_hashes.clear();
             let Some(upload) = self.inline_upload() else { return false };
             if !self.detile_into(tiled, upload.data()) {
                 last.inline_current = false;
+                last.hash = None;
                 last.has_data = last.sampled.is_some();
                 return false;
             }
@@ -1210,23 +1401,157 @@ impl Staging {
         true
     }
 
+    // Only single-slice, non-thick layouts with multiple mips have a
+    // proven contiguous mip span here. Tail mips share the entire tail block.
+    fn mip_hashes(&self, tiled: &[u8]) -> Vec<Option<blake3::Hash>> {
+        use victory_formats::texture::{Dimension, Swizzle};
+        static ENABLED: OnceLock<bool> = OnceLock::new();
+        if !*ENABLED.get_or_init(|| std::env::var_os("VICTORY_MIP_DIFF").is_some_and(|v| v == "1")) {
+            return Vec::new();
+        }
+        let l = &self.layout;
+        if l.slices != 1 || l.thick || l.desc.dimension == Dimension::Tex3d
+            || l.desc.swizzle == Swizzle::SW_64KB_R_X || self.footprints.len() < 2 {
+            return Vec::new();
+        }
+        self.footprints.iter().enumerate().map(|(i, _)| {
+            let (mip, _) = self.part(i);
+            let m = l.mips.get(mip as usize)?;
+            let start = if m.tail.is_some() { 0 } else { m.offset };
+            let end = l.bytes_from(mip);
+            let span = tiled.get(usize::try_from(start).ok()?..usize::try_from(end).ok()?)?;
+            if span.is_empty() { return None; }
+            Some(blake3::hash(span))
+        }).collect()
+    }
+
     fn detile_into(&self, tiled: &[u8], data: *mut u8) -> bool {
+        self.detile_selected(tiled, data, &[], &[], self.first, 0)
+    }
+
+    fn partial_upload_base(&self, first: u32) -> u64 {
+        static ON: OnceLock<bool> = OnceLock::new();
+        if !*ON.get_or_init(|| std::env::var_os("VICTORY_COMPACT_MIP_UPLOAD").is_some_and(|v| v == "1")) {
+            return 0;
+        }
+        compact_suffix_base(self.bytes, self.footprints.iter().zip(&self.rows).enumerate()
+            .filter(|(i, _)| self.part(*i).0 >= first)
+            .map(|(_, (f, rows))| {
+                let len = u64::from(f.Footprint.RowPitch).checked_mul(u64::from(*rows))
+                    .and_then(|n| n.checked_mul(u64::from(f.Footprint.Depth)));
+                (f.Offset, len)
+            }))
+    }
+
+    fn detile_selected(&self, tiled: &[u8], data: *mut u8,
+        old: &[Option<blake3::Hash>], new: &[Option<blake3::Hash>], first: u32, base: u64) -> bool {
         #[cfg(feature = "diagnostics")]
-        if tiled.iter().all(|&b| b == 0) {
+        if tracing::enabled!(tracing::Level::DEBUG) && tiled.iter().all(|&b| b == 0) {
             tracing::debug!(
                 memory = ?self.memory,
                 desc = ?self.layout.desc,
                 "a sampled texture's memory is all zero (not streamed yet, or a failed BCPack read)"
             );
         }
+        // Large mip chains can be converted concurrently without duplicating
+        // guest data or allocating another staging buffer. Limit the entire
+        // process to one extra worker, even when refreshes are already parallel.
+        static PARALLEL: OnceLock<bool> = OnceLock::new();
+        static BUSY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+        use std::sync::atomic::Ordering::{Acquire, Release, Relaxed};
+        if base == 0 && self.bytes >= 4 << 20
+            && *PARALLEL.get_or_init(|| std::env::var_os("VICTORY_PARALLEL_DETILE").is_some_and(|v| v == "1"))
+            && BUSY.compare_exchange(false, true, Acquire, Relaxed).is_ok()
+        {
+            struct Permit<'a>(&'a std::sync::atomic::AtomicBool);
+            impl Drop for Permit<'_> {
+                fn drop(&mut self) { self.0.store(false, Release); }
+            }
+            let _permit = Permit(&BUSY);
+            // Validate every footprint before constructing disjoint slices.
+            let mut ranges = Vec::new();
+            let mut end = 0usize;
+            let mut valid = true;
+            for (i, (footprint, &rows)) in self.footprints.iter().zip(&self.rows).enumerate() {
+                let f = footprint.Footprint;
+                let pitch = f.RowPitch as usize;
+                let Some(depth_pitch) = pitch.checked_mul(rows as usize) else { valid = false; break };
+                let Some(len) = depth_pitch.checked_mul(f.Depth as usize) else { valid = false; break };
+                let Ok(start) = usize::try_from(footprint.Offset) else { valid = false; break };
+                let Some(next) = start.checked_add(len) else { valid = false; break };
+                if start < end || next as u64 > self.bytes || len == 0 { valid = false; break; }
+                end = next;
+                if self.part(i).0 < first { continue; }
+                if let Some(Some(hash)) = new.get(i) {
+                    if old.get(i) == Some(&Some(*hash)) { continue; }
+                }
+                ranges.push((i, start, len, pitch, depth_pitch));
+            }
+            if valid && !ranges.is_empty() {
+                let layout = &self.layout;
+                let mut jobs = Vec::with_capacity(ranges.len());
+                for (i, start, len, pitch, depth_pitch) in ranges {
+                    let (mip, slice) = self.part(i);
+                    // SAFETY: all ranges were checked for bounds and overlap;
+                    // the caller owns this staging revision until we join.
+                    let dst = unsafe { std::slice::from_raw_parts_mut(data.add(start), len) };
+                    jobs.push((mip, slice, pitch, depth_pitch, dst));
+                }
+                // Greedy size balancing, so a large top mip does not leave
+                // the second worker with only tiny tail mips unnecessarily.
+                jobs.sort_unstable_by_key(|job| std::cmp::Reverse(job.4.len()));
+                let total: usize = jobs.iter().map(|job| job.4.len()).sum();
+                if jobs[0].4.len() >= total - total / 4 {
+                    for (index, (mip, slice, pitch, depth_pitch, dst)) in jobs.into_iter().enumerate() {
+                        let result = if index == 0 {
+                            layout.detile_parallel_rows(tiled, mip, slice, dst, pitch, depth_pitch)
+                        } else {
+                            layout.detile(tiled, mip, slice, dst, pitch, depth_pitch)
+                        };
+                        if let Err(e) = result {
+                            tracing::warn!(?e, mip, slice, "row-band texture not detiled");
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+                let (mut a, mut b) = (Vec::new(), Vec::new());
+                let (mut na, mut nb) = (0usize, 0usize);
+                for job in jobs {
+                    if na <= nb { na += job.4.len(); a.push(job); }
+                    else { nb += job.4.len(); b.push(job); }
+                }
+                let convert = |jobs: Vec<(u32, u32, usize, usize, &mut [u8])>| {
+                    let mut ok = true;
+                    for (mip, slice, pitch, depth_pitch, dst) in jobs {
+                        if let Err(e) = layout.detile(tiled, mip, slice, dst, pitch, depth_pitch) {
+                            tracing::warn!(?e, mip, slice, "parallel texture not detiled");
+                            ok = false;
+                        }
+                    }
+                    ok
+                };
+                return std::thread::scope(|scope| {
+                    let convert_ref = &convert;
+                    let worker = scope.spawn(move || convert_ref(b));
+                    let first = convert(a);
+                    let second = worker.join().unwrap_or(false);
+                    first && second
+                });
+            }
+        }
         for (i, (footprint, &rows)) in self.footprints.iter().zip(&self.rows).enumerate() {
+            if self.part(i).0 < first { continue; }
+            if let Some(Some(hash)) = new.get(i) {
+                if old.get(i) == Some(&Some(*hash)) { continue; }
+            }
             let (mip, slice) = self.part(i);
             let f = footprint.Footprint;
             let pitch = f.RowPitch as usize;
             let len = pitch * rows as usize * f.Depth as usize;
             // SAFETY: the subresource's part of the mapped staging buffer.
             let linear = unsafe {
-                std::slice::from_raw_parts_mut(data.add(footprint.Offset as usize), len)
+                std::slice::from_raw_parts_mut(data.add((footprint.Offset - base) as usize), len)
             };
             if let Err(e) =
                 self.layout
@@ -1244,10 +1569,13 @@ impl Staging {
 /// upload from it hold it until they have run); the next upload makes one
 /// anew.
 pub(crate) fn unstage(resource: This) {
-    let mut map = STAGING.lock().unwrap_or_else(|e| e.into_inner());
-    if let Some(map) = map.as_mut() {
-        map.remove(&(resource as usize));
-    }
+    let retired = {
+        let mut map = STAGING.lock().unwrap_or_else(|e| e.into_inner());
+        map.as_mut().and_then(|map| map.remove(&(resource as usize)))
+    };
+    // Releasing a staging resource may release COM objects and upload slots.
+    // Do not serialize unrelated texture lookups behind that destruction.
+    drop(retired);
 }
 
 /// Has the next list that uploads a title texture with a staging buffer
@@ -1263,6 +1591,9 @@ pub(crate) fn upload_again(resource: This) {
     if let Some(staging) = staging {
         let mut last = staging.last.lock().unwrap_or_else(|e| e.into_inner());
         staging.uploaded.store(false, std::sync::atomic::Ordering::Relaxed);
+        // A GPU-only revision has no CPU bytes to replay. Force the next
+        // refresh to rebuild it rather than treating its old hash as data.
+        last.require_cpu_revision();
         last.partial = None;
         last.sparse_copies = Default::default();
     }
@@ -1664,6 +1995,8 @@ mod first_mip_tests {
         assert!(!last.advance_watch(2, &[(17, 3)]));
         assert!(!last.partial_due(43, false));
         assert!(last.partial_due(72, false));
+        last.partial_time = Some(std::time::Instant::now() - std::time::Duration::from_secs(1));
+        assert!(last.partial_due(73, false));
     }
 
     #[test]
@@ -2217,5 +2550,25 @@ mod title_memory_tests {
                 assert_ne!(VirtualFree(base.cast(), 0, MEM_RELEASE), 0);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod gpu_only_revision_tests {
+    use super::*;
+    #[test]
+    fn invalidation_requires_rebuilding_gpu_only_revision() {
+        let mut last = Last { has_data: true, asked: 42, hash: Some(blake3::hash(b"texture")), ..Default::default() };
+        last.require_cpu_revision();
+        assert!(!last.has_data);
+        assert_eq!(last.asked, 0);
+        assert!(last.hash.is_none());
+    }
+    #[test]
+    fn inline_revision_is_not_invalidated() {
+        let mut last = Last { has_data: true, inline_current: true, asked: 42, ..Default::default() };
+        last.require_cpu_revision();
+        assert!(last.has_data);
+        assert_eq!(last.asked, 42);
     }
 }

@@ -64,6 +64,38 @@ unsafe impl Send for Pending {}
 // SAFETY: as above.
 unsafe impl Sync for Pending {}
 
+static PENDING: std::sync::LazyLock<Mutex<HashMap<String, Weak<Pending>>>> =
+    std::sync::LazyLock::new(Mutex::default);
+static COMPILED: AtomicU64 = AtomicU64::new(0);
+static FAILED: AtomicU64 = AtomicU64::new(0);
+
+/// Dead weak registry entries cannot be upgraded by any live pipeline.
+/// Prune from the existing idle sweep, never during a draw's lookup.
+pub(super) fn trim_registry() {
+    static ON: OnceLock<bool> = OnceLock::new();
+    if !*ON.get_or_init(|| std::env::var_os("VICTORY_TRIM_PIPELINE_REGISTRY").is_some_and(|v| v == "1")) { return; }
+    // Promoted early jobs have a second queue entry. A long requested
+    // backlog otherwise keeps completed PSOs and shader data alive.
+    static CLEAN_FRAME: AtomicU64 = AtomicU64::new(u64::MAX);
+    let frame = crate::frame::current();
+    if CLEAN_FRAME.swap(frame, Ordering::Relaxed) != frame && frame % 32 == 0 {
+        let mut retired = Vec::new();
+        if let Ok(mut queue) = QUEUE.try_lock() {
+            queue.prune_promoted(&mut retired);
+        }
+        drop(retired); // final COM release outside queue lock
+    }
+    let Ok(mut known) = PENDING.try_lock() else { return };
+    let before = known.len();
+    known.retain(|_, entry| entry.strong_count() != 0);
+    if known.len() < before / 2 { known.shrink_to_fit(); }
+}
+
+#[cfg(feature = "diagnostics")]
+pub(super) fn compile_counts() -> (u64, u64) {
+    (COMPILED.swap(0, Ordering::Relaxed), FAILED.swap(0, Ordering::Relaxed))
+}
+
 impl Pending {
     pub(crate) fn new(shaders: Vec<Arc<Shader>>, graphics: Option<Box<GraphicsState>>) -> Pending {
         let mut key = blake3::Hasher::new();
@@ -89,8 +121,6 @@ impl Pending {
     /// Identical title pipeline objects share one compilation and its native
     /// result. The registry does not keep retired states or shaders alive.
     pub(crate) fn shared(shaders: Vec<Arc<Shader>>, graphics: Option<Box<GraphicsState>>) -> Arc<Self> {
-        static PENDING: std::sync::LazyLock<Mutex<HashMap<String, Weak<Pending>>>> =
-            std::sync::LazyLock::new(Mutex::default);
         let pending = Self::new(shaders, graphics);
         let mut known = PENDING.lock().unwrap_or_else(|err| err.into_inner());
         if let Some(existing) = known.get(&pending.key).and_then(Weak::upgrade) {
@@ -110,13 +140,17 @@ impl Pending {
     /// Whether the host's driver has been at it for longer than a frame
     /// waits for ([`held_too_long`]).
     fn slow(&self) -> bool {
-        self.begun.get().is_some_and(|at| held_too_long(at.elapsed(), self.computes(), wait_budget()))
+        self.begun.get().is_some_and(|at| held_too_long(at.elapsed(), self.computes(), wait_budget(self.computes())))
     }
 
     fn make(&self) {
         let _ = self.begun.set(Instant::now());
-        self.made
-            .get_or_init(|| HostPipeline::new(&self.shaders, self.graphics.as_deref()));
+        self.made.get_or_init(|| {
+            let result = HostPipeline::new(&self.shaders, self.graphics.as_deref());
+            if result.is_some() { COMPILED.fetch_add(1, Ordering::Relaxed); }
+            else { FAILED.fetch_add(1, Ordering::Relaxed); }
+            result
+        });
         let (lock, done) = &self.finished;
         let _held = lock.lock().unwrap_or_else(|e| e.into_inner());
         done.notify_all();
@@ -152,20 +186,31 @@ pub(crate) fn missing(p: &Pending) -> Option<String> {
 static REUSED: AtomicU64 = AtomicU64::new(0);
 
 /// Waiting allowed per title frame, over all threads.
-fn wait_budget() -> Duration {
+fn wait_budget(compute: bool) -> Duration {
     #[cfg(test)]
     if let Some(budget) = TEST_BUDGET.get() {
         return budget;
     }
     static BUDGET: OnceLock<Duration> = OnceLock::new();
-    *BUDGET.get_or_init(|| {
+    let base = *BUDGET.get_or_init(|| {
         let millis = std::env::var("VICTORY_PIPELINE_WAIT_MS")
             .ok()
             .and_then(|value| value.trim().parse::<u64>().ok())
             .unwrap_or(DEFAULT_WAIT_MS);
         tracing::info!(millis, "host pipeline wait budget per frame, per kind");
         Duration::from_millis(millis)
-    })
+    });
+    // Graphics-only override is explicit; never reduce the original compute
+    // budget as an accidental consequence of reducing graphics stalls.
+    static GRAPHICS: OnceLock<Option<Duration>> = OnceLock::new();
+    if compute { base } else {
+        GRAPHICS.get_or_init(|| {
+            let ms = std::env::var("VICTORY_GRAPHICS_PIPELINE_WAIT_MS").ok()
+                .and_then(|v| v.trim().parse::<u64>().ok())?;
+            tracing::info!(ms, "experimental graphics-only pipeline wait budget");
+            Some(Duration::from_millis(ms))
+        }).unwrap_or(base)
+    }
 }
 
 /// The default of [`wait_budget`]: the picture before frame rate. A frame
@@ -202,16 +247,25 @@ const LOADING_FRAME_COMPUTE: Duration = Duration::from_secs(12);
 /// `VICTORY_PIPELINE_GATE_S` (120): the most a run waits past
 /// [`wait_budget`] for each kind, in seconds, all frames together; 0 waits
 /// as before. The title's GPU watchdog bounds one frame (30 s).
-fn loading_allowance() -> Duration {
+fn loading_allowance(compute: bool) -> Duration {
     static TOTAL: OnceLock<Duration> = OnceLock::new();
-    *TOTAL.get_or_init(|| {
+    let base = *TOTAL.get_or_init(|| {
         let seconds = std::env::var("VICTORY_PIPELINE_GATE_S")
             .ok()
             .and_then(|value| value.trim().parse::<u64>().ok())
             .unwrap_or(120);
         tracing::info!(seconds, "host pipeline loading allowance per kind");
         Duration::from_secs(seconds)
-    })
+    });
+    static GRAPHICS: OnceLock<Option<Duration>> = OnceLock::new();
+    if compute { base } else {
+        GRAPHICS.get_or_init(|| {
+            let seconds = std::env::var("VICTORY_GRAPHICS_PIPELINE_GATE_S").ok()
+                .and_then(|v| v.trim().parse::<u64>().ok())?;
+            tracing::info!(seconds, "experimental graphics-only pipeline loading allowance");
+            Some(Duration::from_secs(seconds))
+        }).unwrap_or(base)
+    }
 }
 
 /// A frame's budget for a pipeline of one kind: the frame budget, or while
@@ -395,16 +449,16 @@ impl FrameWait {
 
 /// Waits for `p` while frame `frame` has budget left.
 fn wait(p: &Pending, frame: u64) {
-    let base = wait_budget();
+    let compute = p.computes();
+    let base = wait_budget(compute);
     if base.is_zero() || p.slow() {
         return;
     }
     // What was waited past the base budget since the start, in
     // milliseconds, by kind (others, compute).
     static PAST: [AtomicU64; 2] = [const { AtomicU64::new(0) }; 2];
-    let compute = p.computes();
     let past = &PAST[usize::from(compute)];
-    let budget = frame_budget(base, compute, loading_allowance(), Duration::from_millis(past.load(Ordering::Relaxed)));
+    let budget = frame_budget(base, compute, loading_allowance(compute), Duration::from_millis(past.load(Ordering::Relaxed)));
     // The frame the budget belongs to, and what was waited of it (or is
     // taken by a thread waiting now), by kind.
     static FRAMES: [Mutex<FrameWait>; 2] = [const { Mutex::new(FrameWait::new()) }; 2];
@@ -477,6 +531,15 @@ impl Queue {
         Some(prev == NOT_QUEUED)
     }
 
+    fn prune_promoted(&mut self, retired: &mut Vec<Arc<Pending>>) {
+        for queue in [&mut self.early, &mut self.early_depth] {
+            queue.retain(|p| {
+                if p.queue_state.load(Ordering::Relaxed) == EARLY { true }
+                else { retired.push(p.clone()); false }
+            });
+        }
+    }
+
     fn pop(&mut self) -> Option<Arc<Pending>> {
         let p = self.requested.pop_front().or_else(|| {
             // An early entry can have been promoted and claimed already.
@@ -530,7 +593,14 @@ fn workers() -> bool {
     static RUNNING: OnceLock<bool> = OnceLock::new();
     *RUNNING.get_or_init(|| {
         let mut running = false;
-        let workers = std::thread::available_parallelism().map_or(2, |n| (n.get() / 2).clamp(2, 8));
+        let default_workers = std::thread::available_parallelism().map_or(2, |n| (n.get() / 2).clamp(2, 8));
+        // Driver compiles and translation can each have large temporary
+        // working sets. Allow an explicit concurrency limit for 16 GiB PCs
+        // without dropping, cancelling or changing the order of jobs.
+        let workers = std::env::var("VICTORY_PIPELINE_WORKERS").ok()
+            .and_then(|v| v.trim().parse::<usize>().ok())
+            .map_or(default_workers, |n| n.clamp(1, default_workers));
+        tracing::info!(workers, default_workers, "pipeline worker concurrency");
         for i in 0..workers {
             let spawned = std::thread::Builder::new()
                 .name(format!("victory-pipelines-{i}"))
@@ -714,6 +784,10 @@ mod tests {
         assert_eq!(queue.push(&promoted, REQUESTED), Some(false));
         assert_eq!(queue.push(&promoted, REQUESTED), None);
 
+        let mut retired = Vec::new();
+        queue.prune_promoted(&mut retired);
+        assert_eq!(retired.len(), 1);
+        assert!(Arc::ptr_eq(&retired[0], &promoted));
         assert!(Arc::ptr_eq(&queue.pop().unwrap(), &requested));
         assert!(Arc::ptr_eq(&queue.pop().unwrap(), &promoted));
         assert_eq!(queue.push(&promoted, REQUESTED), None);

@@ -61,6 +61,7 @@ pub(crate) struct Shader {
     /// The first 8 bytes of its BLAKE3, as logged.
     pub(crate) hash: String,
     container: Vec<u8>,
+    cached: bool,
     #[cfg(windows)]
     translated: OnceLock<Option<Translated>>,
     #[cfg(windows)]
@@ -73,11 +74,11 @@ impl std::fmt::Debug for Shader {
     }
 }
 
-/// Every container seen, by full content hash.
+/// Shared containers by full content hash; unused entries can be reclaimed.
 static SHADERS: Mutex<Option<HashMap<[u8; 32], Arc<Shader>>>> = Mutex::new(None);
 
 /// For the memory lines: containers kept and their bytes, translations
-/// kept and the bytes of their host code. None of them is ever let go.
+/// kept and the bytes of their host code (runtime cache entries only).
 static KEPT: [std::sync::atomic::AtomicU64; 4] = [const { std::sync::atomic::AtomicU64::new(0) }; 4];
 
 /// What the shader table and the pipeline library keep in memory:
@@ -113,6 +114,7 @@ fn shader(stage: &'static str, bytes: &[u8]) -> Arc<Shader> {
                 stage,
                 hash: full.to_hex()[..16].to_owned(),
                 container: bytes.to_vec(),
+                cached: true,
                 #[cfg(windows)]
                 translated: OnceLock::new(),
                 #[cfg(windows)]
@@ -120,6 +122,46 @@ fn shader(stage: &'static str, bytes: &[u8]) -> Arc<Shader> {
             })
         })
         .clone()
+}
+
+impl Drop for Shader {
+    fn drop(&mut self) {
+        use std::sync::atomic::Ordering::Relaxed;
+        if !self.cached { return; }
+        KEPT[0].fetch_sub(1, Relaxed);
+        KEPT[1].fetch_sub(self.container.len() as u64, Relaxed);
+        #[cfg(windows)]
+        if let Some(Some(t)) = self.translated.get() {
+            KEPT[2].fetch_sub(1, Relaxed);
+            KEPT[3].fetch_sub(t.host.dxil.len() as u64, Relaxed);
+        }
+    }
+}
+
+/// Reclaim only cache-owned shaders. Live pipelines and compilation jobs
+/// retain their Arc, so their bytecode and translation remain valid.
+#[cfg(windows)]
+pub(crate) fn trim_shaders(available: Option<u64>) {
+    make::trim_registry();
+    use std::sync::atomic::Ordering::Relaxed;
+    let limit = match crate::budget::ram_pressure(available) {
+        2 => 0,
+        1 => 64 << 20,
+        _ => 256 << 20,
+    };
+    if limit != 0 && KEPT[1].load(Relaxed).saturating_add(KEPT[3].load(Relaxed)) <= limit {
+        return;
+    }
+    let retired = {
+        let mut guard = SHADERS.lock().unwrap_or_else(|e| e.into_inner());
+        let Some(map) = guard.as_mut() else { return; };
+        let keys: Vec<_> = map.iter().filter(|(_, s)| Arc::strong_count(s) == 1)
+            .map(|(key, _)| *key).collect();
+        let retired: Vec<_> = keys.iter().filter_map(|key| map.remove(key)).collect();
+        map.shrink_to_fit();
+        retired
+    };
+    drop(retired);
 }
 
 /// Puts the translation of a container of the title's into the cache on
@@ -136,11 +178,12 @@ pub fn warm(stage: &'static str, container: &[u8], compute: bool) -> (bool, Opti
 #[cfg(windows)]
 pub fn warm_selected(stage: &'static str, container: &[u8], compute: bool) -> Option<(bool, Option<bool>)> {
     let full = blake3::hash(container);
-    // Not through the table, which lets nothing go.
+    // Warmup does not populate the runtime table.
     let shader = Arc::new(Shader {
         stage,
         hash: full.to_hex()[..16].to_owned(),
         container: container.to_vec(),
+        cached: false,
         translated: OnceLock::new(),
         ray_work: OnceLock::new(),
     });
@@ -183,7 +226,7 @@ impl Shader {
                         let _ = std::fs::write(dir.join(format!("{stem}.dxil")), &t.host.dxil);
                     }
                 }
-                if let Ok(t) = &done {
+                if self.cached && let Ok(t) = &done {
                     KEPT[2].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                     KEPT[3].fetch_add(t.host.dxil.len() as u64, std::sync::atomic::Ordering::Relaxed);
                 }
@@ -456,6 +499,11 @@ pub(crate) fn host_pipeline<'a>(this: This) -> Option<&'a host::HostPipeline> {
 #[cfg(windows)]
 pub(crate) fn making() -> u64 {
     make::waiting()
+}
+
+#[cfg(all(windows, feature = "diagnostics"))]
+pub(crate) fn compile_counts() -> (u64, u64) {
+    make::compile_counts()
 }
 
 /// Draws and dispatches dropped since the last [`take_drops`], by reason

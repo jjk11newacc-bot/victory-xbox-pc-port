@@ -78,3 +78,6 @@ pub use watch::{
     title_memory_remapping, title_memory_remapping_range,
     writing as kernel_will_write,
 };
+
+#[cfg(windows)]
+mod budget;

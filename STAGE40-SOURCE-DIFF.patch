@@ -1,0 +1,407 @@
+--- a/crates/victory-gpu/src/watch.rs
++++ b/crates/victory-gpu/src/watch.rs
+@@ -39,6 +39,8 @@
+     asked: u64,
+     /// Page number → the asking that last found it written.
+     written: BTreeMap<usize, u64>,
++    // Conservative maximum write generation per 16 MiB of guest memory.
++    generations: BTreeMap<usize, u64>,
+     /// Room for the kernel's answer.
+     found: Vec<usize>,
+     /// Page ranges asked ahead for a submission's refreshes ([`ask_ahead`])
+@@ -57,6 +59,7 @@
+ const EMPTY_JOURNAL: Journal = Journal {
+     asked: 0,
+     written: BTreeMap::new(),
++    generations: BTreeMap::new(),
+     found: Vec::new(),
+     ahead: Vec::new(),
+     ahead_asked: 0,
+@@ -64,6 +67,35 @@
+     kept: false,
+ };
+ static JOURNAL: Mutex<Journal> = Mutex::new(EMPTY_JOURNAL);
++
++// A chunk maximum is only a rejection test, never proof that a specific
++// page changed. Keep maxima even when an older ahead query records a page.
++const GENERATION_CHUNK: usize = 256;
++pub(crate) fn indexed_generations() -> bool {
++    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
++    *ON.get_or_init(|| std::env::var_os("VICTORY_INDEXED_WATCH").is_some_and(|v| v == "1"))
++}
++fn record_write(j: &mut Journal, page: usize, now: u64) {
++    j.written.insert(page, now);
++    if indexed_generations() || cfg!(test) {
++        let latest = j.generations.entry(page / GENERATION_CHUNK).or_default();
++        *latest = (*latest).max(now);
++    }
++}
++fn journal_since(j: &Journal, first: usize, last: usize, since: u64, indexed: bool) -> Vec<(usize, u64)> {
++    if first >= last { return Vec::new(); }
++    if !indexed || since == 0 || last - first < GENERATION_CHUNK {
++        return j.written.range(first..last).filter_map(|(&p, &w)| (w > since).then_some((p,w))).collect();
++    }
++    let mut result = Vec::new();
++    for (&chunk, &latest) in j.generations.range(first / GENERATION_CHUNK..=(last - 1) / GENERATION_CHUNK) {
++        if latest <= since { continue; }
++        let lo = first.max(chunk * GENERATION_CHUNK);
++        let hi = last.min((chunk + 1) * GENERATION_CHUNK);
++        result.extend(j.written.range(lo..hi).filter_map(|(&p,&w)| (w > since).then_some((p,w))));
++    }
++    result
++}
+ 
+ // A query must fit inside one successful kernel asking, not merely the
+ // union of adjacent ranges. Prefix maxima preserve exactly that predicate.
+@@ -220,9 +252,23 @@
+     // such range asked again at each of its 70 flushes (run 76: 2,300
+     // askings a frame with the switch on, as without it). They are asked
+     // here, once; what is not write-watched stays with `writes`.
+-    for (first, last) in pieces {
+-        if !j.ahead.iter().any(|&(a, b)| a <= first && last <= b) && ask_kernel(j, first, last) {
+-            j.ahead.push((first, last));
++    if indexed_generations() {
++        // `pieces` are sorted by start. The successful group index is
++        // fixed for this loop; every newly successful singleton starts at
++        // or before the next candidate, so its largest end suffices.
++        index_ahead(j);
++        let mut single_end = 0;
++        for (first, last) in pieces {
++            if last > single_end && !ahead_contains(j, first, last) && ask_kernel(j, first, last) {
++                j.ahead.push((first, last));
++                single_end = single_end.max(last);
++            }
++        }
++    } else {
++        for (first, last) in pieces {
++            if !j.ahead.iter().any(|&(a, b)| a <= first && last <= b) && ask_kernel(j, first, last) {
++                j.ahead.push((first, last));
++            }
+         }
+     }
+     index_ahead(j);
+@@ -251,7 +297,7 @@
+     j.asked += 1;
+     let now = j.asked;
+     for page in at / PAGE..at.saturating_add(len).div_ceil(PAGE) {
+-        j.written.insert(page, now);
++        record_write(&mut j, page, now);
+     }
+ }
+ 
+@@ -311,10 +357,10 @@
+ 
+ fn note_kernel_writes(j: &mut Journal, count: usize, now: u64) {
+     let mut previous = None;
+-    for &address in &j.found[..count] {
+-        let page = address / PAGE;
++    for i in 0..count {
++        let page = j.found[i] / PAGE;
+         if previous != Some(page) {
+-            j.written.insert(page, now);
++            record_write(j, page, now);
+             previous = Some(page);
+         }
+     }
+@@ -326,10 +372,13 @@
+ /// written, with the number of the asking that stands (as [`writes`] gives
+ /// it). `None` if the kernel would have to be asked.
+ pub(crate) fn asked(start: usize, end: usize) -> Option<(u64, Vec<(usize, u64)>)> {
++    asked_since(start, end, 0)
++}
++pub(crate) fn asked_since(start: usize, end: usize, since: u64) -> Option<(u64, Vec<(usize, u64)>)> {
+     let (first, last) = (start / PAGE, end.div_ceil(PAGE));
+     let j = JOURNAL.lock().unwrap_or_else(|e| e.into_inner());
+     ahead_contains(&j, first, last)
+-        .then(|| (j.ahead_asked, j.written.range(first..last).map(|(&p, &w)| (p, w)).collect()))
++        .then(|| (j.ahead_asked, journal_since(&j, first, last, since, indexed_generations())))
+ }
+ 
+ /// The pages of `[start, end)` (whole pages) as last written, for pages
+@@ -338,6 +387,11 @@
+ /// kernel just reported. `None` if the memory is not write-watched (nor,
+ /// with `guarded`, view memory, which is then guarded).
+ pub(crate) fn writes(start: usize, end: usize, guarded: bool) -> Option<(u64, Vec<(usize, u64)>)> {
++    writes_since(start, end, guarded, 0)
++}
++/// Same kernel/guard query as `writes`; omit only generations already held
++/// by the caller. A zero watermark preserves the complete journal answer.
++pub(crate) fn writes_since(start: usize, end: usize, guarded: bool, since: u64) -> Option<(u64, Vec<(usize, u64)>)> {
+     use windows_sys::Win32::System::Memory::GetWriteWatch;
+     const WRITE_WATCH_FLAG_RESET: u32 = 1;
+     let (first, last) = (start / PAGE, end.div_ceil(PAGE));
+@@ -347,10 +401,7 @@
+     if ahead_contains(j, first, last) {
+         return Some((
+             j.ahead_asked,
+-            j.written
+-                .range(first..last)
+-                .map(|(&p, &w)| (p, w))
+-                .collect(),
++            journal_since(j, first, last, since, indexed_generations()),
+         ));
+     }
+     let mut count = (last - first) * PAGE / KERNEL_PAGE;
+@@ -394,14 +445,11 @@
+     let now = j.asked;
+     note_kernel_writes(j, count, now);
+     for page in guarded {
+-        j.written.insert(page, now);
++        record_write(j, page, now);
+     }
+     Some((
+         now,
+-        j.written
+-            .range(first..last)
+-            .map(|(&p, &w)| (p, w))
+-            .collect(),
++        journal_since(j, first, last, since, indexed_generations()),
+     ))
+ }
+ 
+@@ -1021,6 +1069,23 @@
+         MEM_COMMIT, MEM_RELEASE, MEM_RESERVE, PAGE_READWRITE, VirtualAlloc, VirtualFree,
+     };
+     const MEM_WRITE_WATCH: u32 = 0x20_0000;
++
++    #[test]
++    fn generation_index_preserves_exact_filtered_journal() {
++        let mut j = EMPTY_JOURNAL;
++        let mut seed = 1234u64;
++        for i in 1..=12000u64 {
++            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
++            let page = (seed >> 32) as usize % 8192;
++            record_write(&mut j, page, if i % 7 == 0 { i / 2 } else { i });
++            if i % 11 == 0 {
++                let from = seed as usize % 8192;
++                let to = (from + 1 + ((seed >> 24) as usize % 4096)).min(8192);
++                let since = i / 2;
++                assert_eq!(journal_since(&j, from, to, since, true), journal_since(&j, from, to, since, false));
++            }
++        }
++    }
+ 
+     #[test]
+     fn indexed_ahead_matches_single_range_containment() {
+--- a/crates/victory-gpu/src/shadow.rs
++++ b/crates/victory-gpu/src/shadow.rs
+@@ -996,6 +996,7 @@
+     by_capacity: BTreeMap<usize, Vec<Vec<u8>>>,
+     bytes: usize,
+     count: usize,
++    pressure_limit: Option<usize>,
+ }
+ 
+ impl SnapshotPool {
+@@ -1020,7 +1021,7 @@
+             let low_memory = std::env::var_os("VICTORY_LOW_MEMORY").is_some_and(|v| v == "1");
+             if low_memory { 256 << 20 } else { 512 << 20 }
+         });
+-        self.put_with_limit(buffer, limit);
++        self.put_with_limit(buffer, limit.min(self.pressure_limit.unwrap_or(usize::MAX)));
+     }
+ 
+     // Only retired CPU snapshots enter this pool. Active snapshots and GPU
+@@ -1058,9 +1059,14 @@
+ /// Release only retired allocations under physical memory pressure.
+ pub(crate) fn trim_retired_under_pressure(available: Option<u64>) {
+     let Some(available) = available else { return };
+-    if available >= 4 << 30 { return; }
++    let sticky = crate::budget::sticky_pressure();
++    if !sticky && available >= 4 << 30 { return; }
+     let limit = if available < 2 << 30 { 0 } else { 64 << 20 };
+     let mut pool = POOL.lock().unwrap_or_else(|e| e.into_inner());
++    if sticky {
++        pool.pressure_limit = if available >= 4 << 30 { None } else { Some(limit) };
++    }
++    if available >= 4 << 30 { return; }
+     while pool.bytes > limit {
+         let Some(mut bucket) = pool.by_capacity.last_entry() else { break };
+         let size = *bucket.key();
+@@ -1121,6 +1127,20 @@
+         assert_eq!((pool.count, pool.bytes), (0, 0));
+         pool.put_with_limit(Vec::with_capacity(4096), 0);
+         assert_eq!(pool.count, 0);
++    }
++
++    #[test]
++    fn retired_buffers_cannot_refill_a_pressure_limited_pool() {
++        let mut pool = SnapshotPool::default();
++        pool.pressure_limit = Some(0);
++        pool.put(Vec::with_capacity(4096));
++        assert_eq!(pool.bytes, 0);
++        pool.pressure_limit = Some(8192);
++        for _ in 0..8 { pool.put(Vec::with_capacity(4096)); }
++        assert_eq!(pool.bytes, 8192);
++        pool.pressure_limit = None;
++        pool.put(Vec::with_capacity(4096));
++        assert_eq!(pool.bytes, 12288);
+     }
+ 
+     #[test]
+@@ -2458,6 +2478,16 @@
+         !self.pending.lock().unwrap_or_else(|e| e.into_inner()).is_empty()
+     }
+ 
++    // Minimum copied generation is a conservative lower bound: an older
++    // journal entry cannot make any page in the range stale. Zero keeps all
++    // entries, including for pages not yet copied in full.
++    fn watch_floor(&self, from: usize, to: usize, copied: &[u64]) -> u64 {
++        if !crate::watch::indexed_generations() || from >= to { return 0; }
++        let base = self.start as usize / PAGE;
++        copied.get(from / PAGE - base..=(to - 1) / PAGE - base)
++            .and_then(|v| v.iter().copied().min()).unwrap_or(0)
++    }
++
+     /// Whether [`Shadow::update`] of `[address, address + len)` would leave
+     /// title bytes behind: a range shaders may be writing holds a page the
+     /// title wrote since the copy last took it. The answer comes from the
+@@ -2491,7 +2521,7 @@
+         }
+         let base = start / PAGE;
+         let copied = self.copied.lock().unwrap_or_else(|e| e.into_inner());
+-        busy.into_iter().any(|(a, e)| match crate::watch::asked(a, e) {
++        busy.into_iter().any(|(a, e)| match crate::watch::asked_since(a, e, self.watch_floor(a, e, &copied)) {
+             Some((_, written)) => written.into_iter().any(|(page, write)| {
+                 page >= base && copied.get(page - base).is_none_or(|&at| at == 0 || write > at)
+             }),
+@@ -2544,18 +2574,21 @@
+             // of view memory, which is guarded and not write-watched, and
+             // those were all of run 99's cases: the flights were settled
+             // 4-5 times a frame for "0 pages looked at".
+-            let Some((now, written)) = crate::watch::writes(a, e, true) else {
++            let floor = if crate::watch::indexed_generations() {
++                let copied = self.copied.lock().unwrap_or_else(|e| e.into_inner());
++                self.watch_floor(a, e, &copied)
++            } else { 0 };
++            let Some((now, written)) = crate::watch::writes_since(a, e, true, floor) else {
+                 return true;
+             };
+-            let stale: Vec<usize> = {
++            let stale: Vec<(usize, u64)> = {
+                 let copied = self.copied.lock().unwrap_or_else(|e| e.into_inner());
+                 written
+                     .into_iter()
+                     .filter(|&(page, write)| page >= base && copied.get(page - base).is_none_or(|&at| at == 0 || write > at))
+-                    .map(|(page, _)| page)
+                     .collect()
+             };
+-            for page in stale {
++            for (page, write) in stale {
+                 let (lo, hi) = ((page * PAGE).max(a), ((page + 1) * PAGE).min(e));
+                 if lo >= hi {
+                     continue;
+@@ -2618,7 +2651,7 @@
+                 if (page * PAGE).max(start) >= a && ((page + 1) * PAGE).min(end) <= e {
+                     let mut copied = self.copied.lock().unwrap_or_else(|e| e.into_inner());
+                     if let Some(at) = copied.get_mut(page - base) {
+-                        *at = now;
++                        *at = now.max(write);
+                     }
+                 }
+             }
+@@ -2678,9 +2711,17 @@
+     /// shader writes.
+     fn update_free(&self, from: usize, to: usize) -> usize {
+         if self.watched.load(Ordering::Relaxed) != NOT_WATCHED {
+-            if let Some((now, written)) = crate::watch::writes(from, to, true) {
++            let floor = if crate::watch::indexed_generations() {
++                let copied = self.copied.lock().unwrap_or_else(|e| e.into_inner());
++                self.watch_floor(from, to, &copied)
++            } else { 0 };
++            if let Some((now, written)) = crate::watch::writes_since(from, to, true, floor) {
+                 self.watched.store(1, Ordering::Relaxed);
+-                let copied = self.copy_stale(from, to, now, &written);
++                let copied = if floor != 0 && written.is_empty() {
++                    // All pages were initialized and the journal has no
++                    // newer writes. Avoid a second walk of copied pages.
++                    0
++                } else { self.copy_stale(from, to, now, &written) };
+                 self.refresh_check(from, to);
+                 #[cfg(feature = "diagnostics")]
+                 {
+--- a/crates/victory-gpu/src/texture.rs
++++ b/crates/victory-gpu/src/texture.rs
+@@ -1068,7 +1068,7 @@
+         if !sampled {
+             last.require_cpu_revision();
+         }
+-        if let Some((now, written)) = waited(1, || crate::watch::writes(start, end, false)) {
++        if let Some((now, written)) = waited(1, || crate::watch::writes_since(start, end, false, if crate::watch::indexed_generations() { last.asked } else { 0 })) {
+             let changed = last.advance_watch(now, &written);
+             if !changed && last.has_data {
+                 if last.first == self.first || !last.partial_due(crate::frame::current(), false) {
+@@ -1115,7 +1115,7 @@
+         let mut unseen = false;
+         let mut reported_write = false;
+         if *GUARD.get_or_init(|| std::env::var_os("VICTORY_TEXTURE_GUARD").is_none_or(|v| v != "0"))
+-            && let Some((now, written)) = waited(1, || crate::watch::writes(start, end, true))
++            && let Some((now, written)) = waited(1, || crate::watch::writes_since(start, end, true, if crate::watch::indexed_generations() { last.asked } else { 0 }))
+         {
+             const HASH_EVERY: u64 = 8;
+             reported_write = last.advance_watch(now, &written);
+--- a/crates/victory-gpu/src/budget.rs
++++ b/crates/victory-gpu/src/budget.rs
+@@ -10,6 +10,11 @@
+ pub(crate) fn strict_enabled() -> bool {
+     static ON: OnceLock<bool> = OnceLock::new();
+     *ON.get_or_init(|| std::env::var_os("VICTORY_STRICT_ADMISSION").is_some_and(|v| v == "1"))
++}
++/// Keep retirement cache limits in force between pressure sweeps.
++pub(crate) fn sticky_pressure() -> bool {
++    static ON: OnceLock<bool> = OnceLock::new();
++    *ON.get_or_init(|| std::env::var_os("VICTORY_STICKY_RAM_PRESSURE").is_some_and(|v| v == "1"))
+ }
+ pub(crate) fn ceiling(budget: u64, percent: u64) -> u64 {
+     (budget / 100 * percent).min(budget.saturating_sub(1024 * MIB))
+--- a/crates/victory-gpu/src/texture/upload.rs
++++ b/crates/victory-gpu/src/texture/upload.rs
+@@ -2,7 +2,7 @@
+ 
+ use std::sync::{
+     Arc, Mutex,
+-    atomic::{AtomicU64, Ordering::Relaxed},
++    atomic::{AtomicBool, AtomicU64, Ordering::Relaxed},
+ };
+ use windows::Win32::Graphics::Direct3D12::ID3D12Resource;
+ 
+@@ -26,6 +26,7 @@
+ static POOL: Mutex<[Vec<Slots>; CLASSES]> = Mutex::new([const { Vec::new() }; CLASSES]);
+ static GROW: [Mutex<()>; CLASSES] = [const { Mutex::new(()) }; CLASSES];
+ static REUSE: AtomicU64 = AtomicU64::new(0);
++static PRESSURE: AtomicBool = AtomicBool::new(false);
+ static CREATED: AtomicU64 = AtomicU64::new(0);
+ 
+ /// The lifetime of a staging allocation, including every command list that
+@@ -154,10 +155,10 @@
+         let capacity = (CHUNK_BYTES >> (MIN_SHIFT as usize + class)) as usize;
+         slots[page_index].free.push(index);
+         if slots[page_index].free.len() == capacity
+-            && slots
++            && (PRESSURE.load(Relaxed) || slots
+                 .iter()
+                 .enumerate()
+-                .any(|(i, page)| i != page_index && page.free.len() == capacity)
++                .any(|(i, page)| i != page_index && page.free.len() == capacity))
+         {
+             // Keep at most one idle chunk per size class. This Upload still
+             // holds the chunk, so final COM release occurs outside the lock.
+@@ -174,9 +175,15 @@
+ /// Release only fully free chunks under physical RAM pressure. Drop COM
+ /// resources after releasing the pool lock; leased slots are untouched.
+ pub(super) fn trim_idle_under_pressure(available: Option<u64>) {
+-    if !available.is_some_and(|bytes| bytes < (2u64 << 30)) {
+-        return;
+-    }
++    let Some(available) = available else { return };
++    let pressured = available < (2u64 << 30);
++    if crate::budget::sticky_pressure() {
++        // Hysteresis avoids repeatedly freeing and recreating a chunk near
++        // the low-memory threshold. Only idle chunks are ever retired.
++        if pressured { PRESSURE.store(true, Relaxed); }
++        else if available >= (4u64 << 30) { PRESSURE.store(false, Relaxed); }
++    }
++    if !pressured { return; }
+     let mut retired = Vec::new();
+     {
+         let mut pool = POOL.lock().unwrap_or_else(|e| e.into_inner());

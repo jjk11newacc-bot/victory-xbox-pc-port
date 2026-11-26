@@ -1,0 +1,587 @@
+--- stage36/crates/victory-gpu/src/pipeline/make.rs
++++ stage37/crates/victory-gpu/src/pipeline/make.rs
+@@ -110,7 +110,7 @@
+     /// Whether the host's driver has been at it for longer than a frame
+     /// waits for ([`held_too_long`]).
+     fn slow(&self) -> bool {
+-        self.begun.get().is_some_and(|at| held_too_long(at.elapsed(), self.computes(), wait_budget()))
++        self.begun.get().is_some_and(|at| held_too_long(at.elapsed(), self.computes(), wait_budget(self.computes())))
+     }
+ 
+     fn make(&self) {
+@@ -152,20 +152,31 @@
+ static REUSED: AtomicU64 = AtomicU64::new(0);
+ 
+ /// Waiting allowed per title frame, over all threads.
+-fn wait_budget() -> Duration {
++fn wait_budget(compute: bool) -> Duration {
+     #[cfg(test)]
+     if let Some(budget) = TEST_BUDGET.get() {
+         return budget;
+     }
+     static BUDGET: OnceLock<Duration> = OnceLock::new();
+-    *BUDGET.get_or_init(|| {
++    let base = *BUDGET.get_or_init(|| {
+         let millis = std::env::var("VICTORY_PIPELINE_WAIT_MS")
+             .ok()
+             .and_then(|value| value.trim().parse::<u64>().ok())
+             .unwrap_or(DEFAULT_WAIT_MS);
+         tracing::info!(millis, "host pipeline wait budget per frame, per kind");
+         Duration::from_millis(millis)
+-    })
++    });
++    // Graphics-only override is explicit; never reduce the original compute
++    // budget as an accidental consequence of reducing graphics stalls.
++    static GRAPHICS: OnceLock<Option<Duration>> = OnceLock::new();
++    if compute { base } else {
++        GRAPHICS.get_or_init(|| {
++            let ms = std::env::var("VICTORY_GRAPHICS_PIPELINE_WAIT_MS").ok()
++                .and_then(|v| v.trim().parse::<u64>().ok())?;
++            tracing::info!(ms, "experimental graphics-only pipeline wait budget");
++            Some(Duration::from_millis(ms))
++        }).unwrap_or(base)
++    }
+ }
+ 
+ /// The default of [`wait_budget`]: the picture before frame rate. A frame
+@@ -202,16 +213,25 @@
+ /// `VICTORY_PIPELINE_GATE_S` (120): the most a run waits past
+ /// [`wait_budget`] for each kind, in seconds, all frames together; 0 waits
+ /// as before. The title's GPU watchdog bounds one frame (30 s).
+-fn loading_allowance() -> Duration {
++fn loading_allowance(compute: bool) -> Duration {
+     static TOTAL: OnceLock<Duration> = OnceLock::new();
+-    *TOTAL.get_or_init(|| {
++    let base = *TOTAL.get_or_init(|| {
+         let seconds = std::env::var("VICTORY_PIPELINE_GATE_S")
+             .ok()
+             .and_then(|value| value.trim().parse::<u64>().ok())
+             .unwrap_or(120);
+         tracing::info!(seconds, "host pipeline loading allowance per kind");
+         Duration::from_secs(seconds)
+-    })
++    });
++    static GRAPHICS: OnceLock<Option<Duration>> = OnceLock::new();
++    if compute { base } else {
++        GRAPHICS.get_or_init(|| {
++            let seconds = std::env::var("VICTORY_GRAPHICS_PIPELINE_GATE_S").ok()
++                .and_then(|v| v.trim().parse::<u64>().ok())?;
++            tracing::info!(seconds, "experimental graphics-only pipeline loading allowance");
++            Some(Duration::from_secs(seconds))
++        }).unwrap_or(base)
++    }
+ }
+ 
+ /// A frame's budget for a pipeline of one kind: the frame budget, or while
+@@ -395,16 +415,16 @@
+ 
+ /// Waits for `p` while frame `frame` has budget left.
+ fn wait(p: &Pending, frame: u64) {
+-    let base = wait_budget();
++    let compute = p.computes();
++    let base = wait_budget(compute);
+     if base.is_zero() || p.slow() {
+         return;
+     }
+     // What was waited past the base budget since the start, in
+     // milliseconds, by kind (others, compute).
+     static PAST: [AtomicU64; 2] = [const { AtomicU64::new(0) }; 2];
+-    let compute = p.computes();
+     let past = &PAST[usize::from(compute)];
+-    let budget = frame_budget(base, compute, loading_allowance(), Duration::from_millis(past.load(Ordering::Relaxed)));
++    let budget = frame_budget(base, compute, loading_allowance(compute), Duration::from_millis(past.load(Ordering::Relaxed)));
+     // The frame the budget belongs to, and what was waited of it (or is
+     // taken by a thread waiting now), by kind.
+     static FRAMES: [Mutex<FrameWait>; 2] = [const { Mutex::new(FrameWait::new()) }; 2];
+--- stage36/crates/victory-gpu/src/memory.rs
++++ stage37/crates/victory-gpu/src/memory.rs
+@@ -40,8 +40,10 @@
+ //! is the extent of the title's allocation around an address, which the
+ //! memory module of the layer knows and this one does not ask yet.
+ //!
+-//! shortcut: a copy that is numbered is kept for the rest of the run, and
++//! By default a copy that is numbered is kept for the rest of the run, and
+ //! each view heap grows its descriptor run as more copies are needed.
++//! Experimental raw-slot reclamation compacts only with no raw-list leases;
++//! superseded descriptor runs stay pinned until their final list is reset.
+ //! Reads see all addressable copies. Writers publish all visible copies unless
+ //! the direct builder's bound constants identify every possible raw store.
+ 
+@@ -152,6 +154,9 @@
+     recalculate: BTreeSet<usize>,
+     generation: u64,
+     coverage_revision: u64,
++    slot_epoch: u64,
++    lease: Arc<()>,
++    compact_frame: u64,
+     /// The frame the faults were last read in.
+     frame: u64,
+     /// Pages asked for this frame that are not the title's memory.
+@@ -179,10 +184,10 @@
+ /// Logical backing sizes, including entries retained solely by stable raw
+ /// descriptor slots. These are not resident RAM or a claim of a memory leak.
+ #[cfg(feature = "diagnostics")]
+-pub(crate) fn retained_backings() -> [u64; 4] {
++pub(crate) fn retained_backings() -> [u64; 6] {
+     let guard = MEMORY.lock().unwrap_or_else(|e| e.into_inner());
+-    let Some(m) = guard.as_ref() else { return [0; 4] };
+-    let mut out = [m.copies.len() as u64, 0, 0, 0];
++    let Some(m) = guard.as_ref() else { return [0; 6] };
++    let mut out = [m.copies.len() as u64, 0, 0, 0, m.slot_epoch, Arc::strong_count(&m.lease).saturating_sub(1) as u64];
+     for (i, copy) in m.copies.iter().enumerate() {
+         let (_, len) = copy.span();
+         out[1] = out[1].saturating_add(len);
+@@ -231,6 +236,9 @@
+             recalculate: BTreeSet::new(),
+             generation: GENERATION.load(Ordering::Acquire),
+             coverage_revision: 0,
++            slot_epoch: 0,
++            lease: Arc::new(()),
++            compact_frame: u64::MAX,
+             frame: u64::MAX,
+             refused: Default::default(),
+             acceleration: None,
+@@ -241,6 +249,63 @@
+             speculative_skips: 0,
+             partial_copy: None,
+         })
++    }
++
++    /// Compact only when no recorded or in-flight raw list can replay an
++    /// old slot. Reconciliation has already completed. Build the replacement
++    /// before touching any live state; allocation failure leaves it unchanged.
++    fn compact_idle(&mut self, frame: u64) {
++        if self.compact_frame == frame || Arc::strong_count(&self.lease) != 1 {
++            return;
++        }
++        self.compact_frame = frame;
++        self.update_ranges();
++        let mut live = vec![false; self.copies.len()];
++        for &owner in self.pages.values() { live[owner] = true; }
++        // A partially populated copy may still be expanded on its next root.
++        if let Some(i) = self.partial_copy { live[i] = true; }
++        let dead = live.iter().filter(|&&used| !used).count();
++        let bytes: u64 = self.copies.iter().zip(&live)
++            .filter(|(_, used)| !**used).map(|(copy, _)| copy.span().1).sum();
++        if dead == 0 { return; }
++        if dead < 16 && bytes < (64 << 20)
++            && crate::host::available_physical_ram().is_none_or(|free| free >= (2 << 30)) { return; }
++        let Some(epoch) = self.slot_epoch.checked_add(1) else { return };
++        let Some(next) = Self::table(u64::from(MEMORY_PAGES) * 2, "compacted directory") else { return };
++        let mut remap = vec![usize::MAX; live.len()];
++        let mut copies = Vec::with_capacity(live.len() - dead);
++        let mut ranges = Vec::with_capacity(live.len() - dead);
++        let mut numbers = HashMap::with_capacity(live.len() - dead);
++        for (i, copy) in self.copies.iter().enumerate() {
++            if !live[i] { continue; }
++            remap[i] = copies.len();
++            numbers.insert(copy.id(), copies.len());
++            copies.push(copy.clone());
++            ranges.push(std::mem::take(&mut self.ranges[i]));
++        }
++        for (&page, owner) in &mut self.pages {
++            *owner = remap[*owner];
++            // SAFETY: both tables cover this page; no recorded list can use
++            // this epoch. The new table was zeroed and is not published yet.
++            unsafe {
++                let at = page as usize * 2;
++                next.1.add(at + 1).write(self.directory.1.add(at + 1).read());
++                next.1.add(at).write(*owner as u32 + 1);
++            }
++        }
++        self.partial_copy = self.partial_copy.map(|i| remap[i]);
++        self.directory = next;
++        self.copies = copies;
++        self.ranges = ranges;
++        self.numbers = numbers;
++        self.slot_epoch = epoch;
++        self.coverage_revision += 1;
++        // First-mapping counters describe the current epoch, not the old one.
++        self.from_roots = 0;
++        self.from_neighbors = 0;
++        self.from_constants = 0;
++        self.from_faults = 0;
++        tracing::info!(epoch, dead, bytes, remaining = self.copies.len(), "compacted idle raw memory directory (logical bytes)");
+     }
+ 
+     fn table(dwords: u64, what: &str) -> Option<(ID3D12Resource, *mut u32, u64)> {
+@@ -579,6 +644,11 @@
+     })
+ }
+ 
++pub(crate) fn reclaim_raw_slots() -> bool {
++    static ON: OnceLock<bool> = OnceLock::new();
++    *ON.get_or_init(|| std::env::var_os("VICTORY_RECLAIM_RAW_SLOTS").is_some_and(|v| v == "1"))
++}
++
+ fn batch_raw_work() -> bool {
+     static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+     *ON.get_or_init(|| std::env::var_os("VICTORY_BATCH_RAW_WORK").is_some_and(|v| v == "1"))
+@@ -602,10 +672,11 @@
+         *guard = Memory::new();
+     }
+     let m = guard.as_mut()?;
++    m.reconcile()?;
++    let frame = crate::frame::current();
++    if reclaim_raw_slots() { m.compact_idle(frame); }
+     let before = m.copies.len();
+     let skipped_before = m.speculative_skips;
+-    m.reconcile()?;
+-    let frame = crate::frame::current();
+     if m.frame != frame {
+         m.frame = frame;
+         m.refused.clear();
+@@ -626,7 +697,13 @@
+             "raw memory copies by first mapping source");
+     }
+     m.update_ranges();
+-    let (base, count) = heap.raw_page_views(&m.copies)?;
++    let (base, count) = if reclaim_raw_slots() {
++        let views = heap.raw_page_views_leased(&m.copies, m.slot_epoch, list)?;
++        list.keep_raw_lease(&m.lease);
++        views
++    } else {
++        heap.raw_page_views(&m.copies)?
++    };
+     // A list may submit before the other recording list that numbered a
+     // copy. Each must prepare all copies visible at its own bind.
+     const READ: usize = usize::MAX - 0x6d;
+@@ -714,6 +791,58 @@
+ #[cfg(test)]
+ mod tests {
+     use super::{page_byte, Memory, CELL, PAGE, SPECULATIVE_COPIES};
++
++    #[test]
++    fn compact_raw_slots_only_after_replay_lease_is_released() {
++        use windows_sys::Win32::System::Memory::{
++            MEM_COMMIT, MEM_RELEASE, MEM_RESERVE, PAGE_READWRITE, VirtualAlloc, VirtualFree,
++        };
++        let Some(mut memory) = Memory::new() else { return };
++        let pages = 20;
++        let start = (0x250..0x290).map(|i| i * 32 * CELL).find(|&at| unsafe {
++            !VirtualAlloc(at as _, (pages * PAGE) as usize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE).is_null()
++        }).unwrap();
++        for i in 0..pages {
++            let at = start + i * PAGE;
++            crate::shadow::register(at as usize, at, PAGE);
++            assert!(memory.map(at));
++        }
++        assert_eq!(memory.copies.len(), pages as usize);
++        // Simulate ownership removals, keeping the last two slots.
++        for i in 0..pages - 2 {
++            let page = start / PAGE + i;
++            memory.recalculate.insert(memory.pages[&page]);
++            memory.set_page(page, None);
++        }
++        let old = memory.directory.2;
++        let list = crate::host::host().unwrap().new_list().unwrap();
++        list.keep_raw_lease(&memory.lease);
++        list.close();
++        memory.compact_idle(1);
++        assert_eq!(memory.directory.2, old);
++        assert_eq!(memory.copies.len(), pages as usize);
++        list.reset();
++        memory.compact_idle(1);
++        assert_eq!(memory.slot_epoch, 1);
++        assert_eq!(memory.copies.len(), 2);
++        assert_eq!(memory.numbers.len(), 2);
++        for i in 0..pages {
++            let entry = (start / PAGE + i) as usize * 2;
++            let slot = unsafe { memory.directory.1.add(entry).read() };
++            if i < pages - 2 { assert_eq!(slot, 0); }
++            else {
++                assert_eq!(slot, (i - (pages - 2) + 1) as u32);
++                assert_eq!(memory.copies[(slot - 1) as usize].span(), (start + i * PAGE, PAGE));
++                assert_eq!(memory.ranges[(slot - 1) as usize], [(start + i * PAGE, PAGE)]);
++            }
++        }
++        drop(memory);
++        for i in 0..pages {
++            let at = start + i * PAGE;
++            crate::shadow::unregister(at as usize, at);
++        }
++        assert_ne!(unsafe { VirtualFree(start as _, 0, MEM_RELEASE) }, 0);
++    }
+ 
+     #[test]
+     fn speculation_stops_before_heap_growth_and_confirmed_accesses_can_still_grow() {
+--- stage36/crates/victory-gpu/src/descriptor/host.rs
++++ stage37/crates/victory-gpu/src/descriptor/host.rs
+@@ -20,6 +20,8 @@
+     base: u32,
+     slots: u32,
+     populated: u32,
++    epoch: u64,
++    lease: Arc<()>,
+ }
+ 
+ pub(crate) struct HostHeap {
+@@ -72,6 +74,7 @@
+     /// Runs grow geometrically. Older reservations stay valid until this
+     /// heap is destroyed because recorded command lists still use their base.
+     raw_pages: Mutex<Option<RawPageRun>>,
++    raw_retired: Mutex<Vec<RawPageRun>>,
+     /// Title slots holding buffer views. Such a view gets its host slot
+     /// (and its memory a host copy) only when something reads it: a draw
+     /// through a table, or [`HostHeap::buffer_slots`] for shaders that pick
+@@ -1156,6 +1159,7 @@
+             strides,
+             addresses: std::sync::OnceLock::new(),
+             raw_pages: Mutex::new(None),
++            raw_retired: Mutex::new(Vec::new()),
+             buffers: Mutex::default(),
+             changed: Mutex::default(),
+             buffer_pass: Mutex::default(),
+@@ -2401,7 +2405,33 @@
+     }
+ 
+     pub(crate) fn raw_page_views(&self, copies: &[Arc<crate::shadow::Shadow>]) -> Option<(u32, u32)> {
++        self.raw_page_views_impl(copies, 0, None)
++    }
++
++    pub(crate) fn raw_page_views_leased(&self, copies: &[Arc<crate::shadow::Shadow>], epoch: u64, list: &crate::host::HostList) -> Option<(u32, u32)> {
++        self.raw_page_views_impl(copies, epoch, Some(list))
++    }
++
++    fn collect_raw_runs(&self, retired: &mut Vec<RawPageRun>) {
++        retired.retain(|old| {
++            if Arc::strong_count(&old.lease) != 1 { return true; }
++            // Only the owner remains; no recorded/in-flight list can replay
++            // this range. Clear resource references even without VRAM pressure.
++            for i in 0..=old.populated { self.null_raw_uav_at(old.base + i); }
++            self.release(old.base, old.slots, false);
++            false
++        });
++    }
++
++    fn raw_page_views_impl(&self, copies: &[Arc<crate::shadow::Shadow>], epoch: u64, list: Option<&crate::host::HostList>) -> Option<(u32, u32)> {
+         let mut run = self.raw_pages.lock().unwrap_or_else(|e| e.into_inner());
++        let mut retired = list.map(|_| self.raw_retired.lock().unwrap_or_else(|e| e.into_inner()));
++        if let Some(retired) = retired.as_mut() {
++            if run.as_ref().is_some_and(|old| old.epoch != epoch) {
++                retired.push(run.take().unwrap());
++            }
++            self.collect_raw_runs(retired);
++        }
+         let requested = u32::try_from(copies.len()).ok()?;
+         let needed = requested.saturating_add(1);
+         if run.as_ref().is_none_or(|r| needed > r.slots && r.slots < self.dynamic) {
+@@ -2421,7 +2451,11 @@
+                 if let Some(old) = run.as_ref() {
+                     tracing::info!(previous = old.slots, slots, "grew raw memory descriptor run");
+                 }
+-                *run = Some(RawPageRun { base, slots, populated: 0 });
++                let old = run.replace(RawPageRun { base, slots, populated: 0, epoch, lease: Arc::new(()) });
++                if let (Some(old), Some(retired)) = (old, retired.as_mut()) {
++                    retired.push(old);
++                    self.collect_raw_runs(retired);
++                }
+             }
+         }
+         let run = run.as_mut()?;
+@@ -2436,6 +2470,7 @@
+             self.raw_uav_at(run.base + 1 + n as u32, &shadow.buffer, 0, width);
+         }
+         run.populated = run.populated.max(count);
++        if let Some(list) = list { list.keep_raw_lease(&run.lease); }
+         Some((run.base, count))
+     }
+ 
+@@ -4923,6 +4958,26 @@
+     }
+ 
+     #[test]
++    fn raw_descriptor_runs_survive_closed_list_replay_until_reset() {
++        let Some(host) = host() else { return };
++        let Some(heap) = HostHeap::new(false, 4) else { return };
++        let a = host.new_list().unwrap();
++        let b = host.new_list().unwrap();
++        let old = heap.raw_page_views_leased(&[], 0, &a).unwrap();
++        a.close();
++        // Simulate an epoch change: retired slots remain reserved while a
++        // closed list can replay, even if it has not been submitted yet.
++        let new = heap.raw_page_views_leased(&[], 1, &b).unwrap();
++        assert_ne!(old.0, new.0);
++        assert_eq!(heap.raw_retired.lock().unwrap().len(), 1);
++        let before = heap.free.load(std::sync::atomic::Ordering::Relaxed);
++        a.reset();
++        assert_eq!(heap.raw_page_views_leased(&[], 1, &b), Some(new));
++        assert!(heap.raw_retired.lock().unwrap().is_empty());
++        assert_eq!(heap.free.load(std::sync::atomic::Ordering::Relaxed), before + super::FIRST_RAW_PAGE_SLOTS);
++    }
++
++    #[test]
+     fn recreated_heap_reserves_its_own_raw_page_views() {
+         let Some(mut heap) = HostHeap::new(false, 4) else { return };
+         assert_eq!(heap.raw_page_views(&[]), Some((4, 0)));
+--- stage36/crates/victory-gpu/src/host.rs
++++ stage37/crates/victory-gpu/src/host.rs
+@@ -2185,6 +2185,8 @@
+     texture_mips: std::collections::HashMap<usize, u32>,
+     /// Numbered guest memory copies already prepared by this list.
+     raw_copies: RawCopyCoverage,
++    /// Raw directory and descriptor leases survive closed-list replay and flights.
++    raw_leases: Vec<std::sync::Arc<()>>,
+     /// Bottom-of-pipe writes, done once the list has run: address, what,
+     /// bytes.
+     writes: Vec<(usize, crate::queue::Written, usize)>,
+@@ -7038,6 +7040,15 @@
+         let mut deferred = self.deferred();
+         let covered = deferred.texture_mips.entry(key).or_insert(first);
+         *covered = (*covered).min(first);
++    }
++
++    /// Pin the raw directory epoch and descriptor run until this list is
++    /// discarded/reset, not just until its first execution finishes.
++    pub(crate) fn keep_raw_lease(&self, lease: &std::sync::Arc<()>) {
++        let mut deferred = self.deferred();
++        if !deferred.raw_leases.iter().any(|old| std::sync::Arc::ptr_eq(old, lease)) {
++            deferred.raw_leases.push(lease.clone());
++        }
+     }
+ 
+     /// Independent lists can discover new guest memory copies in any order.
+@@ -8083,7 +8094,7 @@
+             let available = available_physical_ram();
+             let groups = host().and_then(|h| h.video_memory_groups());
+             let [shadow_count, shadow_bytes, window_count, window_bytes, pool_count, pool_bytes] = crate::shadow::memory();
+-            let [raw_count, raw_bytes, raw_empty, raw_empty_bytes] = crate::memory::retained_backings();
++            let [raw_count, raw_bytes, raw_empty, raw_empty_bytes, raw_epoch, raw_list_leases] = crate::memory::retained_backings();
+             let [texture_plans, texture_logical_bytes, texture_kept] = crate::texture::memory();
+             tracing::info!(working_set_mib = self.ram_mb,
+                 process_commit_mib = private_bytes() >> 20,
+@@ -8094,7 +8105,7 @@
+                 shared_budget_mib = ?groups.map(|g| g[1][0] >> 20),
+                 shadow_count, shadow_mib = shadow_bytes >> 20, window_count, window_mib = window_bytes >> 20,
+                 retired_count = pool_count, retired_mib = pool_bytes >> 20,
+-                raw_count, raw_logical_mib = raw_bytes >> 20, raw_empty, raw_empty_logical_mib = raw_empty_bytes >> 20,
++                raw_count, raw_logical_mib = raw_bytes >> 20, raw_empty, raw_empty_logical_mib = raw_empty_bytes >> 20, raw_epoch, raw_list_leases,
+                 texture_plans, texture_logical_mib = texture_logical_bytes >> 20, texture_kept,
+                 "memory pressure sample (categories may overlap; do not sum)");
+         }
+--- stage36/crates/victory-gpu/src/texture/gpu_detile.hlsl
++++ stage37/crates/victory-gpu/src/texture/gpu_detile.hlsl
+@@ -1,17 +1,36 @@
+ ByteAddressBuffer tiled : register(t0);
+ RWByteAddressBuffer linear_rows : register(u0);
+ cbuffer Args : register(b0) {
+-    uint words_per_row, height, pitch, element_bytes;
++    uint row_bytes, height, pitch, element_bytes;
+     uint columns_at, rows_at, origin, render_xor;
+     uint output_at;
+ };
++uint address_at(uint x, uint b) {
++    uint a = tiled.Load(columns_at + x * 4);
++    return render_xor != 0 ? ((a & 0xffff0000) + (b & 0xffff0000) + ((a ^ b) & 0xffff)) : (a + b - origin);
++}
+ [RootSignature("SRV(t0), UAV(u0), RootConstants(num32BitConstants=9,b0)")]
+ [numthreads(64,1,1)]
+ void main(uint3 id : SV_DispatchThreadID) {
+-    if (id.x >= words_per_row || id.y >= height) return;
+     uint byte_x = id.x * 4;
+-    uint a = tiled.Load(columns_at + (byte_x / element_bytes) * 4);
++    if (byte_x >= row_bytes || id.y >= height) return;
+     uint b = tiled.Load(rows_at + id.y * 4);
+-    uint at = render_xor != 0 ? ((a & 0xffff0000) + (b & 0xffff0000) + ((a ^ b) & 0xffff)) : (a + b - origin);
+-    linear_rows.Store(output_at + id.y * pitch + byte_x, tiled.Load(at + byte_x % element_bytes));
++    uint value;
++    if (element_bytes >= 4) {
++        uint at = address_at(byte_x / element_bytes, b);
++        value = tiled.Load(at + byte_x % element_bytes);
++    } else {
++        // One thread owns one aligned destination dword. Gather individual
++        // texels from their aligned source dwords: no unaligned Load or
++        // racing read-modify-write of neighboring output texels.
++        value = 0;
++        uint mask = element_bytes == 1 ? 255 : 65535;
++        for (uint n = 0; n < 4; n += element_bytes) {
++            if (byte_x + n >= row_bytes) break;
++            uint at = address_at((byte_x + n) / element_bytes, b);
++            uint texel = (tiled.Load(at & ~3u) >> ((at & 3u) * 8)) & mask;
++            value |= texel << (n * 8);
++        }
++    }
++    linear_rows.Store(output_at + id.y * pitch + byte_x, value);
+ }
+--- stage36/crates/victory-gpu/src/texture/gpu_detile.rs
++++ stage37/crates/victory-gpu/src/texture/gpu_detile.rs
+@@ -113,7 +113,7 @@
+         if d.dimension != Dimension::Tex2d || slice >= layout.slices
+             || d.samples != 1 || !matches!(d.block, 1 | 4) || layout.thick
+             || !layout.addressable() || d.swizzle == Swizzle::LINEAR
+-            || !matches!(d.element_bytes, 4 | 8 | 16) { return None; }
++            || !matches!(d.element_bytes, 1 | 2 | 4 | 8 | 16) { return None; }
+         let m = layout.mips.get(mip as usize)?;
+         if m.width == 0 || m.height == 0 || m.width > 16384 || m.height > 16384 { return None; }
+         let offset = |x, y| u32::try_from(layout.offset(mip, x, y, slice).ok()?).ok();
+@@ -126,7 +126,7 @@
+         let b = u64::from(*rows.iter().max()?);
+         let end = if xor { (a & !65535) + (b & !65535) + 65536 }
+             else { a.checked_add(b)?.checked_sub(u64::from(origin))?.checked_add(u64::from(d.element_bytes))? };
+-        if end > bytes as u64 || columns.iter().chain(&rows).any(|v| v % 4 != 0) { return None; }
++        if end > bytes as u64 || columns.iter().chain(&rows).any(|v| v % d.element_bytes.min(4) != 0) { return None; }
+         Some(Self { columns, rows, origin, xor })
+     }
+ }
+@@ -180,6 +180,9 @@
+     if output_base % 512 != 0 || output_bytes < 1 << 20 || output_bytes > 16 << 20 { return None; }
+     let layout = &staging.layout;
+     let d = &layout.desc;
++    static SMALL_ELEMENTS: OnceLock<bool> = OnceLock::new();
++    if d.element_bytes < 4 && (!extended || (check_budget && !*SMALL_ELEMENTS.get_or_init(||
++        std::env::var_os("VICTORY_GPU_DETILE_SMALL_ELEMENTS").is_some_and(|v| v == "1")))) { return None; }
+     if !extended && (staging.first != 0 || staging.mips != 1 || staging.footprints.len() != 1
+         || d.block != 1 || d.depth != 1) { return None; }
+     if staging.first >= staging.mips || staging.footprints.len() != staging.rows.len()
+@@ -214,7 +217,7 @@
+         if tables.len() > (2 << 20) / 4 { return None; }
+         // An unprovable envelope disables pruning for this job, never the upload.
+         job_sources.push(axes.source_bounds(d.element_bytes, tiled.len()).unwrap_or((0, tiled.len())));
+-        jobs.push([row_bytes / 4, m.height, f.RowPitch, d.element_bytes, col_at, row_at,
++        jobs.push([row_bytes, m.height, f.RowPitch, d.element_bytes, col_at, row_at,
+             axes.origin, u32::from(axes.xor), u32::try_from(footprint.Offset.checked_sub(output_base)?).ok()?]);
+     }
+     if jobs.is_empty() { return None; }
+@@ -321,7 +324,7 @@
+                     continue;
+                 }
+                 list.SetComputeRoot32BitConstants(2, 9, args.as_ptr().cast(), 0);
+-                list.Dispatch(args[0].div_ceil(64), args[1], 1);
++                list.Dispatch(args[0].div_ceil(4).div_ceil(64), args[1], 1);
+             }
+             list.ResourceBarrier(&[transition(&self.input, srv, common), transition(&self.output, uav, source)]);
+         }
+@@ -367,6 +370,9 @@
+             return;
+         };
+         for (swizzle, element_bytes, block, width, height, mips, depth, first, revision_first) in [
++            (Swizzle::SW_4KB_D, 1, 1, 1537, 1025, 1, 1, 0, 0),
++            (Swizzle::SW_64KB_S, 2, 1, 1025, 769, 9, 1, 0, 0),
++            (Swizzle::SW_64KB_R_X, 2, 1, 1025, 769, 1, 1, 0, 0),
+             (Swizzle::SW_64KB_R_X, 4, 1, 513, 517, 1, 1, 0, 0),
+             (Swizzle::SW_64KB_R_X, 8, 1, 513, 517, 1, 1, 0, 0),
+             (Swizzle::SW_4KB_D, 16, 1, 513, 517, 1, 1, 0, 0),
+@@ -406,7 +412,7 @@
+                 memory: tiled.as_ptr(), last: Default::default(), dirty: true.into(),
+                 uploaded: false.into(), used: 0.into(),
+             };
+-            let extended = block != 1 || mips != 1 || depth != 1;
++            let extended = element_bytes < 4 || block != 1 || mips != 1 || depth != 1;
+             if extended { assert!(prepare_inner(&staging, &tiled, false, false, revision_first).is_none()); }
+             let upload = prepare_inner(&staging, &tiled, false, extended, revision_first).expect("eligible test GPU detile");
+             let plan = upload.gpu.as_ref().unwrap();
+@@ -449,12 +455,12 @@
+     #[test]
+     fn axis_equation_matches_existing_layout() {
+         for swizzle in [Swizzle::SW_256B_S, Swizzle::SW_4KB_D, Swizzle::SW_64KB_S, Swizzle::SW_64KB_R_X] {
+-            for element_bytes in [4, 8, 16] {
++            for element_bytes in [1, 2, 4, 8, 16] {
+                 let desc = Desc { dimension: Dimension::Tex2d, width: 513, height: 259, depth: 1,
+                     mips: 1, element_bytes, block: 1, samples: 1, swizzle };
+                 let layout = Layout::new(&desc).unwrap();
+                 let Some(axes) = Axes::new(&layout, layout.size as usize) else {
+-                    assert!(swizzle == Swizzle::SW_64KB_R_X && element_bytes == 16); continue;
++                    assert!(!layout.addressable() || (swizzle == Swizzle::SW_64KB_R_X && matches!(element_bytes, 1 | 16))); continue;
+                 };
+                 let (lo, hi) = axes.source_bounds(element_bytes, layout.size as usize).unwrap_or((0, layout.size as usize));
+                 for y in 0..desc.height { for x in 0..desc.width {

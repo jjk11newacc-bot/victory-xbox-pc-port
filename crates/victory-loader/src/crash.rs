@@ -143,58 +143,98 @@ const FATAL: [i32; 6] = [
     EXCEPTION_BREAKPOINT,
 ];
 
+/// Copy the readable prefix of an instruction, stopping before reserved,
+/// uncommitted, guarded, or execute-only memory. Exception handlers must not
+/// probe the next page with a direct load: the fetch itself can fault again.
+fn readable_code_prefix(address: usize, out: &mut [u8]) -> usize {
+    use windows_sys::Win32::System::Memory::{
+        MEM_COMMIT, MEMORY_BASIC_INFORMATION, PAGE_EXECUTE_READ, PAGE_EXECUTE_READWRITE,
+        PAGE_EXECUTE_WRITECOPY, PAGE_GUARD, PAGE_NOACCESS, PAGE_READONLY, PAGE_READWRITE,
+        PAGE_WRITECOPY, VirtualQuery,
+    };
+    let mut copied = 0usize;
+    while copied < out.len() {
+        let Some(at) = address.checked_add(copied) else { break };
+        // SAFETY: zeroed MEMORY_BASIC_INFORMATION is a valid output buffer.
+        let mut info: MEMORY_BASIC_INFORMATION = unsafe { std::mem::zeroed() };
+        // SAFETY: VirtualQuery reads the process address map, not the memory at `at`.
+        if unsafe { VirtualQuery(at as *const _, &mut info, std::mem::size_of_val(&info)) } == 0 {
+            break;
+        }
+        let protection = info.Protect & 0xff;
+        if info.State != MEM_COMMIT
+            || info.Protect & (PAGE_GUARD | PAGE_NOACCESS) != 0
+            || !matches!(
+                protection,
+                PAGE_READONLY
+                    | PAGE_READWRITE
+                    | PAGE_WRITECOPY
+                    | PAGE_EXECUTE_READ
+                    | PAGE_EXECUTE_READWRITE
+                    | PAGE_EXECUTE_WRITECOPY
+            )
+        {
+            break;
+        }
+        let Some(end) = (info.BaseAddress as usize).checked_add(info.RegionSize) else { break };
+        if end <= at { break; }
+        let count = (end - at).min(out.len() - copied);
+        // SAFETY: the queried committed region is readable and `count` stays
+        // within that region and the output slice. The handler only reads the
+        // already-fetched instruction and adjacent bytes for decoding.
+        unsafe { std::ptr::copy_nonoverlapping(at as *const u8, out.as_mut_ptr().add(copied), count) };
+        copied += count;
+    }
+    copied
+}
+
 /// Console CPUs are Zen 2: titles use AMD-only instructions Intel CPUs
 /// lack. Does their job instead: `clzero` (`0f 01 fc`) zeroes the 64-byte
 /// line at `rax`; `monitorx`/`mwaitx` (`0f 01 fa`/`fb`) are wait hints, so
 /// a spin loop around them works with mwaitx as a yield.
 unsafe fn emulate_amd_only(info: *mut EXCEPTION_POINTERS) -> bool {
-    // SAFETY: the system passes valid exception pointers; the faulting
-    // instruction's bytes are readable, as the CPU just fetched them.
+    // SAFETY: the system passes valid exception pointers. Instruction bytes
+    // are copied only after checking their committed readable memory regions.
     unsafe {
         let record = &*(*info).ExceptionRecord;
         let context = &mut *(*info).ContextRecord;
         if record.ExceptionCode != EXCEPTION_ILLEGAL_INSTRUCTION {
             return false;
         }
-        let code = context.Rip as *const u8;
-        match code.cast::<[u8; 3]>().read_unaligned() {
-            [0x0f, 0x01, 0xfc] => ((context.Rax & !63) as *mut u8).write_bytes(0, 64),
-            [0x0f, 0x01, 0xfa] => {}
-            [0x0f, 0x01, 0xfb] => std::thread::yield_now(),
-            _ => {
-                // Only bytes inside the faulting instruction's page are read: the next page may
-                // not be mapped.
-                let room = 0x1000 - (context.Rip as usize & 0xfff);
-                let mut bytes = [0u8; 32];
-                let n = room.min(bytes.len());
-                std::ptr::copy_nonoverlapping(code, bytes.as_mut_ptr(), n);
-                if let Some(pass) = clwb_loop(&bytes[..n]) {
-                    // A whole write-back loop in one exception (see `clwb_loop`).
-                    let limit = *gpr(context, pass.limit);
-                    let base = gpr(context, pass.base);
-                    *base = if *base <= limit {
-                        base.wrapping_add(((limit - *base) / 64 + 1) * 64)
-                    } else {
-                        base.wrapping_add(64)
-                    };
-                    let flags = cmp_flags(*base, limit);
-                    context.EFlags = context.EFlags & !CMP_FLAGS | flags;
-                    context.Rip += pass.len as u64;
-                    return true;
-                }
-                if n >= 15
-                    && let Some(len) = clwb_len(bytes[..15].try_into().unwrap_or([0; 15]))
-                {
-                    // A write-back hint: the PC's memory is coherent, so it has nothing to do.
-                    context.Rip += len as u64;
-                    return true;
-                }
-                let Some(len) = sse4a(code, &mut context.Anonymous.FltSave.XmmRegisters) else {
-                    return false;
+        let mut fetched = [0u8; 32];
+        let n = readable_code_prefix(context.Rip as usize, &mut fetched);
+        let code = &fetched[..n];
+        if code.starts_with(&[0x0f, 0x01, 0xfc]) {
+            ((context.Rax & !63) as *mut u8).write_bytes(0, 64);
+        } else if code.starts_with(&[0x0f, 0x01, 0xfa]) {
+            // MONITORX is a hint with no state to preserve here.
+        } else if code.starts_with(&[0x0f, 0x01, 0xfb]) {
+            std::thread::yield_now();
+        } else {
+            if let Some(pass) = clwb_loop(code) {
+                // A whole write-back loop in one exception (see `clwb_loop`).
+                let limit = *gpr(context, pass.limit);
+                let base = gpr(context, pass.base);
+                *base = if *base <= limit {
+                    base.wrapping_add(((limit - *base) / 64 + 1) * 64)
+                } else {
+                    base.wrapping_add(64)
                 };
+                let flags = cmp_flags(*base, limit);
+                context.EFlags = context.EFlags & !CMP_FLAGS | flags;
+                context.Rip += pass.len as u64;
+                return true;
+            }
+            if let Some(len) = clwb_len(code) {
+                // A write-back hint: the PC's memory is coherent, so it has nothing to do.
                 context.Rip += len as u64;
                 return true;
             }
+            let Some(len) = sse4a(code, &mut context.Anonymous.FltSave.XmmRegisters) else {
+                return false;
+            };
+            context.Rip += len as u64;
+            return true;
         }
         context.Rip += 3;
     }
@@ -203,12 +243,12 @@ unsafe fn emulate_amd_only(info: *mut EXCEPTION_POINTERS) -> bool {
 
 /// `clwb m8` (`66 [rex] 0f ae /6`, a memory operand), which Intel CPUs before
 /// Ice Lake lack: its length, or `None` for any other instruction.
-fn clwb_len(code: [u8; 15]) -> Option<usize> {
-    let at = if code[1] & 0xf0 == 0x40 { 2 } else { 1 };
-    if code[0] != 0x66 || code[at] != 0x0f || code[at + 1] != 0xae {
+fn clwb_len(code: &[u8]) -> Option<usize> {
+    let at = if *code.get(1)? & 0xf0 == 0x40 { 2 } else { 1 };
+    if *code.first()? != 0x66 || code.get(at) != Some(&0x0f) || code.get(at + 1) != Some(&0xae) {
         return None;
     }
-    let modrm = code[at + 2];
+    let modrm = *code.get(at + 2)?;
     let (mode, rm) = (modrm >> 6, modrm & 7);
     if mode == 3 || (modrm >> 3) & 7 != 6 {
         return None;
@@ -216,7 +256,7 @@ fn clwb_len(code: [u8; 15]) -> Option<usize> {
     let mut len = at + 3;
     let mut base = rm;
     if rm == 4 {
-        base = code[len] & 7;
+        base = *code.get(len)? & 7;
         len += 1;
     }
     len += match mode {
@@ -225,7 +265,7 @@ fn clwb_len(code: [u8; 15]) -> Option<usize> {
         2 => 4,
         _ => 0,
     };
-    Some(len)
+    (code.len() >= len).then_some(len)
 }
 
 /// A `clwb` write-back loop as the title's compilers build it, one cache line a
@@ -322,27 +362,30 @@ const CMP_FLAGS: u32 = 0x8d5;
 
 /// SSE4a's `extrq`/`insertq` (register forms, the only ones there are) on
 /// the saved XMM registers; returns the instruction's length.
-unsafe fn sse4a(code: *const u8, xmm: &mut [M128A; 16]) -> Option<usize> {
-    // SAFETY: the caller's code bytes are readable up to the instruction's end.
-    let b = |i: usize| unsafe { code.add(i).read() };
-    let prefix = b(0);
-    let (rex, at) = if b(1) & 0xf0 == 0x40 {
-        (b(1), 2)
+fn sse4a(code: &[u8], xmm: &mut [M128A; 16]) -> Option<usize> {
+    let prefix = *code.first()?;
+    let second = *code.get(1)?;
+    let (rex, at) = if second & 0xf0 == 0x40 {
+        (second, 2)
     } else {
         (0, 1)
     };
-    if !matches!(prefix, 0x66 | 0xf2) || b(at) != 0x0f || !matches!(b(at + 1), 0x78 | 0x79) {
+    if !matches!(prefix, 0x66 | 0xf2)
+        || code.get(at) != Some(&0x0f)
+        || !matches!(code.get(at + 1), Some(&0x78) | Some(&0x79))
+    {
         return None;
     }
-    let modrm = b(at + 2);
+    let opcode = *code.get(at + 1)?;
+    let modrm = *code.get(at + 2)?;
     if modrm >> 6 != 3 {
         return None;
     }
     let dst = usize::from((modrm >> 3) & 7 | (rex & 4) << 1);
     let src = usize::from(modrm & 7 | (rex & 1) << 3);
-    let immediate = b(at + 1) == 0x78;
+    let immediate = opcode == 0x78;
     let (fields, len) = if immediate {
-        ((b(at + 3), b(at + 4)), at + 5)
+        ((*code.get(at + 3)?, *code.get(at + 4)?), at + 5)
     } else {
         // extrq reads its fields from src's low half, insertq from its high.
         let f = if prefix == 0x66 { xmm[src].Low } else { xmm[src].High as u64 };
@@ -639,7 +682,7 @@ fn memory_at(address: usize) -> String {
     // SAFETY: a zeroed MEMORY_BASIC_INFORMATION is valid.
     let mut info: MEMORY_BASIC_INFORMATION = unsafe { std::mem::zeroed() };
     // SAFETY: reads the address space's bookkeeping, not `address` itself.
-    let n = unsafe { VirtualQuery(address as *const _, &mut info, size_of_val(&info)) };
+    let n = unsafe { VirtualQuery(address as *const _, &mut info, std::mem::size_of_val(&info)) };
     if n == 0 {
         // Above the process's address space: Windows reports a
         // non-canonical address as all ones.
@@ -816,21 +859,33 @@ mod tests {
             c[..b.len()].copy_from_slice(b);
             c
         };
-        assert_eq!(clwb_len(pad(&[0x66, 0x41, 0x0f, 0xae, 0x31])), Some(5)); // clwb [r9]
-        assert_eq!(clwb_len(pad(&[0x66, 0x0f, 0xae, 0x30])), Some(4)); // clwb [rax]
-        assert_eq!(clwb_len(pad(&[0x66, 0x0f, 0xae, 0x70, 0x40])), Some(5)); // clwb [rax+0x40]
+        assert_eq!(clwb_len(&pad(&[0x66, 0x41, 0x0f, 0xae, 0x31])), Some(5)); // clwb [r9]
+        assert_eq!(clwb_len(&pad(&[0x66, 0x0f, 0xae, 0x30])), Some(4)); // clwb [rax]
+        assert_eq!(clwb_len(&pad(&[0x66, 0x0f, 0xae, 0x70, 0x40])), Some(5)); // clwb [rax+0x40]
         assert_eq!(
-            clwb_len(pad(&[0x66, 0x0f, 0xae, 0xb0, 0, 1, 0, 0])),
+            clwb_len(&pad(&[0x66, 0x0f, 0xae, 0xb0, 0, 1, 0, 0])),
             Some(8)
         ); // [rax+disp32]
-        assert_eq!(clwb_len(pad(&[0x66, 0x0f, 0xae, 0x34, 0x24])), Some(5)); // clwb [rsp]
+        assert_eq!(clwb_len(&pad(&[0x66, 0x0f, 0xae, 0x34, 0x24])), Some(5)); // clwb [rsp]
         assert_eq!(
-            clwb_len(pad(&[0x66, 0x0f, 0xae, 0x35, 0, 0, 0, 0])),
+            clwb_len(&pad(&[0x66, 0x0f, 0xae, 0x35, 0, 0, 0, 0])),
             Some(8)
         ); // [rip+disp32]
-        assert_eq!(clwb_len(pad(&[0x66, 0x0f, 0xae, 0x38])), None); // clflushopt, /7
-        assert_eq!(clwb_len(pad(&[0x0f, 0xae, 0x30])), None); // xsaveopt, no 66
-        assert_eq!(clwb_len(pad(&[0x66, 0x0f, 0xae, 0xf0])), None); // register form
+        assert_eq!(clwb_len(&pad(&[0x66, 0x0f, 0xae, 0x38])), None); // clflushopt, /7
+        assert_eq!(clwb_len(&pad(&[0x0f, 0xae, 0x30])), None); // xsaveopt, no 66
+        assert_eq!(clwb_len(&pad(&[0x66, 0x0f, 0xae, 0xf0])), None); // register form
+        assert_eq!(clwb_len(&[0x66, 0x0f, 0xae]), None); // cut off before ModRM
+        assert_eq!(clwb_len(&[0x66, 0x0f, 0xae, 0xb0, 0]), None); // cut off displacement
+    }
+
+    #[test]
+    fn sse4a_decoder_stops_at_the_available_instruction_bytes() {
+        let insertq = [0xf2, 0x0f, 0x78, 0xc1, 0x10, 0x10];
+        let mut xmm = [reg(0, 0); 16];
+        for len in 0..insertq.len() {
+            assert_eq!(sse4a(&insertq[..len], &mut xmm), None, "prefix length {len}");
+        }
+        assert_eq!(sse4a(&insertq, &mut xmm), Some(insertq.len()));
     }
 
     #[test]
@@ -1045,6 +1100,10 @@ mod tests {
             let end = page.add(0x1000 - 3);
             end.copy_from_nonoverlapping(code.as_ptr(), 3);
             assert_eq!(instruction_bytes(end as usize), "0f 01 fd");
+            let mut fetched = [0u8; 32];
+            let count = readable_code_prefix(end as usize, &mut fetched);
+            assert_eq!(count, 3);
+            assert_eq!(&fetched[..count], &[0x0f, 0x01, 0xfd]);
             VirtualFree(page.cast(), 0, MEM_RELEASE);
         }
     }

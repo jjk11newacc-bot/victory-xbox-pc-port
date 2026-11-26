@@ -45,6 +45,7 @@ pub fn run(
 
     let images = cfg.cache_subdir("images")?;
     victory_hle::modules::d3d12x::use_shader_cache(cfg.cache_subdir("shaders")?);
+    let output_1080p = std::env::var("VICTORY_NATIVE_1080P").as_deref() == Ok("1");
     let render_1080p = std::env::var("VICTORY_RENDER_1080P").as_deref() == Ok("1");
     let image = if let Some(preset) = fsr {
         anyhow::ensure!(matches!(console, Console::SeriesX), "FSR at 4K requires Series X mode");
@@ -54,6 +55,7 @@ pub fn run(
         unsafe {
             std::env::set_var("VICTORY_DISPLAY_MODE", "3840x2160");
             std::env::set_var("VICTORY_NATIVE_1440P", "0");
+            std::env::set_var("VICTORY_NATIVE_1080P", "0");
             std::env::set_var("VICTORY_RENDER_1080P", "0");
         }
         victory_hle::modules::fidelityfx::use_host_dir(cfg.fidelityfx_dir.as_deref());
@@ -63,16 +65,18 @@ pub fn run(
         );
         let cache = format!("images/fsr-{}-4k-sdr", preset.name());
         victory_loader::load(&prepared, &cfg.cache_subdir(&cache)?)?
-    } else if render_1080p || std::env::var("VICTORY_NATIVE_1440P").as_deref() == Ok("1") {
-        anyhow::ensure!(matches!(console, Console::SeriesX), "1440p output requires Series X mode");
-        native_1440p::prepare(&mut prepared, render_1080p)?;
+    } else if output_1080p || render_1080p || std::env::var("VICTORY_NATIVE_1440P").as_deref() == Ok("1") {
+        anyhow::ensure!(matches!(console, Console::SeriesX), "Native display output requires Series X mode");
+        native_1440p::prepare(&mut prepared, render_1080p, output_1080p)?;
         // SAFETY: Windows supports setting the environment across threads.
         // The title and DXGI emulation have not started querying display modes.
         unsafe {
-            std::env::set_var("VICTORY_DISPLAY_MODE", "2560x1440");
-            std::env::set_var("VICTORY_NATIVE_1440P", "1");
+            std::env::set_var("VICTORY_DISPLAY_MODE", if output_1080p { "1920x1080" } else { "2560x1440" });
+            std::env::set_var("VICTORY_NATIVE_1440P", if output_1080p { "0" } else { "1" });
         }
-        let image_cache = if render_1080p {
+        let image_cache = if output_1080p {
+            "images/native-1080p-sdr"
+        } else if render_1080p {
             "images/1080p-to-1440p-sdr"
         } else {
             "images/native-1440p-sdr"

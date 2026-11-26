@@ -1,8 +1,10 @@
+> **Intel Core i5-12400F / RTX 3060 Ti / 16 GB PC profile:** See [the hardware-specific target notes](HARDWARE-INTEL12400F-RTX3060TI.md), [NVIDIA-LOW-MEMORY.md](NVIDIA-LOW-MEMORY.md), [Xbox-to-PC memory notes](docs/xbox-to-pc-memory.md). The RTX gameplay path still needs validation on the target PC.
+
 # DexNom RayTime (AMD)
 
 DexNom RayTime is a community fork of Marvisak's VIctory for Windows x64. It runs an Xbox Series executable from your own game installation and translates its GPU work for Direct3D 12. This is our most complete tested build so far and the source for the FSR Quality 4K baseline. Game files, executables, saves and generated shader caches stay on your own computer.
 
-AMD Radeon is the primary target and the best-tested GPU path for this build. See [Experimental NVIDIA](#experimental-nvidia) for the untested NVIDIA launch options. The current performance priorities are reducing VRAM use and improving FPS and frame-time stability.
+AMD Radeon is the primary target and the best-tested GPU path for this build. See [NVIDIA RTX PC profile](#nvidia-rtx-pc-profile) for the RTX 3060 Ti launch settings. The current performance priorities are reducing VRAM use and improving FPS and frame-time stability.
 
 The Radeon FSR Quality 4K build is our most stable tested baseline for shaders and texture streaming. See [Things to Be Done](#things-to-be-done) for open work and how to measure a contribution.
 
@@ -22,8 +24,8 @@ The Radeon FSR Quality 4K build is our most stable tested baseline for shaders a
 
 1. Use 64-bit Windows and a current Direct3D 12 driver. The game uses mesh shaders and Shader Model 6.6. The Radeon gameplay results and known issues are listed below.
 2. Install Rust for Windows and Visual Studio Build Tools. In the Visual Studio installer, select **Desktop development with C++**, including the x64 MSVC toolset and a Windows 10 or 11 SDK. [Rust installer](https://rustup.rs/) · [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-3. Download this repository using **Code → Download ZIP**, extract the ZIP to a writable folder, and double-click **Setup.cmd**. Select the Series X game executable inside your own extracted game installation. Keep its accompanying files together. Setup downloads the pinned build dependencies, verifies the BCPack format tables, and compiles the three Windows programs locally. [Download source ZIP](https://github.com/DexNom/VIctory/archive/refs/heads/main.zip)
-4. Open **DexNom RayTime** from the Windows Start menu. Use a controller for the game's first-time setup. The launcher and your local data are in `%LOCALAPPDATA%\DexNom Runtime`. Saves are in `state`, shader caches in `cache`, and per-run diagnostics in `logs`. The file `logs\latest.txt` points to the latest game log.
+3. Download this repository using **Code → Download ZIP**, extract the ZIP to a writable folder, and double-click **Setup.cmd**. Select the Series X game executable inside your own extracted game installation. Keep its accompanying files together. Setup downloads the pinned build dependencies, verifies the BCPack format tables, and compiles the three Windows programs locally without diagnostic instrumentation. Use `Setup.cmd -Diagnostics` when collecting detailed runtime counters. [Download source ZIP](https://github.com/DexNom/VIctory/archive/refs/heads/main.zip)
+4. Open **DexNom RayTime** from the Windows Start menu. Use a controller for the game's first-time setup. The launcher and your local data are in `%LOCALAPPDATA%\DexNom Runtime`. Saves are in `state`, shader caches in `cache`, and per-run logs in `logs`. The file `logs\latest.txt` points to the latest game log.
 
 To update, close the runtime, extract the new source ZIP, and run **Setup.cmd** again. It reuses the saved game path and the same save directory. To select a different installation, pass its executable path to Setup from PowerShell:
 
@@ -33,7 +35,7 @@ To update, close the runtime, extract the new source ZIP, and run **Setup.cmd** 
 
 To warm the shader cache, open `victory-warm.exe` in the installed runtime directory. The log lists translated and refused shaders. Graphics pipelines also depend on draw state encountered during play. If you see a missing `VCRUNTIME140.dll` error, install Microsoft's x64 redistributable. [Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
 
-For a manual build, run `.\Initialize-FormatTables.ps1`, then `cargo build --locked --release -p victory --features diagnostics --bins`. The release binaries are in `target\release`. Place all three together outside the checkout and pass the game executable path to `victory-play.exe`. Custom data and cache directories are documented in the configuration example. [Configuration example](victory.example.toml)
+For a manual performance build, run `.\Initialize-FormatTables.ps1`, then `cargo build --locked --release -p victory --bins`. Add `--features diagnostics` when you need detailed counters. The release binaries are in `target\release`. Place all three together outside the checkout and pass the game executable path to `victory-play.exe`. Custom data and cache directories are documented in the configuration example. [Configuration example](victory.example.toml)
 
 ## FSR Quality 4K baseline
 
@@ -51,7 +53,7 @@ The **DexNom RayTime (Experimental RT)** shortcut enables ray tracing with the g
 
 Chapter 1 City produced in-range ray and triangle intersections on an RX 7900 XTX. The game builds and traverses its acceleration structures through translated Direct3D 12 compute shaders. Frame times can still reach several seconds. Interior lighting, shadows and performance vary by scene. [Ray-tracing implementation](docs/fork-ray-tracing.md) · [City testing](BENCHMARK.md)
 
-## Experimental NVIDIA
+## NVIDIA RTX PC profile
 
 NVIDIA gameplay is untested. Start with ray tracing off and the game's display path. Replace `--rt` with `--no-rt` and leave out `--fsr-quality`, `--fsr-balanced`, and `--fsr-performance`. After setup, run the following in PowerShell.
 
@@ -111,8 +113,13 @@ $env:VICTORY_PARALLEL_PRELUDES = '1'
 - **The XCL contributors** published an independent Xbox Series compatibility layer that informed our work on shader translation and CPU/GPU memory synchronization. [XCL](https://github.com/xcl-dev/xcl)
 - **AMD** supplies the FSR 4.1.2 upscaler used by the Quality 4K profile. [AMD FSR SDK](https://gpuopen.com/amd-fsr-sdk/)
 
-The upstream README preserves the original credits and historical test results. [Upstream README](README.upstream.md)
+
 
 ## Licensing
 
 VIctory source is licensed under GPL-3.0-or-later. The upstream project identifies the required BCPack format tables as separately supplied data outside that license. This source archive omits that file. The setup script verifies a local or upstream copy before use. [License](LICENSE) · [Upstream asset policy and table notice](docs/asset-policy.md)
+
+
+
+
+

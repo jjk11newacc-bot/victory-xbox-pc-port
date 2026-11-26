@@ -40,8 +40,10 @@
 //! is the extent of the title's allocation around an address, which the
 //! memory module of the layer knows and this one does not ask yet.
 //!
-//! shortcut: a copy that is numbered is kept for the rest of the run, and
+//! By default a copy that is numbered is kept for the rest of the run, and
 //! each view heap grows its descriptor run as more copies are needed.
+//! Experimental raw-slot reclamation compacts only with no raw-list leases;
+//! superseded descriptor runs stay pinned until their final list is reset.
 //! Reads see all addressable copies. Writers publish all visible copies unless
 //! the direct builder's bound constants identify every possible raw store.
 
@@ -152,6 +154,9 @@ struct Memory {
     recalculate: BTreeSet<usize>,
     generation: u64,
     coverage_revision: u64,
+    slot_epoch: u64,
+    lease: Arc<()>,
+    compact_frame: u64,
     /// The frame the faults were last read in.
     frame: u64,
     /// Pages asked for this frame that are not the title's memory.
@@ -175,6 +180,24 @@ struct Memory {
 unsafe impl Send for Memory {}
 
 static MEMORY: Mutex<Option<Memory>> = Mutex::new(None);
+
+/// Logical backing sizes, including entries retained solely by stable raw
+/// descriptor slots. These are not resident RAM or a claim of a memory leak.
+#[cfg(feature = "diagnostics")]
+pub(crate) fn retained_backings() -> [u64; 6] {
+    let guard = MEMORY.lock().unwrap_or_else(|e| e.into_inner());
+    let Some(m) = guard.as_ref() else { return [0; 6] };
+    let mut out = [m.copies.len() as u64, 0, 0, 0, m.slot_epoch, Arc::strong_count(&m.lease).saturating_sub(1) as u64];
+    for (i, copy) in m.copies.iter().enumerate() {
+        let (_, len) = copy.span();
+        out[1] = out[1].saturating_add(len);
+        if m.ranges[i].is_empty() && !m.recalculate.contains(&i) {
+            out[2] += 1;
+            out[3] = out[3].saturating_add(len);
+        }
+    }
+    out
+}
 
 /// What a draw binds.
 pub(crate) struct Ready {
@@ -213,6 +236,9 @@ impl Memory {
             recalculate: BTreeSet::new(),
             generation: GENERATION.load(Ordering::Acquire),
             coverage_revision: 0,
+            slot_epoch: 0,
+            lease: Arc::new(()),
+            compact_frame: u64::MAX,
             frame: u64::MAX,
             refused: Default::default(),
             acceleration: None,
@@ -223,6 +249,63 @@ impl Memory {
             speculative_skips: 0,
             partial_copy: None,
         })
+    }
+
+    /// Compact only when no recorded or in-flight raw list can replay an
+    /// old slot. Reconciliation has already completed. Build the replacement
+    /// before touching any live state; allocation failure leaves it unchanged.
+    fn compact_idle(&mut self, frame: u64) {
+        if self.compact_frame == frame || Arc::strong_count(&self.lease) != 1 {
+            return;
+        }
+        self.compact_frame = frame;
+        self.update_ranges();
+        let mut live = vec![false; self.copies.len()];
+        for &owner in self.pages.values() { live[owner] = true; }
+        // A partially populated copy may still be expanded on its next root.
+        if let Some(i) = self.partial_copy { live[i] = true; }
+        let dead = live.iter().filter(|&&used| !used).count();
+        let bytes: u64 = self.copies.iter().zip(&live)
+            .filter(|(_, used)| !**used).map(|(copy, _)| copy.span().1).sum();
+        if dead == 0 { return; }
+        if self.copies.len() < SPECULATIVE_COPIES && dead < 16 && bytes < (64 << 20)
+            && crate::budget::ram_pressure(crate::host::available_physical_ram()) < 2 { return; }
+        let Some(epoch) = self.slot_epoch.checked_add(1) else { return };
+        let Some(next) = Self::table(u64::from(MEMORY_PAGES) * 2, "compacted directory") else { return };
+        let mut remap = vec![usize::MAX; live.len()];
+        let mut copies = Vec::with_capacity(live.len() - dead);
+        let mut ranges = Vec::with_capacity(live.len() - dead);
+        let mut numbers = HashMap::with_capacity(live.len() - dead);
+        for (i, copy) in self.copies.iter().enumerate() {
+            if !live[i] { continue; }
+            remap[i] = copies.len();
+            numbers.insert(copy.id(), copies.len());
+            copies.push(copy.clone());
+            ranges.push(std::mem::take(&mut self.ranges[i]));
+        }
+        for (&page, owner) in &mut self.pages {
+            *owner = remap[*owner];
+            // SAFETY: both tables cover this page; no recorded list can use
+            // this epoch. The new table was zeroed and is not published yet.
+            unsafe {
+                let at = page as usize * 2;
+                next.1.add(at + 1).write(self.directory.1.add(at + 1).read());
+                next.1.add(at).write(*owner as u32 + 1);
+            }
+        }
+        self.partial_copy = self.partial_copy.map(|i| remap[i]);
+        self.directory = next;
+        self.copies = copies;
+        self.ranges = ranges;
+        self.numbers = numbers;
+        self.slot_epoch = epoch;
+        self.coverage_revision += 1;
+        // First-mapping counters describe the current epoch, not the old one.
+        self.from_roots = 0;
+        self.from_neighbors = 0;
+        self.from_constants = 0;
+        self.from_faults = 0;
+        tracing::info!(epoch, dead, bytes, remaining = self.copies.len(), "compacted idle raw memory directory (logical bytes)");
     }
 
     fn table(dwords: u64, what: &str) -> Option<(ID3D12Resource, *mut u32, u64)> {
@@ -310,11 +393,17 @@ impl Memory {
                 continue;
             }
             if !replaced {
-                let next = Self::table(u64::from(MEMORY_PAGES) * 2, "directory")?;
-                // SAFETY: equal-sized disjoint tables. The CPU records under
-                // the memory mutex and all GPU directory accesses are reads.
-                unsafe { std::ptr::copy_nonoverlapping(self.directory.1, next.1, MEMORY_PAGES as usize * 2) };
-                self.directory = next;
+                // With raw-slot leases enabled, the same quiescence proof
+                // used by compact_idle also permits editing this directory
+                // in place. Old lists (including replayable closed lists)
+                // must otherwise retain their immutable old directory.
+                if !idle_directory_reuse(Arc::strong_count(&self.lease)) {
+                    let next = Self::table(u64::from(MEMORY_PAGES) * 2, "directory")?;
+                    // SAFETY: equal-sized disjoint tables. The CPU records under
+                    // the memory mutex and all GPU directory accesses are reads.
+                    unsafe { std::ptr::copy_nonoverlapping(self.directory.1, next.1, MEMORY_PAGES as usize * 2) };
+                    self.directory = next;
+                }
                 replaced = true;
                 self.coverage_revision += 1;
             }
@@ -329,7 +418,39 @@ impl Memory {
     }
 
     fn update_ranges(&mut self) {
-        for index in std::mem::take(&mut self.recalculate) {
+        let changed = std::mem::take(&mut self.recalculate);
+        static BATCH: OnceLock<bool> = OnceLock::new();
+        if changed.len() >= 8 && *BATCH.get_or_init(|| std::env::var_os("VICTORY_BATCH_PAGE_RANGES").is_some_and(|v| v == "1")) {
+            // Many overlapping old/new owners may be dirty after remapping.
+            // Rebuild in one ordered directory pass rather than walking the
+            // same page tree for every owner. Keep the legacy clipping rule.
+            let mut spans: Vec<_> = changed.iter().map(|&index| {
+                self.ranges[index].clear();
+                let (start, len) = self.copies[index].span();
+                (start.div_ceil(PAGE), (start + len) / PAGE)
+            }).filter(|&(a, b)| a < b).collect();
+            spans.sort_unstable();
+            let mut union: Vec<(u64, u64)> = Vec::new();
+            for (a, b) in spans {
+                if let Some(last) = union.last_mut().filter(|last| a <= last.1) {
+                    last.1 = last.1.max(b);
+                } else { union.push((a, b)); }
+            }
+            for (from, to) in union {
+                for (&page, &owner) in self.pages.range(from..to) {
+                    if !changed.contains(&owner) { continue; }
+                    let (start, len) = self.copies[owner].span();
+                    if page < start.div_ceil(PAGE) || page >= (start + len) / PAGE { continue; }
+                    let at = page * PAGE;
+                    let ranges = &mut self.ranges[owner];
+                    if let Some((first, bytes)) = ranges.last_mut() && *first + *bytes == at {
+                        *bytes += PAGE;
+                    } else { ranges.push((at, PAGE)); }
+                }
+            }
+            return;
+        }
+        for index in changed {
             let (start, len) = self.copies[index].span();
             let ranges = &mut self.ranges[index];
             ranges.clear();
@@ -520,6 +641,45 @@ impl Memory {
     }
 }
 
+fn raw_ranges(memory: &Memory, indices: std::ops::Range<usize>)
+    -> impl Iterator<Item = (&Arc<Shadow>, u64, u64)> + '_
+{
+    indices.flat_map(move |i| {
+        let shadow = &memory.copies[i];
+        memory.ranges[i].iter().map(move |&(start, len)| (shadow, start, len))
+    })
+}
+
+fn idle_directory_reuse(leases: usize) -> bool {
+    static ON: OnceLock<bool> = OnceLock::new();
+    reclaim_raw_slots() && leases == 1 && *ON.get_or_init(||
+        std::env::var_os("VICTORY_REUSE_IDLE_DIRECTORY").is_some_and(|v| v == "1"))
+}
+
+pub(crate) fn reclaim_raw_slots() -> bool {
+    static ON: OnceLock<bool> = OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("VICTORY_RECLAIM_RAW_SLOTS").is_some_and(|v| v == "1"))
+}
+
+/// Let idle raw directories shed obsolete numbered copies even when the
+/// title stops recording raw draws. No work if a recorded list can replay.
+pub(crate) fn sweep_idle_raw() {
+    if !reclaim_raw_slots() { return; }
+    let Ok(mut guard) = MEMORY.try_lock() else { return };
+    let Some(memory) = guard.as_mut() else { return };
+    if Arc::strong_count(&memory.lease) != 1 { return; }
+    // Do not perform a remap/lookup under the submission lock. The next
+    // raw bind reconciles a stale directory in its normal recording context.
+    if memory.generation == GENERATION.load(Ordering::Acquire) {
+        memory.compact_idle(crate::frame::current());
+    }
+}
+
+fn batch_raw_work() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("VICTORY_BATCH_RAW_WORK").is_some_and(|v| v == "1"))
+}
+
 /// Before a draw whose shader reads title memory by address: what its
 /// root arguments name gets its copies (`addresses`: its root views;
 /// `constants`: its root constants, see the module), every numbered copy
@@ -538,10 +698,11 @@ pub(crate) fn ready(
         *guard = Memory::new();
     }
     let m = guard.as_mut()?;
-    let before = m.copies.len();
-    let skipped_before = m.speculative_skips;
     m.reconcile()?;
     let frame = crate::frame::current();
+    if reclaim_raw_slots() { m.compact_idle(frame); }
+    let before = m.copies.len();
+    let skipped_before = m.speculative_skips;
     if m.frame != frame {
         m.frame = frame;
         m.refused.clear();
@@ -562,7 +723,13 @@ pub(crate) fn ready(
             "raw memory copies by first mapping source");
     }
     m.update_ranges();
-    let (base, count) = heap.raw_page_views(&m.copies)?;
+    let (base, count) = if reclaim_raw_slots() {
+        let views = heap.raw_page_views_leased(&m.copies, m.slot_epoch, list)?;
+        list.keep_raw_lease(&m.lease);
+        views
+    } else {
+        heap.raw_page_views(&m.copies)?
+    };
     // A list may submit before the other recording list that numbered a
     // copy. Each must prepare all copies visible at its own bind.
     const READ: usize = usize::MAX - 0x6d;
@@ -571,30 +738,50 @@ pub(crate) fn ready(
     let (reads, written) = list.raw_memory_ranges(
         &m.directory.0, m.coverage_revision, count as usize, writes == Writes::All,
     );
-    for i in reads {
-        for &(start, len) in &m.ranges[i] {
-            m.copies[i].refresh(list, start, len);
-        }
-    }
     #[cfg(feature = "diagnostics")]
     let measure_broad = writes == Writes::All && crate::draw::rt_raw_write_probe();
     #[cfg(feature = "diagnostics")]
     let mut new_broad = [0, 0];
-    for i in written {
-        for &(start, len) in &m.ranges[i] {
-            m.copies[i].gpu_writes(list, start, len);
-            #[cfg(feature = "diagnostics")]
-            if measure_broad {
+    if batch_raw_work() {
+        // A raw bind can name thousands of copies. Keep the exact ordered
+        // steps but avoid a mutex acquisition for each range. Bounded writes
+        // follow broad writes, just as in the scalar path.
+        let mut bounded = Vec::new();
+        writes.owned(&m.pages, |owner, at, len| {
+            if owner < count as usize { bounded.push((&m.copies[owner], at, len)); }
+        });
+        let memory = &*m;
+        let ranges = |indices| raw_ranges(memory, indices);
+        #[cfg(feature = "diagnostics")]
+        if measure_broad {
+            for (_, _, len) in ranges(written.clone()) {
                 new_broad[0] += 1;
                 new_broad[1] += len;
             }
         }
-    }
-    writes.owned(&m.pages, |owner, at, len| {
-        if owner < count as usize {
-            m.copies[owner].gpu_writes(list, at, len);
+        list.defer_raw_work(ranges(reads), ranges(written).chain(bounded));
+    } else {
+        for i in reads {
+            for &(start, len) in &m.ranges[i] {
+                m.copies[i].refresh(list, start, len);
+            }
         }
-    });
+        for i in written {
+            for &(start, len) in &m.ranges[i] {
+                m.copies[i].gpu_writes(list, start, len);
+                #[cfg(feature = "diagnostics")]
+                if measure_broad {
+                    new_broad[0] += 1;
+                    new_broad[1] += len;
+                }
+            }
+        }
+        writes.owned(&m.pages, |owner, at, len| {
+            if owner < count as usize {
+                m.copies[owner].gpu_writes(list, at, len);
+            }
+        });
+    }
     #[cfg(feature = "diagnostics")]
     if let Writes::Ranges(ranges) = writes {
         static BOUNDED: AtomicU64 = AtomicU64::new(0);
@@ -630,6 +817,58 @@ mod deferred_readback_tests;
 #[cfg(test)]
 mod tests {
     use super::{page_byte, Memory, CELL, PAGE, SPECULATIVE_COPIES};
+
+    #[test]
+    fn compact_raw_slots_only_after_replay_lease_is_released() {
+        use windows_sys::Win32::System::Memory::{
+            MEM_COMMIT, MEM_RELEASE, MEM_RESERVE, PAGE_READWRITE, VirtualAlloc, VirtualFree,
+        };
+        let Some(mut memory) = Memory::new() else { return };
+        let pages = 20;
+        let start = (0x250..0x290).map(|i| i * 32 * CELL).find(|&at| unsafe {
+            !VirtualAlloc(at as _, (pages * PAGE) as usize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE).is_null()
+        }).unwrap();
+        for i in 0..pages {
+            let at = start + i * PAGE;
+            crate::shadow::register(at as usize, at, PAGE);
+            assert!(memory.map(at));
+        }
+        assert_eq!(memory.copies.len(), pages as usize);
+        // Simulate ownership removals, keeping the last two slots.
+        for i in 0..pages - 2 {
+            let page = start / PAGE + i;
+            memory.recalculate.insert(memory.pages[&page]);
+            memory.set_page(page, None);
+        }
+        let old = memory.directory.2;
+        let list = crate::host::host().unwrap().new_list().unwrap();
+        list.keep_raw_lease(&memory.lease);
+        list.close();
+        memory.compact_idle(1);
+        assert_eq!(memory.directory.2, old);
+        assert_eq!(memory.copies.len(), pages as usize);
+        list.reset();
+        memory.compact_idle(1);
+        assert_eq!(memory.slot_epoch, 1);
+        assert_eq!(memory.copies.len(), 2);
+        assert_eq!(memory.numbers.len(), 2);
+        for i in 0..pages {
+            let entry = (start / PAGE + i) as usize * 2;
+            let slot = unsafe { memory.directory.1.add(entry).read() };
+            if i < pages - 2 { assert_eq!(slot, 0); }
+            else {
+                assert_eq!(slot, (i - (pages - 2) + 1) as u32);
+                assert_eq!(memory.copies[(slot - 1) as usize].span(), (start + i * PAGE, PAGE));
+                assert_eq!(memory.ranges[(slot - 1) as usize], [(start + i * PAGE, PAGE)]);
+            }
+        }
+        drop(memory);
+        for i in 0..pages {
+            let at = start + i * PAGE;
+            crate::shadow::unregister(at as usize, at);
+        }
+        assert_ne!(unsafe { VirtualFree(start as _, 0, MEM_RELEASE) }, 0);
+    }
 
     #[test]
     fn speculation_stops_before_heap_growth_and_confirmed_accesses_can_still_grow() {

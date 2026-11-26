@@ -1369,7 +1369,7 @@ impl<'a> Lower<'a> {
                                 // lanes 32..63 are the other host wave: masks, lane reads and lane
                                 // numbers go through two exchange dwords past the program's LDS
                                 exchange = Some((s.lds_dwords, group <= 32, all));
-                                s.lds_dwords += 2 * group.div_ceil(64);
+                                s.lds_dwords += (if Self::paired_exchange() { 4 } else { 2 }) * group.div_ceil(64);
                             }
                         }
                     }
@@ -1982,7 +1982,7 @@ impl<'a> Lower<'a> {
                     let c = self.cur;
                     let (lo, hi) = self.exchange_halves(c, rb);
                     let (lo, hi) = (back(self, lo), back(self, hi));
-                    match op {
+                    let combined = match op {
                         Op::AddU | Op::AddF => self.s.m.bin(c, Bin::Add, lo, hi),
                         Op::Or => self.s.m.bin(c, Bin::Or, lo, hi),
                         Op::And => self.s.m.bin(c, Bin::And, lo, hi),
@@ -1999,7 +1999,8 @@ impl<'a> Lower<'a> {
                             };
                             self.s.op(c, &format!("binary.{sfx}"), Attr::ReadNone, ty, code, &[lo, hi])
                         }
-                    }
+                    };
+                    if let Some(missing) = self.missing_upper(c) { self.s.m.select(c, missing, r, combined) } else { combined }
                 }
             }
         } else {
@@ -2052,13 +2053,12 @@ impl<'a> Lower<'a> {
             .op(c, "splitDouble.f64", Attr::ReadNone, split_ty, 102, &[sum]);
         let mut r_lo = self.s.m.extract(c, split, 0);
         let mut r_hi = self.s.m.extract(c, split, 1);
-        if self.exchange.is_some() {
+        if self.exchange.as_ref().is_some_and(|e| !e.1) && !self.local {
             if !self.all_lanes(self.cur_ir) {
                 need(self.cur_ir);
                 return Err("a wave reduction where not every lane runs");
             }
-            let (lo0, lo1) = self.exchange_halves(self.cur, r_lo);
-            let (hi0, hi1) = self.exchange_halves(self.cur, r_hi);
+            let ((lo0, lo1), (hi0, hi1)) = self.exchange_two(self.cur, r_lo, r_hi);
             let c = self.cur;
             let d0 = self
                 .s
@@ -2070,8 +2070,12 @@ impl<'a> Lower<'a> {
             let split = self
                 .s
                 .op(c, "splitDouble.f64", Attr::ReadNone, split_ty, 102, &[total]);
-            r_lo = self.s.m.extract(c, split, 0);
-            r_hi = self.s.m.extract(c, split, 1);
+            let lo = self.s.m.extract(c, split, 0);
+            let hi = self.s.m.extract(c, split, 1);
+            if let Some(missing) = self.missing_upper(c) {
+                r_lo = self.s.m.select(c, missing, r_lo, lo);
+                r_hi = self.s.m.select(c, missing, r_hi, hi);
+            } else { r_lo = lo; r_hi = hi; }
         }
         Ok(if high { r_hi } else { r_lo })
     }
@@ -3779,6 +3783,18 @@ impl<'a> Lower<'a> {
         if let Some(v) = self.wave_base {
             return Some(v);
         }
+        // A group fitting in one explicitly requested 32-lane wave has
+        // exactly one possible wave base. No counter, atomics or barrier
+        // are needed; keep the existing half-wave metadata and LDS layout.
+        static SMALL: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        if *SMALL.get_or_init(|| std::env::var_os("VICTORY_WAVE_SINGLE_GROUP").is_some_and(|v| v == "1"))
+            && self.s.wave_size == Some(32)
+            && matches!(self.x.native.io, StageIo::Cs(cs) if cs.threads.iter().product::<u32>() <= 32)
+        {
+            let base = self.s.m.i32(0);
+            self.wave_base = Some(base);
+            return Some(base);
+        }
         let (e, i32t) = (self.s.entry, self.s.t.i32);
         let lds = self.s.lds();
         let k = self.s.m.i32(slot);
@@ -3840,6 +3856,62 @@ impl<'a> Lower<'a> {
         self.s.op(block, "barrier", Attr::NoDuplicate, void, 80, &[mode]);
     }
 
+    fn paired_exchange() -> bool {
+        static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        *ON.get_or_init(|| std::env::var_os("VICTORY_WAVE_PAIR_EXCHANGE").is_some_and(|v| v == "1"))
+    }
+
+    /// In a group of full host waves, the last console wave may have only
+    /// a lower half. Do not read an LDS slot that no host wave wrote.
+    fn missing_upper(&mut self, at: usize) -> Option<V> {
+        let group = self.s.threads?.iter().product::<u32>();
+        if group <= 32 || group % 64 != 32 || self.local { return None; }
+        let thread = self.console_thread();
+        let last = self.s.m.i32(group - 32);
+        Some(self.s.m.cmp(at, pred::IUGE, thread, last))
+    }
+
+    /// Two wave-uniform dwords in one exchange, using separate LDS slots.
+    /// The caller has already proved all lanes reach this point.
+    fn exchange_two(&mut self, at: usize, a: V, b: V) -> ((V, V), (V, V)) {
+        if !Self::paired_exchange() || self.local || !self.exchange.as_ref().is_some_and(|e| !e.1) {
+            let a = self.exchange_halves(at, a);
+            let b = self.exchange_halves(at, b);
+            return (a, b);
+        }
+        let slot = self.exchange.as_ref().unwrap().0;
+        let pair = self.exchange_pair(slot);
+        let lane = self.console_lane();
+        let five = self.s.m.i32(5);
+        let half = self.s.m.bin(at, Bin::LShr, lane, five);
+        let first = self.s.m.bin(at, Bin::Add, pair, half);
+        let two = self.s.m.i32(2);
+        let second = self.s.m.bin(at, Bin::Add, first, two);
+        let lds = self.s.lds();
+        let pa = self.s.m.element(at, lds, first);
+        let pb = self.s.m.element(at, lds, second);
+        self.s.m.store(at, pa, a);
+        self.s.m.store(at, pb, b);
+        self.group_sync(at);
+        let missing = self.missing_upper(at);
+        let read = |l: &mut Self, base: V| {
+            let one = l.s.m.i32(1);
+            let hi = l.s.m.bin(at, Bin::Add, base, one);
+            let hi = if let Some(missing) = missing { l.s.m.select(at, missing, base, hi) } else { hi };
+            let lo_ptr = l.s.m.element(at, lds, base);
+            let hi_ptr = l.s.m.element(at, lds, hi);
+            let lo = l.s.m.load(at, lo_ptr);
+            let hi = l.s.m.load(at, hi_ptr);
+            let hi = if let Some(missing) = missing { let zero = l.s.m.i32(0); l.s.m.select(at, missing, zero, hi) } else { hi };
+            (lo, hi)
+        };
+        let a = read(self, pair);
+        let next = self.s.m.bin(at, Bin::Add, pair, two);
+        let b = read(self, next);
+        self.group_sync(at);
+        (a, b)
+    }
+
     /// `exchange`: each host wave gives `mine` (the same in all its lanes) for its half; both get
     /// (lower half's, upper half's). A group with no upper half gets 0 for it.
     fn exchange_halves(&mut self, at: usize, mine: V) -> (V, V) {
@@ -3872,10 +3944,13 @@ impl<'a> Lower<'a> {
         self.group_sync(at);
         let one = self.s.m.i32(1);
         let k1 = self.s.m.bin(at, Bin::Add, pair, one);
+        let missing = self.missing_upper(at);
+        let k1 = if let Some(missing) = missing { self.s.m.select(at, missing, pair, k1) } else { k1 };
         let p0 = self.s.m.element(at, lds, pair);
         let p1 = self.s.m.element(at, lds, k1);
         let lo = self.s.m.load(at, p0);
         let hi = self.s.m.load(at, p1);
+        let hi = if let Some(missing) = missing { let zero = self.s.m.i32(0); self.s.m.select(at, missing, zero, hi) } else { hi };
         // the slots are written again only after every thread read them
         self.group_sync(at);
         (lo, hi)
@@ -3891,8 +3966,8 @@ impl<'a> Lower<'a> {
         let thread = self.console_thread();
         let six = self.s.m.i32(6);
         let wave = self.s.m.bin(e, Bin::LShr, thread, six);
-        let one = self.s.m.i32(1);
-        let twice = self.s.m.bin(e, Bin::Shl, wave, one);
+        let shift = self.s.m.i32(if Self::paired_exchange() { 2 } else { 1 });
+        let twice = self.s.m.bin(e, Bin::Shl, wave, shift);
         let base = self.s.m.i32(slot);
         let v = self.s.m.bin(e, Bin::Add, base, twice);
         self.pair = Some(v);
@@ -7698,8 +7773,7 @@ impl<'a> Lower<'a> {
                     } else {
                         let i32t = self.s.t.i32;
                         let has = self.s.m.cast(c, Cast::ZExt, any, i32t);
-                        let (lo_has, hi_has) = self.exchange_halves(c, has);
-                        let (lo, hi) = self.exchange_halves(c, mine);
+                        let ((lo_has, hi_has), (lo, hi)) = self.exchange_two(c, has, mine);
                         let z = self.s.m.i32(0);
                         let in_lo = self.s.m.cmp(c, pred::NE, lo_has, z);
                         let in_hi = self.s.m.cmp(c, pred::NE, hi_has, z);

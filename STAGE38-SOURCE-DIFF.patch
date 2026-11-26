@@ -1,0 +1,317 @@
+--- a/crates/victory-gpu/src/descriptor/host.rs
++++ b/crates/victory-gpu/src/descriptor/host.rs
+@@ -75,6 +75,7 @@
+     /// heap is destroyed because recorded command lists still use their base.
+     raw_pages: Mutex<Option<RawPageRun>>,
+     raw_retired: Mutex<Vec<RawPageRun>>,
++    raw_collect_frame: std::sync::atomic::AtomicU64,
+     /// Title slots holding buffer views. Such a view gets its host slot
+     /// (and its memory a host copy) only when something reads it: a draw
+     /// through a table, or [`HostHeap::buffer_slots`] for shaders that pick
+@@ -1160,6 +1161,7 @@
+             addresses: std::sync::OnceLock::new(),
+             raw_pages: Mutex::new(None),
+             raw_retired: Mutex::new(Vec::new()),
++            raw_collect_frame: std::sync::atomic::AtomicU64::new(u64::MAX),
+             buffers: Mutex::default(),
+             changed: Mutex::default(),
+             buffer_pass: Mutex::default(),
+@@ -1279,6 +1281,16 @@
+         let started = std::time::Instant::now();
+         #[cfg(feature = "diagnostics")]
+         crate::copystat::add(crate::copystat::C::DynamicAsked, 1);
++        if crate::memory::reclaim_raw_slots() {
++            use std::sync::atomic::Ordering::Relaxed;
++            let frame = crate::frame::current();
++            if self.raw_collect_frame.load(Relaxed) != frame
++                && let Ok(mut retired) = self.raw_retired.try_lock()
++            {
++                self.raw_collect_frame.store(frame, Relaxed);
++                self.collect_raw_runs(&mut retired);
++            }
++        }
+         let mut guard = self.next.lock().unwrap_or_else(|e| e.into_inner());
+         let (next, taken) = &mut *guard;
+         let enough = self.free.load(std::sync::atomic::Ordering::Relaxed) >= n
+@@ -2210,11 +2222,11 @@
+         let end = (at as usize + n as usize).min(guard.1.len());
+         if let Some(slots) = guard.1.get_mut(at as usize..end) {
+             let given = slots.iter().filter(|taken| **taken).count() as u32;
++            static EAGER: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
++            let eager = *EAGER.get_or_init(|| std::env::var_os("VICTORY_EAGER_DESCRIPTOR_RELEASE").is_some_and(|v| v == "1"));
+             if discarded
+                 && given != 0
+-                && self
+-                    .texture_pressure
+-                    .load(std::sync::atomic::Ordering::Relaxed)
++                && (eager || self.texture_pressure.load(std::sync::atomic::Ordering::Relaxed))
+             {
+                 // Discarded lists cannot replay these descriptors. Clear
+                 // their GPU-visible contents before releasing references or
+--- a/crates/victory-gpu/src/host.rs
++++ b/crates/victory-gpu/src/host.rs
+@@ -214,6 +214,7 @@
+     crate::shadow::trim_retired_under_pressure(available_physical_ram());
+     crate::pipeline::trim_library();
+     crate::pipeline::trim_shaders(available_physical_ram());
++    crate::memory::sweep_idle_raw();
+     crate::shadow::let_go_idle();
+     crate::texture::let_go_idle();
+     crate::resource::let_go_idle();
+@@ -2519,6 +2520,32 @@
+     masks
+ }
+ 
++/// Claim only bytes not already fetched for this same backing in this
++/// settlement. The union is ordered and disjoint. A second settled merge
++/// of the same bytes could mistake a preserved CPU write for a GPU write.
++fn claim_fetch_range(covered: &mut std::collections::BTreeMap<usize, usize>, lo: usize, hi: usize) -> Vec<(usize, usize)> {
++    if lo >= hi { return Vec::new(); }
++    let (mut start, mut end, mut next) = (lo, hi, lo);
++    let mut missing = Vec::new();
++    if let Some((&a, &b)) = covered.range(..=lo).next_back() && b >= lo {
++        start = a;
++        end = end.max(b);
++        next = next.max(b);
++        covered.remove(&a);
++    }
++    loop {
++        let candidate = covered.range(start..=end).next().map(|(&a, &b)| (a, b));
++        let Some((a, b)) = candidate else { break };
++        if next < a && next < hi { missing.push((next, a.min(hi))); }
++        next = next.max(b);
++        end = end.max(b);
++        covered.remove(&a);
++    }
++    if next < hi { missing.push((next, hi)); }
++    covered.insert(start, end);
++    missing
++}
++
+ /// The byte ranges in the packed readback buffer follow the merge order.
+ /// Record one copy command for neighboring ranges of the same GPU buffer.
+ pub(crate) fn copy_fetch_runs<'a>(
+@@ -2756,6 +2783,18 @@
+             assert_eq!(at.add(8192 + overflow_bytes as usize).read(), 0x11);
+             assert_eq!(at.add(4224).read(), 0xa7);
+         }
++    }
++
++    #[test]
++    fn synchronous_fetch_claims_each_byte_once() {
++        use super::claim_fetch_range;
++        let mut covered = std::collections::BTreeMap::new();
++        assert_eq!(claim_fetch_range(&mut covered, 12, 20), [(12, 20)]);
++        assert_eq!(claim_fetch_range(&mut covered, 28, 40), [(28, 40)]);
++        assert_eq!(claim_fetch_range(&mut covered, 8, 32), [(8, 12), (20, 28)]);
++        assert!(claim_fetch_range(&mut covered, 10, 30).is_empty());
++        assert_eq!(claim_fetch_range(&mut covered, 40, 48), [(40, 48)]);
++        assert_eq!(covered.into_iter().collect::<Vec<_>>(), [(8, 48)]);
+     }
+ 
+     #[test]
+@@ -5220,10 +5259,35 @@
+         // where the bytes come down.
+         let mut pieces: Vec<(usize, usize, usize, u64)> = Vec::new();
+         let mut total = 0u64;
++        static PACK: OnceLock<bool> = OnceLock::new();
++        let pack = *PACK.get_or_init(|| std::env::var_os("VICTORY_PACK_SYNC_READBACK").is_some_and(|v| v == "1"));
++        // A hash for a whole page can have been updated by another declaration
++        // covering that page. Use the union of dirty masks, just as the relay
++        // does. changed_ranges still clips to the exact declaration.
++        let flagged = pack.then(|| flagged_pieces(plan.ranges.iter().flat_map(|r| {
++            let copy = std::sync::Arc::as_ptr(&r.shadow) as usize;
++            (0..r.span.pieces).map(move |p| (copy, r.span.first + p, r.changed_pages(p, differs)))
++        })));
++        let mut coverage = std::collections::HashMap::<usize, std::collections::BTreeMap<usize, usize>>::new();
++        if pack {
++            for &(copy, lo, hi) in seen.iter() {
++                let _ = claim_fetch_range(coverage.entry(copy).or_default(), lo, hi);
++            }
++        }
+         for (i, r) in plan.ranges.iter().enumerate() {
++            let copy = std::sync::Arc::as_ptr(&r.shadow) as usize;
+             for p in 0..r.span.pieces {
+-                for (lo, hi) in r.span.changed_ranges(p, r.changed_pages(p, differs)) {
+-                    if seen.insert((std::sync::Arc::as_ptr(&r.shadow) as usize, lo, hi)) {
++                let mask = if let Some(flags) = &flagged {
++                    flags.get(&(copy, r.span.first + p)).copied().unwrap_or(0)
++                } else { r.changed_pages(p, differs) };
++                for (lo, hi) in r.span.changed_ranges(p, mask) {
++                    if pack {
++                        for (a, b) in claim_fetch_range(coverage.entry(copy).or_default(), lo, hi) {
++                            seen.insert((copy, a, b));
++                            pieces.push((i, a, b, total));
++                            total += (b - a) as u64;
++                        }
++                    } else if seen.insert((copy, lo, hi)) {
+                         pieces.push((i, lo, hi, total));
+                         total += (hi - lo) as u64;
+                     }
+@@ -5231,6 +5295,13 @@
+             }
+             crate::shadow::CARD_STATS[2].fetch_add(u64::from(r.span.pieces), Ordering::Relaxed);
+         }
++        let packed = if pack {
++            let (runs, bytes) = pack_relay_fetch(&mut pieces, |i| {
++                std::sync::Arc::as_ptr(&plan.ranges[*i].shadow) as usize
++            });
++            total = bytes;
++            Some(runs)
++        } else { None };
+         let mut written = vec![0usize; plan.ranges.len()];
+         if !pieces.is_empty() {
+             if work.fetched.as_ref().is_none_or(|f| f.2 < total) {
+@@ -5248,7 +5319,11 @@
+                 (|| -> windows::core::Result<()> {
+                     allocator.Reset()?;
+                     list.Reset(allocator, None)?;
+-                    copy_fetch_runs(list, fetched, pieces.iter().map(|&(i, lo, hi, at)| (&plan.ranges[i].shadow.buffer, lo, hi, at)));
++                    if let Some(runs) = &packed {
++                        copy_fetch_runs(list, fetched, runs.iter().map(|&(i, lo, hi, at)| (&plan.ranges[pieces[i].0].shadow.buffer, lo, hi, at)));
++                    } else {
++                        copy_fetch_runs(list, fetched, pieces.iter().map(|&(i, lo, hi, at)| (&plan.ranges[i].shadow.buffer, lo, hi, at)));
++                    }
+                     list.Close()?;
+                     self.execute_lists(&[Some(list.cast()?)], false);
+                     *submitted += 1;
+@@ -5272,7 +5347,9 @@
+                 CARD_STATS[5].fetch_add(1, Ordering::Relaxed);
+                 CARD_STATS[6].fetch_add(waiting.elapsed().as_micros() as u64, Ordering::Relaxed);
+             }
+-            if wide_merge() && pieces.len() >= 8 {
++            // Preserve merge order in the new path. Distinct backing IDs
++            // can still refer to overlapping guest addresses.
++            if !pack && wide_merge() && pieces.len() >= 8 {
+                 // The pieces are apart from one another (each its own bytes
+                 // of its copy and of title memory): several at a time.
+                 let fetched = *data;
+@@ -8096,6 +8173,11 @@
+             let [shadow_count, shadow_bytes, window_count, window_bytes, pool_count, pool_bytes] = crate::shadow::memory();
+             let [raw_count, raw_bytes, raw_empty, raw_empty_bytes, raw_epoch, raw_list_leases] = crate::memory::retained_backings();
+             let [texture_plans, texture_logical_bytes, texture_kept] = crate::texture::memory();
++            let (compiled, failed) = crate::pipeline::compile_counts();
++            let [shader_count, shader_bytes, translations, dxil_bytes, library_bytes, ..] = crate::pipeline::kept();
++            tracing::info!(compiled, failed, frames, shader_count, shader_mib = shader_bytes >> 20,
++                translations, dxil_mib = dxil_bytes >> 20, pipeline_library_mib = library_bytes >> 20,
++                "pipeline and shader pressure sample (completed attempts since last sample)");
+             tracing::info!(working_set_mib = self.ram_mb,
+                 process_commit_mib = private_bytes() >> 20,
+                 available_ram_mib = ?available.map(|n| n >> 20),
+--- a/crates/victory-gpu/src/memory.rs
++++ b/crates/victory-gpu/src/memory.rs
+@@ -649,6 +649,20 @@
+     *ON.get_or_init(|| std::env::var_os("VICTORY_RECLAIM_RAW_SLOTS").is_some_and(|v| v == "1"))
+ }
+ 
++/// Let idle raw directories shed obsolete numbered copies even when the
++/// title stops recording raw draws. No work if a recorded list can replay.
++pub(crate) fn sweep_idle_raw() {
++    if !reclaim_raw_slots() { return; }
++    let Ok(mut guard) = MEMORY.try_lock() else { return };
++    let Some(memory) = guard.as_mut() else { return };
++    if Arc::strong_count(&memory.lease) != 1 { return; }
++    // Do not perform a remap/lookup under the submission lock. The next
++    // raw bind reconciles a stale directory in its normal recording context.
++    if memory.generation == GENERATION.load(Ordering::Acquire) {
++        memory.compact_idle(crate::frame::current());
++    }
++}
++
+ fn batch_raw_work() -> bool {
+     static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+     *ON.get_or_init(|| std::env::var_os("VICTORY_BATCH_RAW_WORK").is_some_and(|v| v == "1"))
+--- a/crates/victory-gpu/src/pipeline/make.rs
++++ b/crates/victory-gpu/src/pipeline/make.rs
+@@ -64,6 +64,27 @@
+ // SAFETY: as above.
+ unsafe impl Sync for Pending {}
+ 
++static PENDING: std::sync::LazyLock<Mutex<HashMap<String, Weak<Pending>>>> =
++    std::sync::LazyLock::new(Mutex::default);
++static COMPILED: AtomicU64 = AtomicU64::new(0);
++static FAILED: AtomicU64 = AtomicU64::new(0);
++
++/// Dead weak registry entries cannot be upgraded by any live pipeline.
++/// Prune from the existing idle sweep, never during a draw's lookup.
++pub(super) fn trim_registry() {
++    static ON: OnceLock<bool> = OnceLock::new();
++    if !*ON.get_or_init(|| std::env::var_os("VICTORY_TRIM_PIPELINE_REGISTRY").is_some_and(|v| v == "1")) { return; }
++    let Ok(mut known) = PENDING.try_lock() else { return };
++    let before = known.len();
++    known.retain(|_, entry| entry.strong_count() != 0);
++    if known.len() < before / 2 { known.shrink_to_fit(); }
++}
++
++#[cfg(feature = "diagnostics")]
++pub(super) fn compile_counts() -> (u64, u64) {
++    (COMPILED.swap(0, Ordering::Relaxed), FAILED.swap(0, Ordering::Relaxed))
++}
++
+ impl Pending {
+     pub(crate) fn new(shaders: Vec<Arc<Shader>>, graphics: Option<Box<GraphicsState>>) -> Pending {
+         let mut key = blake3::Hasher::new();
+@@ -89,8 +110,6 @@
+     /// Identical title pipeline objects share one compilation and its native
+     /// result. The registry does not keep retired states or shaders alive.
+     pub(crate) fn shared(shaders: Vec<Arc<Shader>>, graphics: Option<Box<GraphicsState>>) -> Arc<Self> {
+-        static PENDING: std::sync::LazyLock<Mutex<HashMap<String, Weak<Pending>>>> =
+-            std::sync::LazyLock::new(Mutex::default);
+         let pending = Self::new(shaders, graphics);
+         let mut known = PENDING.lock().unwrap_or_else(|err| err.into_inner());
+         if let Some(existing) = known.get(&pending.key).and_then(Weak::upgrade) {
+@@ -115,8 +134,12 @@
+ 
+     fn make(&self) {
+         let _ = self.begun.set(Instant::now());
+-        self.made
+-            .get_or_init(|| HostPipeline::new(&self.shaders, self.graphics.as_deref()));
++        self.made.get_or_init(|| {
++            let result = HostPipeline::new(&self.shaders, self.graphics.as_deref());
++            if result.is_some() { COMPILED.fetch_add(1, Ordering::Relaxed); }
++            else { FAILED.fetch_add(1, Ordering::Relaxed); }
++            result
++        });
+         let (lock, done) = &self.finished;
+         let _held = lock.lock().unwrap_or_else(|e| e.into_inner());
+         done.notify_all();
+--- a/crates/victory-gpu/src/pipeline.rs
++++ b/crates/victory-gpu/src/pipeline.rs
+@@ -142,6 +142,7 @@
+ /// retain their Arc, so their bytecode and translation remain valid.
+ #[cfg(windows)]
+ pub(crate) fn trim_shaders(available: Option<u64>) {
++    make::trim_registry();
+     use std::sync::atomic::Ordering::Relaxed;
+     let limit = match available {
+         Some(n) if n < 2 << 30 => 0,
+@@ -498,6 +499,11 @@
+ #[cfg(windows)]
+ pub(crate) fn making() -> u64 {
+     make::waiting()
++}
++
++#[cfg(all(windows, feature = "diagnostics"))]
++pub(crate) fn compile_counts() -> (u64, u64) {
++    make::compile_counts()
+ }
+ 
+ /// Draws and dispatches dropped since the last [`take_drops`], by reason
+--- a/crates/victory-gpu/src/texture/gpu_detile.rs
++++ b/crates/victory-gpu/src/texture/gpu_detile.rs
+@@ -291,6 +291,15 @@
+             tracing::info!(recorded, reused = REUSED.load(Relaxed), reserved = RESERVED.load(Relaxed), dirty_upload_bytes_avoided = DIRTY_BYTES_SAVED.load(Relaxed), dirty_detile_jobs_avoided = DIRTY_JOBS_SAVED.load(Relaxed), "GPU texture detile dispatches");
+         }
+         let common = D3D12_RESOURCE_STATE_COMMON;
++        // No changed raw bytes and a completed previous output: the caller
++        // still copies the private output into the destination texture. Avoid
++        // touching the input or binding/dispatching compute at all.
++        if dirty_jobs_enabled() && self.dirty.as_ref().is_some_and(Vec::is_empty) {
++            DIRTY_JOBS_SAVED.fetch_add(self.jobs.len() as u64, Relaxed);
++            DIRTY_BYTES_SAVED.fetch_add(self.input_bytes, Relaxed);
++            unsafe { list.ResourceBarrier(&[transition(&self.output, common, D3D12_RESOURCE_STATE_COPY_SOURCE)]) };
++            return;
++        }
+         let dest = D3D12_RESOURCE_STATE_COPY_DEST;
+         let srv = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+         let uav = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
