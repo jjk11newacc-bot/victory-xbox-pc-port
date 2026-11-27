@@ -21,6 +21,7 @@ use windows::Win32::Graphics::Direct3D12::*;
 mod tiled_write_probe;
 #[cfg(feature = "diagnostics")]
 mod card_steps_probe;
+pub(crate) mod scene_fallback;
 use windows::Win32::Graphics::Dxgi::Common::*;
 use windows::Win32::Graphics::Dxgi::*;
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
@@ -205,9 +206,12 @@ fn sweep() {
     {
         return;
     }
-    crate::shadow::trim_retired_under_pressure(available_physical_ram());
+    let available = available_physical_ram();
+    crate::shadow::trim_retired_under_pressure(available);
+    crate::list::trim_idle_lists(available);
+    trim_idle_scratch(available);
     crate::pipeline::trim_library();
-    crate::pipeline::trim_shaders(available_physical_ram());
+    crate::pipeline::trim_shaders(available);
     crate::memory::sweep_idle_raw();
     crate::shadow::let_go_idle();
     crate::texture::let_go_idle();
@@ -476,6 +480,7 @@ pub(crate) static PREPARING: [std::sync::atomic::AtomicU64; 4] = [
 /// memory) and the graphics card's own (indirect arguments, twins' copies).
 /// For the memory line: against what is alive, they show what was let go.
 pub(crate) static MADE: [std::sync::atomic::AtomicU64; 6] = [const { std::sync::atomic::AtomicU64::new(0) }; 6];
+static LOCAL_UPLOAD_BYTES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 /// What of that is alive now, for the memory line (`MADE` counts what was
 /// ever made: 42,607 upload buffers, 77.9 GB, in five minutes of run 60,
@@ -1000,7 +1005,7 @@ mod tests {
                 assert_eq!(heap.Type, D3D12_HEAP_TYPE_UPLOAD);
             }
             eprintln!("Shader input heap type {} in memory pool {}", heap.Type.0, properties.MemoryPoolPreference.0);
-            data.cast::<u32>().write_volatile(value);
+            copy_mapped(data, (&raw const value).cast(), size_of::<u32>(), false);
             commands.Reset(&allocator, None).unwrap();
             commands.CopyBufferRegion(&readback, 0, &input, 0, 4);
             commands.Close().unwrap();
@@ -1772,6 +1777,33 @@ impl<T> Spare<T> {
 
 /// Scratch chunks no list holds.
 static SPARE: Mutex<Spare<Chunk>> = Mutex::new(Spare::new());
+static SCRATCH_IDLE_LIMIT: std::sync::atomic::AtomicU64 =
+    std::sync::atomic::AtomicU64::new(SPARE_MOST);
+
+/// Cap the idle upload pool during RAM pressure, keeping live mappings
+/// under their existing command-list and fence ownership.
+fn trim_idle_scratch(available: Option<u64>) {
+    let limit = match crate::budget::ram_pressure(available) {
+        2 => 8 << 20,
+        1 => 32 << 20,
+        _ => SPARE_MOST,
+    };
+    SCRATCH_IDLE_LIMIT.store(limit, Ordering::Relaxed);
+    let mut retired = Vec::new();
+    {
+        let mut spare = SPARE.lock().unwrap_or_else(|e| e.into_inner());
+        while spare.bytes > limit {
+            let Some((chunk, size)) = spare.kept.pop() else { break };
+            spare.bytes -= size;
+            ALIVE[1].fetch_sub(1, Ordering::Relaxed);
+            ALIVE[2].fetch_sub(size, Ordering::Relaxed);
+            ALIVE[3].fetch_sub(1, Ordering::Relaxed);
+            ALIVE[4].fetch_sub(size, Ordering::Relaxed);
+            retired.push(chunk);
+        }
+    }
+    drop(retired);
+}
 
 /// A scratch chunk of `size` bytes: one kept ([`SPARE`]) or a new one.
 fn take_chunk(host: &Host, size: u64) -> Option<Chunk> {
@@ -1797,7 +1829,7 @@ fn take_chunk(host: &Host, size: u64) -> Option<Chunk> {
 }
 
 /// A list is done with `chunks` (it was reset after its submissions ran,
-/// or dropped): kept for the next list, or freed past [`SPARE_MOST`] and
+/// or dropped): kept for the next list, or freed past the idle cap and
 /// without the pool.
 fn give_chunks(chunks: Vec<(Chunk, u64)>) {
     if chunks.is_empty() {
@@ -1808,7 +1840,7 @@ fn give_chunks(chunks: Vec<(Chunk, u64)>) {
         let mut spare = SPARE.lock().unwrap_or_else(|e| e.into_inner());
         for (chunk, size) in chunks {
             let back = if scratch_pool() {
-                spare.give(chunk, size, SPARE_MOST)
+                spare.give(chunk, size, SCRATCH_IDLE_LIMIT.load(Ordering::Relaxed))
             } else {
                 Some(chunk)
             };
@@ -2583,11 +2615,18 @@ fn flagged_pieces(flags: impl Iterator<Item = (usize, u32, u16)>) -> std::collec
 /// Claim only bytes not already fetched for this same backing in this
 /// settlement. The union is ordered and disjoint. A second settled merge
 /// of the same bytes could mistake a preserved CPU write for a GPU write.
-fn claim_fetch_range(covered: &mut std::collections::BTreeMap<usize, usize>, lo: usize, hi: usize) -> Vec<(usize, usize)> {
-    if lo >= hi { return Vec::new(); }
+fn claim_fetch_range(
+    covered: &mut std::collections::BTreeMap<usize, usize>,
+    lo: usize,
+    hi: usize,
+    mut uncovered: impl FnMut(usize, usize),
+) {
+    if lo >= hi { return; }
     let (mut start, mut end, mut next) = (lo, hi, lo);
-    let mut missing = Vec::new();
     if let Some((&a, &b)) = covered.range(..=lo).next_back() && b >= lo {
+        if b >= hi {
+            return;
+        }
         start = a;
         end = end.max(b);
         next = next.max(b);
@@ -2596,14 +2635,13 @@ fn claim_fetch_range(covered: &mut std::collections::BTreeMap<usize, usize>, lo:
     loop {
         let candidate = covered.range(start..=end).next().map(|(&a, &b)| (a, b));
         let Some((a, b)) = candidate else { break };
-        if next < a && next < hi { missing.push((next, a.min(hi))); }
+        if next < a && next < hi { uncovered(next, a.min(hi)); }
         next = next.max(b);
         end = end.max(b);
         covered.remove(&a);
     }
-    if next < hi { missing.push((next, hi)); }
+    if next < hi { uncovered(next, hi); }
     covered.insert(start, end);
-    missing
 }
 
 /// The byte ranges in the packed readback buffer follow the merge order.
@@ -2860,11 +2898,16 @@ mod relay_tests {
     fn synchronous_fetch_claims_each_byte_once() {
         use super::claim_fetch_range;
         let mut covered = std::collections::BTreeMap::new();
-        assert_eq!(claim_fetch_range(&mut covered, 12, 20), [(12, 20)]);
-        assert_eq!(claim_fetch_range(&mut covered, 28, 40), [(28, 40)]);
-        assert_eq!(claim_fetch_range(&mut covered, 8, 32), [(8, 12), (20, 28)]);
-        assert!(claim_fetch_range(&mut covered, 10, 30).is_empty());
-        assert_eq!(claim_fetch_range(&mut covered, 40, 48), [(40, 48)]);
+        let mut claim = |lo, hi| {
+            let mut result = Vec::new();
+            claim_fetch_range(&mut covered, lo, hi, |a, b| result.push((a, b)));
+            result
+        };
+        assert_eq!(claim(12, 20), [(12, 20)]);
+        assert_eq!(claim(28, 40), [(28, 40)]);
+        assert_eq!(claim(8, 32), [(8, 12), (20, 28)]);
+        assert!(claim(10, 30).is_empty());
+        assert_eq!(claim(40, 48), [(40, 48)]);
         assert_eq!(covered.into_iter().collect::<Vec<_>>(), [(8, 48)]);
     }
 
@@ -5385,7 +5428,7 @@ impl Host {
         let mut coverage = std::collections::HashMap::<usize, std::collections::BTreeMap<usize, usize>>::new();
         if pack {
             for &(copy, lo, hi) in seen.iter() {
-                let _ = claim_fetch_range(coverage.entry(copy).or_default(), lo, hi);
+                claim_fetch_range(coverage.entry(copy).or_default(), lo, hi, |_, _| {});
             }
         }
         for (i, r) in plan.ranges.iter().enumerate() {
@@ -5396,11 +5439,11 @@ impl Host {
                 } else { r.changed_pages(p, differs) };
                 for (lo, hi) in r.span.changed_ranges(p, mask) {
                     if pack {
-                        for (a, b) in claim_fetch_range(coverage.entry(copy).or_default(), lo, hi) {
+                        claim_fetch_range(coverage.entry(copy).or_default(), lo, hi, |a, b| {
                             seen.insert((copy, a, b));
                             pieces.push((i, a, b, total));
                             total += (b - a) as u64;
-                        }
+                        });
                     } else if seen.insert((copy, lo, hi)) {
                         pieces.push((i, lo, hi, total));
                         total += (hi - lo) as u64;
@@ -7094,7 +7137,7 @@ impl HostList {
     ///
     /// shortcut: one buffer per copy; pool them once uploads are frequent.
     pub(crate) fn upload(&self, host: &Host, size: u64) -> Option<(ID3D12Resource, *mut u8)> {
-        let (buffer, data) = host.upload_buffer(size)?;
+        let (buffer, data) = host.staging_upload_buffer(size)?;
         name(&buffer, || format!("list upload {size:#x}"));
         self.deferred().hold_upload(buffer.clone(), size);
         Some((buffer, data))
@@ -8007,8 +8050,8 @@ impl Host {
         }
     }
 
-    /// Allocates a CPU-written, GPU-read input. Bulk texture staging and
-    /// mappings that the CPU reads use their existing allocation paths.
+    /// Allocates a CPU-written, GPU-read input. Eligible buffers can live
+    /// in local GPU memory within the adapter's current residency budget.
     pub(crate) fn shader_input_buffer(&self, size: u64) -> Option<(ID3D12Resource, *mut u8)> {
         if size <= 64 << 20
             && let (Some(gate), Some(adapter)) = (&self.local_gpu_inputs, &self.adapter)
@@ -8022,12 +8065,25 @@ impl Host {
                 && let Ok(mapped) = self.mapped_upload(size, D3D12_HEAP_TYPE_GPU_UPLOAD)
             {
                 static FIRST: std::sync::Once = std::sync::Once::new();
+                LOCAL_UPLOAD_BYTES.fetch_add(size, Ordering::Relaxed);
                 FIRST.call_once(|| tracing::info!(size, budget = info.Budget, used = info.CurrentUsage,
                     "shader inputs mapped in local GPU-upload memory"));
                 return Some(mapped);
             }
         }
         self.upload_buffer(size)
+    }
+
+    /// Prefer local upload storage for bulk copies under system RAM pressure.
+    /// Callers write the mapping once per copy and the GPU reads it.
+    pub(crate) fn staging_upload_buffer(&self, size: u64) -> Option<(ID3D12Resource, *mut u8)> {
+        if self.local_gpu_inputs.is_some()
+            && crate::budget::ram_pressure(available_physical_ram()) != 0
+        {
+            self.shader_input_buffer(size)
+        } else {
+            self.upload_buffer(size)
+        }
     }
 
     pub(crate) fn upload_buffer(&self, size: u64) -> Option<(ID3D12Resource, *mut u8)> {
@@ -8228,8 +8284,6 @@ struct Meter {
     cpu_us: u64,
     /// Percent of the machine's CPU over the last report.
     cpu_pct: f64,
-    /// Percent of the frame time the GPU was busy.
-    gpu_pct: f64,
     /// Working set in MB.
     ram_mb: f64,
 }
@@ -8246,7 +8300,6 @@ impl Meter {
             logged: now,
             cpu_us: process_cpu_us().unwrap_or(0),
             cpu_pct: 0.0,
-            gpu_pct: 0.0,
             ram_mb: 0.0,
         }
     }
@@ -8288,7 +8341,6 @@ impl Meter {
             self.cpu_us = now;
             pct
         };
-        self.gpu_pct = if ms > 0.0 { gpu / ms * 100.0 } else { 0.0 };
         self.ram_mb = process_working_set().unwrap_or(0) as f64 / (1024.0 * 1024.0);
         #[cfg(feature = "diagnostics")]
         if memory_pressure_log() {
@@ -8304,6 +8356,11 @@ impl Meter {
                 "pipeline and shader pressure sample (completed attempts since last sample)");
             tracing::info!(working_set_mib = self.ram_mb,
                 process_commit_mib = private_bytes() >> 20,
+                rust_heap_mib = crate::copystat::live_heap_bytes() >> 20,
+                host_lists = ALIVE[0].load(Ordering::Relaxed),
+                list_scratch_mib = ALIVE[2].load(Ordering::Relaxed) >> 20,
+                list_upload_mib = ALIVE[7].load(Ordering::Relaxed) >> 20,
+                local_upload_allocated_mib = LOCAL_UPLOAD_BYTES.load(Ordering::Relaxed) >> 20,
                 available_ram_mib = ?available.map(|n| n >> 20),
                 dedicated_used_mib = ?groups.map(|g| g[0][1] >> 20),
                 dedicated_budget_mib = ?groups.map(|g| g[0][0] >> 20),
@@ -8506,7 +8563,7 @@ impl Meter {
                  {indirect:.0} indirect; heap buffers {picked:.1} passes {picked_ms:.1} ms;                  texture slots written so far: {placed} placed, {objects} of objects; \
                  textures picked by index: {picked_textures} uploaded so far ({picked_mb} MB), \
                  {picked_waiting} waiting, {picked_away} passed over unmapped; depth textures with                  unordered access: {du0} made, bound as depth {du1}x, cleared as depth {du2}x,                  unordered views refused {du3}x; buffer views left null as the host would refuse them: {refused}; \
-                 cpu {cpu_pct:.1}% gpu {gpu_pct:.0}% busy ram {ram_mb:.0} MB",
+                 cpu {cpu_pct:.1}% ram {ram_mb:.0} MiB",
                 picked_textures = crate::draw::HEAP_TEXTURES.load(Ordering::Relaxed),
                 picked_mb = crate::draw::HEAP_TEXTURE_BYTES.load(Ordering::Relaxed) >> 20,
                 picked_waiting = crate::draw::HEAP_TEXTURES_WAITING.load(Ordering::Relaxed),
@@ -8527,7 +8584,6 @@ impl Meter {
                 placed = crate::descriptor::host::PLACED_TEXTURE_SLOTS.load(Ordering::Relaxed),
                 objects = crate::descriptor::host::OBJECT_TEXTURE_SLOTS.load(Ordering::Relaxed),
                 cpu_pct = self.cpu_pct,
-                gpu_pct = self.gpu_pct,
                 ram_mb = self.ram_mb
             );
             #[cfg(feature = "diagnostics")]
@@ -8541,13 +8597,19 @@ impl Meter {
                 }
             }
         }
-        let (cpu_pct, gpu_pct, ram_mb) = (self.cpu_pct, self.gpu_pct, self.ram_mb);
+        let (cpu_pct, ram_mb) = (self.cpu_pct, self.ram_mb);
+        let vram = host()
+            .and_then(|host| host.video_memory_groups())
+            .map_or_else(|| "VRAM unavailable".to_owned(), |[local, shared]| {
+                format!("VRAM {} MiB / {} MiB budget | Shared GPU {} MiB",
+                    local[1] >> 20, local[0] >> 20, shared[1] >> 20)
+            });
         crate::debug_hud::update(hwnd, || {
-            format!("DexNom RayTime diagnostics\n{fps:.1} FPS   {ms:.1} ms/frame   {draws:.0} draws/frame\nGPU wait {gpu:.1} ms   CPU prep {cpu:.1} ms   Copy-back {back_ms:.1} ms\nDropped {dropped:.0}/frame   RAM {ram_mb:.0} MB")
+            format!("DexNom RayTime diagnostics\n{fps:.1} FPS   {ms:.1} ms/frame   {draws:.0} draws/frame\nGPU wait {gpu:.1} ms   CPU prep {cpu:.1} ms   Copy-back {back_ms:.1} ms\nDropped {dropped:.0}/frame   RAM {ram_mb:.0} MiB   {vram}")
         });
         let text = format!(
-            "DexNom RayTime | {fps:.0} fps {ms:.1} ms/frame | gpu {gpu_pct:.0}% busy \
-             cpu {cpu_pct:.0}% ram {ram_mb:.0} MB | {draws:.0} draws/frame"
+            "DexNom RayTime | {fps:.0} fps {ms:.1} ms/frame | {vram} | \
+             CPU {cpu_pct:.0}% RAM {ram_mb:.0} MiB | {draws:.0} draws/frame"
         );
         // Setting the text waits for the window's thread (a title thread,
         // which may not pump for a while), so a thread of ours does it and
@@ -8636,6 +8698,14 @@ impl Host {
             }
         }
         let state = D3D12_RESOURCE_STATES(state as i32);
+        let scene = if format == DXGI_FORMAT_R8G8B8A8_UNORM {
+            scene_fallback::take(frame)
+        } else {
+            None
+        };
+        if scene.is_some() {
+            settle_now(WHY_SYNC);
+        }
         // SAFETY: our swap chain, list and a live source texture.
         unsafe {
             let index = p.swap_chain.GetCurrentBackBufferIndex();
@@ -8649,7 +8719,7 @@ impl Host {
             let read_now = crate::capture::wanted(frame) || crate::capture::listed(frame);
             #[cfg(not(feature = "diagnostics"))]
             let read_now = false;
-            let slot = if late_free_present() && !read_now {
+            let slot = if late_free_present() && !read_now && scene.is_none() {
                 let finished = FINISHED.load(Ordering::Acquire);
                 p.ahead.iter().position(|(_, flown)| *flown <= finished).or_else(|| {
                     let list = self.new_list().ok()?;
@@ -8666,31 +8736,38 @@ impl Host {
             };
             copy.reset();
             let list = &copy.list;
-            list.ResourceBarrier(&[
-                transition(texture, state, D3D12_RESOURCE_STATE_COPY_SOURCE),
-                transition(
-                    &back,
-                    D3D12_RESOURCE_STATE_PRESENT,
-                    D3D12_RESOURCE_STATE_COPY_DEST,
-                ),
-            ]);
-            list.CopyResource(&back, texture);
+            let fallback = scene.as_ref().is_some_and(|scene| {
+                scene_fallback::record(self, list, texture, state, &back, scene, width, height)
+            });
+            if !fallback {
+                list.ResourceBarrier(&[
+                    transition(texture, state, D3D12_RESOURCE_STATE_COPY_SOURCE),
+                    transition(
+                        &back,
+                        D3D12_RESOURCE_STATE_PRESENT,
+                        D3D12_RESOURCE_STATE_COPY_DEST,
+                    ),
+                ]);
+                list.CopyResource(&back, texture);
+            }
             #[cfg(feature = "diagnostics")]
-            let capture = crate::capture::wanted(frame)
+            let capture = (!fallback && crate::capture::wanted(frame))
                 .then(|| crate::capture::read_back(&self.device, list, texture))
                 .flatten();
             #[cfg(feature = "diagnostics")]
-            let probe = if slot.is_some() { None } else { crate::capture::probe(&self.device, list, texture) };
+            let probe = if slot.is_some() || fallback { None } else { crate::capture::probe(&self.device, list, texture) };
             #[cfg(not(feature = "diagnostics"))]
             let _ = frame;
-            list.ResourceBarrier(&[
-                transition(texture, D3D12_RESOURCE_STATE_COPY_SOURCE, state),
-                transition(
-                    &back,
-                    D3D12_RESOURCE_STATE_COPY_DEST,
-                    D3D12_RESOURCE_STATE_PRESENT,
-                ),
-            ]);
+            if !fallback {
+                list.ResourceBarrier(&[
+                    transition(texture, D3D12_RESOURCE_STATE_COPY_SOURCE, state),
+                    transition(
+                        &back,
+                        D3D12_RESOURCE_STATE_COPY_DEST,
+                        D3D12_RESOURCE_STATE_PRESENT,
+                    ),
+                ]);
+            }
             copy.close();
             match slot {
                 Some(i) => {
@@ -8703,7 +8780,13 @@ impl Host {
             if let Some((buffer, footprint)) = capture {
                 crate::capture::save_read_back(frame, &buffer, &footprint);
             }
-            let _ = p.swap_chain.Present(0, DXGI_PRESENT(0));
+            let presented = p.swap_chain.Present(0, DXGI_PRESENT(0));
+            if let Err(error) = presented.ok() {
+                if frame.is_power_of_two() {
+                    tracing::warn!(%error, frame, width, height, "Windows swap-chain present failed");
+                }
+                return None;
+            }
             p.meter.frame(p.hwnd);
             #[cfg(feature = "diagnostics")]
             return Some(probe.is_some_and(|b| crate::capture::black(&b)));

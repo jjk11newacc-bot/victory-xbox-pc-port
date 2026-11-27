@@ -119,8 +119,8 @@ pub use lower::{host_max_wave, set_host_max_wave};
 pub use rect::rect_list_gs;
 pub use shader::{
     MEMORY_FAULTS, MEMORY_PAGES, ROOT_CBV_SPACE, SAMPLER_SPACE, SLOT_FAULTS, SLOT_MEMORY, SLOT_STRIDES,
-    SLOT_STRIDES_COUNT, SLOT_VIEW_ADDRESSES, USER_DATA_SPACE, USER_GROUP_BASE, USER_MEMORY_BASE, USER_VIEW_ADDRESS, USER_VIEW_BIAS,
-    USER_VIEW_RECORDS, USER_DISPATCH_THREADS_X, set_view_heap_limit, view_heap_limit,
+    SLOT_STRIDES_COUNT, SLOT_STRIDE_R32_UINT, SLOT_VIEW_ADDRESSES, USER_DATA_SPACE, USER_GROUP_BASE, USER_MEMORY_BASE, USER_VIEW_ADDRESS, USER_VIEW_BIAS,
+    USER_VIEW_RECORDS, USER_DISPATCH_THREADS_X, DYNAMIC_VIEW_SLOTS, guest_view_limit, set_view_heap_limit, view_heap_limit,
 };
 
 /// The loop limit without an override: 2^20.
@@ -364,6 +364,7 @@ pub fn translate(container: &[u8]) -> Result<HostShader, ShaderError> {
     let c = Container::parse(container)?;
     let dxil = c
         .part(FourCC::DXIL)
+        .or(c.part(FourCC::ACCC))
         .ok_or(ShaderError::Malformed("no DXIL part"))?;
     let native = crate::native_programs(dxil.data)?
         .into_iter()
@@ -746,6 +747,14 @@ fn emit_program(
     prims.retain(|e| !matches!(e.kind, 10 | 30));
     for e in &mut prims {
         e.interp = 1;
+    }
+    // Interpolation is declared by a pixel shader's input signature. Mesh
+    // outputs cannot pack unrelated interpolation modes into one output row;
+    // carry the semantics and component layout, but leave their mode neutral.
+    if native.stage == HwStage::Ms {
+        for e in &mut outputs {
+            e.interp = 0;
+        }
     }
     // A mesh group's id arrives multiplied by max(threads, vertices,
     // primitives) (the code divides by that); the thread count is in PSV0

@@ -1,0 +1,71 @@
+Runtime [local path removed]
+Game [local path removed]
+VICTORY_FILL_WORKERS: 2
+VICTORY_PIPELINE_WORKERS: 2
+VICTORY_JOIN_COPIES: 1
+VICTORY_WIDE_REFRESH: 0
+VICTORY_TEXTURE_NO_WAIT: 0
+VICTORY_PARALLEL_PRELUDES: 0
+VICTORY_PARALLEL_DETILE: 0
+VICTORY_WIDE_MERGE: 0
+VICTORY_CARD_WINDOWS_MB: 256
+VICTORY_TEXTURE_ROOM_PERCENT: 80
+VICTORY_STRICT_ADMISSION: 1
+VICTORY_ADAPTIVE_BUDGET: 1
+VICTORY_TEXTURE_CATCHUP: 0
+VICTORY_TEXTURE_STAGE_MS: 24
+VICTORY_TEXTURE_STAGE_MB: 96
+VICTORY_EARLY_TEXTURES_MS: 3
+VICTORY_BAKE_TEXTURES_MS: 8
+VICTORY_LOCAL_GPU_INPUTS: 1
+VICTORY_RANGE_UNION: 1
+NVIDIA performance profile; compare against baseline fallback if needed
+VICTORY_INDEXED_WATCH: 1
+VICTORY_WATCH_CLEAN_FAST: 1
+VICTORY_INDEXED_PENDING: 1
+VICTORY_INDEX_WRITE_GROUPS: 1
+VICTORY_BATCH_HAZARD_QUERY: 1
+VICTORY_BATCH_RAW_WORK: 1
+VICTORY_BATCH_PAGE_RANGES: 1
+VICTORY_SPARSE_MERGE: 1
+VICTORY_SETTLED_BLOCK_MERGE: 1
+VICTORY_SPARSE_REFRESH: 1
+VICTORY_SHARED_COMPARE_RUNS: 1
+VICTORY_PACK_SYNC_READBACK: 1
+VICTORY_REUSE_ROOT_DATA: 1
+VICTORY_REUSE_GRAPHICS_BINDINGS: 1
+VICTORY_COMPACT_MIP_UPLOAD: 1
+VICTORY_STICKY_RAM_PRESSURE: 1
+VICTORY_TRIM_READBACKS: 1
+VICTORY_STREAMING_FULL_BUDGET: 1
+VICTORY_STREAMING_SLOW_RECOVERY: 1
+VICTORY_MATERIAL_TEXTURE_DEMAND: 1
+VICTORY_TEXTURE_NO_WAIT: 0
+NVIDIA low-memory profile; RT off; native display patch: true
+Ray tracing requested: off
+Expected scene rendering 1920x1080, output 1920x1080
+Quiet NVIDIA run; use --nvidia-profile-log for diagnostic counters
+Texture copy queue requested: off
+Sparse texture mips requested
+Inherited VICTORY_AMBIENT_FALLBACK=1
+Inherited VICTORY_FSR_4K=0
+Inherited VICTORY_MEMORY_GUARD=1
+Inherited VICTORY_MEMORY_GUARD_MIB=1024
+Memory guard threshold: 1024 MiB available
+Working set trim threshold: 4352 MiB available
+build          unknown (b99f876b74d4a77f03af5f878223b27bd647b5c35a79d5decd9f716504239e93)
+mapped at      [address removed] (preferred [address removed])
+title          7952987A, storage [local path removed]
+console        Xbox Series X
+title dll      xboxbvhbuilder.dll at [address removed]
+title dll      amd_fidelityfx_loader_xbox.dll at [address removed]
+title dll      libhttpclient.gdk.dll at [address removed]
+title dll      bink2scarlett.dll at [address removed]
+bound          xboxbvhbuilder.dll: 9 hle, 48 host, 0 title, 0 missing
+bound          amd_fidelityfx_loader_xbox.dll: 4 hle, 18 host, 0 title, 0 missing
+bound          libhttpclient.gdk.dll: 27 hle, 171 host, 0 title, 0 missing
+bound          bink2scarlett.dll: 6 hle, 54 host, 0 title, 0 missing
+bound          game_scarlett_master.exe: 88 hle, 427 host, 72 title, 0 missing
+2026-11-27T13:08:32.580500Z  WARN victory_hle::modules::kernel: a host DLL outside the host policy: refused dll="rpcrt4.dll"
+Working set trim: success=true, physical available=9631 MiB, after=Some(9722) MiB, commit headroom before=Some(1048) MiB after=Some(1040) MiB, resident=Some(373) MiB, process commit=Some(4782) MiB
+Stopped the game before Windows exhausted commit (Some(976) MiB headroom, 9626 MiB physical RAM free)

@@ -69,7 +69,7 @@
 //! Unknown versions are rejected so a format change shows up as an error.
 
 use crate::ShaderError::{self, Malformed};
-use crate::dxbc::{u32_at, u64_at};
+use crate::dxbc::{u16_at, u32_at, u64_at};
 
 const XDAT_OFFSET: usize = 0x18;
 const MAX_XDAT_ENTRIES: usize = 64;
@@ -120,6 +120,18 @@ const CS_THREADS: usize = 0x28;
 const RECORD_LDS: usize = 0x4c;
 const MS_CLIP_CNTL: usize = 0x194;
 const MS_INFO: usize = 0x448;
+const FSPX_VERSION: u32 = 1;
+const FSPX_HEADER: usize = 0x10;
+const FSPX_PACKET: u32 = 0;
+const FSPX_CODE: u32 = 6;
+const FSPX_METADATA: u32 = 7;
+const PACKET_THREADS: usize = 0x0c;
+const PACKET_FLAGS: usize = 0x12;
+const PACKET_WAVE32: u16 = 1 << 4;
+const PACKET_RSRC1: usize = 0x14;
+const PACKET_RSRC2: usize = 0x18;
+const FSPX_RECORDS: usize = 0x18;
+const FSPX_RECORD: usize = 32;
 /// Unpacked blobs are a few KiB; refuse to allocate for absurd sizes.
 const MAX_UNPACKED: u64 = 16 << 20;
 
@@ -411,6 +423,9 @@ pub struct UsedResource {
 
 /// The native programs in a `DXIL` part's data; empty for the PC layout.
 pub fn native_programs(part: &[u8]) -> Result<Vec<NativeProgram>, ShaderError> {
+    if part.starts_with(b"FSPX") {
+        return Ok(vec![fspx_program(part)?]);
+    }
     if part.get(XDAT_OFFSET..XDAT_OFFSET + 4) != Some(b"XDAT") {
         return Ok(Vec::new());
     }
@@ -430,6 +445,164 @@ pub fn native_programs(part: &[u8]) -> Result<Vec<NativeProgram>, ShaderError> {
         out.extend(programs(&unpack(blob)?)?);
     }
     Ok(out)
+}
+
+/// Reads a compute program from the Xbox FSPX packet, code, and metadata
+/// sections passed to `DeserializeComputePipelineStateX`.
+pub fn fspx_program(part: &[u8]) -> Result<NativeProgram, ShaderError> {
+    if u32_at(part, 4)? != FSPX_VERSION {
+        return Err(Malformed("unknown FSPX version"));
+    }
+    let count = u32_at(part, 8)? as usize;
+    if count > MAX_XDAT_ENTRIES {
+        return Err(Malformed("implausible FSPX entry count"));
+    }
+    let entry = |kind: u32| -> Result<&[u8], ShaderError> {
+        for i in 0..count {
+            let at = FSPX_HEADER + 16 * i;
+            if u32_at(part, at)? == kind {
+                let (offset, size) = (u32_at(part, at + 4)?, u32_at(part, at + 8)?);
+                return bytes(part, offset.into(), size.into())
+                    .ok_or(Malformed("FSPX entry out of bounds"));
+            }
+        }
+        Err(Malformed("FSPX entry missing"))
+    };
+    let packet = entry(FSPX_PACKET)?;
+    let code = entry(FSPX_CODE)?;
+    let meta = entry(FSPX_METADATA)?;
+    if u32_at(meta, 8)? as usize * 4 != code.len() {
+        return Err(Malformed("FSPX code size disagrees"));
+    }
+    let wave64 = u16_at(packet, PACKET_FLAGS)? & PACKET_WAVE32 == 0;
+    let granules = (u32_at(packet, PACKET_RSRC1)? & 0x3f) + 1;
+    let vgprs = (granules * if wave64 { 4 } else { 8 }).min(256) as u16;
+    let threads = |i: usize| u16_at(packet, PACKET_THREADS + 2 * i).map(u32::from);
+    let io = ComputeIo {
+        rsrc2: u32_at(packet, PACKET_RSRC2)?,
+        threads: [threads(0)?, threads(1)?, threads(2)?],
+    };
+    let mut layout: Vec<RootParam> = Vec::new();
+    let mut used = Vec::new();
+    let mut direct_heaps = [None; 4];
+    for e in meta
+        .get(FSPX_RECORDS..)
+        .unwrap_or(&[])
+        .as_chunks::<FSPX_RECORD>()
+        .0
+    {
+        match e[0] {
+            0x41 => {}
+            0x42 => {
+                // A directly indexed range (binding mode 2) has no 0x41
+                // table entry. The compiler appends its heap base to the
+                // user registers, with the sampler heap before the buffers.
+                if e[8] == 2 && let Some(heap) = direct_heaps.get_mut(usize::from(e[9])) {
+                    *heap = Some(if e[9] == 1 {
+                        RootType::SamplerHeap
+                    } else {
+                        RootType::ResourceHeap
+                    });
+                }
+                continue;
+            }
+            0x43 => break,
+            _ => return Err(Malformed("unknown FSPX metadata record")),
+        }
+        let root = RootType::from_raw(e[5].into());
+        let resource = UsedResource {
+            kind: match e[4] {
+                0 => ResourceType::Srv,
+                1 => ResourceType::Sampler,
+                2 => ResourceType::Cbv,
+                3 => ResourceType::Uav,
+                n => ResourceType::Other(n),
+            },
+            root,
+            table_offset_dwords: le32(e, 8),
+            lower_bound: le32(e, 12),
+            stride: 0,
+            dwords: e[20],
+            user_data: e[21],
+            slot: e[22],
+        };
+        let sgprs = match root {
+            RootType::Constants => 1, // Expanded from the user SGPR allocation below.
+            RootType::Table => 1,
+            RootType::Descriptor => 2,
+            RootType::ImmediateSampler => 0,
+            _ => return Err(Malformed("an FSPX resource of an unknown root type")),
+        };
+        if sgprs > 0 && !layout.iter().any(|p| p.slot == resource.slot) {
+            layout.push(RootParam {
+                root,
+                table_offset_dwords: 0,
+                sgprs,
+                base_register: resource.lower_bound,
+                user_data: resource.user_data,
+                slot: resource.slot,
+            });
+        }
+        used.push(resource);
+    }
+    let heap_count = direct_heaps.iter().flatten().count() as u8;
+    let mut heap_start = io.user_sgprs().checked_sub(heap_count)
+        .ok_or(Malformed("FSPX heap bases exceed user SGPR allocation"))?;
+    // In the two-table layout the resource heap follows s4 and s5.
+    // This layout can allocate s7 as padding even though its base is in s6.
+    if heap_count == 1
+        && direct_heaps[0] == Some(RootType::ResourceHeap)
+        && heap_start == 7
+        && layout.len() == 2
+        && [4, 5].into_iter().all(|reg| layout.iter().any(|p| {
+            p.root == RootType::Table && p.user_data == reg
+        }))
+    {
+        heap_start = 6;
+    }
+    if heap_count > 0 && layout.iter().any(|p| u32::from(p.user_data) + p.sgprs > u32::from(heap_start)) {
+        return Err(Malformed("FSPX heap base overlaps a root parameter"));
+    }
+    for (index, root) in [1, 0, 2, 3].into_iter()
+        .filter_map(|kind| direct_heaps[kind]).enumerate()
+    {
+        layout.push(RootParam {
+            root,
+            table_offset_dwords: 0,
+            sgprs: 1,
+            base_register: 0,
+            user_data: heap_start + index as u8,
+            // Direct heaps are stage inputs, with no title root slot.
+            slot: u8::MAX,
+        });
+    }
+    layout.sort_by_key(|p| p.user_data);
+    let count = layout.len();
+    for i in 0..count {
+        if layout[i].root != RootType::Constants {
+            continue;
+        }
+        // FSPX reports the CBV's descriptor size, even when the constants
+        // live directly in SGPRs. The next root parameter or the end of the
+        // compute user SGPR allocation bounds the inline dwords.
+        let start = layout[i].user_data;
+        let end = layout
+            .get(i + 1)
+            .map_or(io.user_sgprs(), |p| p.user_data.min(io.user_sgprs()));
+        if end <= start {
+            return Err(Malformed("FSPX inline constants outside user SGPR allocation"));
+        }
+        layout[i].sgprs = u32::from(end - start);
+    }
+    Ok(NativeProgram {
+        stage: HwStage::Cs,
+        wave64,
+        vgprs,
+        layout,
+        used,
+        io: StageIo::Cs(io),
+        code: code.to_vec(),
+    })
 }
 
 fn unpack(blob: &[u8]) -> Result<Vec<u8>, ShaderError> {
@@ -845,6 +1018,54 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn reads_inline_fspx_constants_until_the_next_parameter_or_system_sgpr() {
+        let mut packet = [0; PACKET_RSRC2 + 4];
+        packet[PACKET_RSRC2..].copy_from_slice(&(12u32 << 1 | 1 << 7).to_le_bytes());
+        let mut meta = [0; FSPX_RECORDS + 5 * FSPX_RECORD];
+        meta[8..12].copy_from_slice(&1u32.to_le_bytes());
+        for (index, (kind, root, sgpr, slot)) in
+            [(2, 0, 6, 2), (0, 3, 4, 0), (2, 0, 10, 3)].into_iter().enumerate()
+        {
+            let offset = FSPX_RECORDS + index * FSPX_RECORD;
+            let record = &mut meta[offset..offset + FSPX_RECORD];
+            record[0] = 0x41;
+            record[4] = kind;
+            record[5] = root;
+            record[20..23].copy_from_slice(&[4, sgpr, slot]);
+        }
+        let heap = FSPX_RECORDS + 3 * FSPX_RECORD;
+        meta[heap] = 0x42;
+        meta[heap + 8] = 2;
+        meta[heap + 9] = 3;
+        meta[heap + FSPX_RECORD] = 0x43;
+        let mut blob = vec![0; FSPX_HEADER + 3 * 16];
+        blob[..4].copy_from_slice(b"FSPX");
+        blob[4..8].copy_from_slice(&FSPX_VERSION.to_le_bytes());
+        blob[8..12].copy_from_slice(&3u32.to_le_bytes());
+        for (index, (kind, section)) in [
+            (FSPX_PACKET, packet.as_slice()),
+            (FSPX_CODE, &[0, 0, 0x81, 0xbf]),
+            (FSPX_METADATA, meta.as_slice()),
+        ].into_iter().enumerate() {
+            let entry = FSPX_HEADER + index * 16;
+            let offset = blob.len() as u32;
+            blob[entry..entry + 4].copy_from_slice(&kind.to_le_bytes());
+            blob[entry + 4..entry + 8].copy_from_slice(&offset.to_le_bytes());
+            blob[entry + 8..entry + 12].copy_from_slice(&(section.len() as u32).to_le_bytes());
+            blob.extend_from_slice(section);
+        }
+        let program = fspx_program(&blob).unwrap();
+        let layout: Vec<_> = program.layout.iter().map(|p| (p.root, p.user_data, p.sgprs)).collect();
+        assert_eq!(layout, [
+            (RootType::Table, 4, 1),
+            (RootType::Constants, 6, 4),
+            (RootType::Constants, 10, 1),
+            (RootType::ResourceHeap, 11, 1),
+        ]);
+        assert_eq!(program.used[0].dwords, 4);
     }
 
     #[test]

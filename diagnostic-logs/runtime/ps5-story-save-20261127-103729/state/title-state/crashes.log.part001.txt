@@ -1,0 +1,4 @@
+unix time 1795756903, process 11980
+VIctory: host GPU failure: host GPU device removed after 1 submissions sent ahead (VICTORY_RELAY=1) of 1 lists; no breadcrumbs (The specified device interface or feature level is not supported on this system. (0x887A0004)); device removed: The GPU will not respond to more commands, most likely because some other application submitted invalid commands.
+The calling application should re-create the device and continue. (0x887A0007); a diagnostics build with VICTORY_D3D12_DEBUG=1 names the command
+

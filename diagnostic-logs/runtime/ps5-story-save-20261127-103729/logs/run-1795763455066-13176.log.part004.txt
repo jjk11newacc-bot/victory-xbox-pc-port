@@ -1,0 +1,102 @@
+2026-11-27T07:16:37.827534Z  INFO victory_gpu::host: dropped 16.2/frame without a host pipeline: refused [compute 94a2127d4d0038cc]
+2026-11-27T07:16:37.827540Z  INFO victory_gpu::host: dropped 14.0/frame without a host pipeline: compute d91c3c8ef59dea6b
+2026-11-27T07:16:37.827546Z  INFO victory_gpu::host: dropped 10.0/frame without a host pipeline: compute e7310903fb29d734
+2026-11-27T07:16:37.827552Z  INFO victory_gpu::host: dropped 9.0/frame without a host pipeline: compute 9ffcc81227ebb092
+2026-11-27T07:16:37.827558Z  INFO victory_gpu::host: dropped 7.5/frame without a host pipeline: compute 02a08cc5e9631c83
+2026-11-27T07:16:37.827564Z  INFO victory_gpu::host: dropped 6.0/frame without a host pipeline: compute 1cfad156fecd39e7
+2026-11-27T07:16:37.827569Z  INFO victory_gpu::host: dropped 5.2/frame without a host pipeline: compute 890640193d957e17
+2026-11-27T07:16:37.827576Z  INFO victory_gpu::host: dropped 5.0/frame without a host pipeline: compute 251d516c3f1b393a
+2026-11-27T07:16:37.827583Z  INFO victory_gpu::host: dropped 5.0/frame without a host pipeline: compute 6746a90fd4cee76d
+2026-11-27T07:16:37.827589Z  INFO victory_gpu::host: dropped 5.0/frame without a host pipeline: compute 8a3ed184821961fb
+2026-11-27T07:16:37.827593Z  INFO victory_gpu::host: dropped 5.0/frame without a host pipeline: compute d43949097f8a88ee
+2026-11-27T07:16:37.827597Z  INFO victory_gpu::host: dropped 4.8/frame without a host pipeline: compute 69ebf6589efdf5e9
+2026-11-27T07:16:37.827602Z  INFO victory_gpu::host: dropped 4.5/frame without a host pipeline: compute 4c1b26390cdc5786
+2026-11-27T07:16:37.827608Z  INFO victory_gpu::host: dropped 4.5/frame without a host pipeline: compute 9f6061da18873d38
+2026-11-27T07:16:37.827613Z  INFO victory_gpu::host: dropped 4.5/frame without a host pipeline: compute becea6807f6df8e4
+2026-11-27T07:16:37.827617Z  INFO victory_gpu::host: dropped 4.5/frame without a host pipeline: compute ede0a590ac73315d
+2026-11-27T07:16:37.827622Z  INFO victory_gpu::host: dropped 4.0/frame without a host pipeline: compute 13cbfff7f07fb3ea
+2026-11-27T07:16:37.827626Z  INFO victory_gpu::host: dropped 3.5/frame without a host pipeline: compute 9737e0a720ea10db
+2026-11-27T07:16:37.827632Z  INFO victory_gpu::host: dropped 3.5/frame without a host pipeline: compute ceb5b07fb8757190
+2026-11-27T07:16:37.827637Z  INFO victory_gpu::host: dropped 3.0/frame without a host pipeline: compute 18037a7fe5ebaf77
+2026-11-27T07:16:37.827782Z  INFO victory_gpu::host: dropped 3.0/frame without a host pipeline: compute 5b1f79a4c681347e
+2026-11-27T07:16:37.827797Z  INFO victory_gpu::host: dropped 3.0/frame without a host pipeline: compute 852af7f2e83e9f07
+2026-11-27T07:16:37.827804Z  INFO victory_gpu::host: dropped 3.0/frame without a host pipeline: compute c44d9dc9569c9934
+2026-11-27T07:16:37.827811Z  INFO victory_gpu::host: dropped 3.0/frame without a host pipeline: compute e2730790f11aa61c
+2026-11-27T07:16:37.827817Z  INFO victory_gpu::host: dropped 3.0/frame without a host pipeline: compute f2397e7fb58a6aee
+2026-11-27T07:16:37.827822Z  INFO victory_gpu::host: dropped 2.5/frame without a host pipeline: compute 02c7c063289f930b
+2026-11-27T07:16:37.827828Z  INFO victory_gpu::host: dropped 2.5/frame without a host pipeline: compute 062ac214c073b7b1
+2026-11-27T07:16:37.827834Z  INFO victory_gpu::host: dropped 2.5/frame without a host pipeline: compute 0a2e642690396eba
+2026-11-27T07:16:37.827842Z  INFO victory_gpu::host: dropped 2.5/frame without a host pipeline: compute 0c01cfe726eae637
+2026-11-27T07:16:37.827847Z  INFO victory_gpu::host: dropped 2.5/frame without a host pipeline: compute 0c01e32325df4a15
+2026-11-27T07:16:37.827852Z  INFO victory_gpu::host: dropped 2.5/frame without a host pipeline: compute 0ec662af61485c85
+2026-11-27T07:16:37.827858Z  INFO victory_gpu::host: dropped 2.5/frame without a host pipeline: compute 1128b6882eb6214d
+2026-11-27T07:16:37.827863Z  INFO victory_gpu::host: dropped 2.5/frame without a host pipeline: compute 11c33a40cc70c9d0
+2026-11-27T07:16:37.827868Z  INFO victory_gpu::host: dropped 2.5/frame without a host pipeline: compute 134287a444f15f99
+2026-11-27T07:16:37.827873Z  INFO victory_gpu::host: dropped 2.5/frame without a host pipeline: compute 16bc3328c83bb0b6
+2026-11-27T07:16:37.827878Z  INFO victory_gpu::host: dropped 2.5/frame without a host pipeline: compute 188bad2644c56c2c
+2026-11-27T07:16:37.827884Z  INFO victory_gpu::host: dropped 2.5/frame without a host pipeline: compute 18f0851de5460e98
+2026-11-27T07:16:37.827889Z  INFO victory_gpu::host: dropped 2.5/frame without a host pipeline: compute 19ab7440eaf2772f
+2026-11-27T07:16:38.308770Z  INFO victory_gpu::texture: released completed texture upload leases released_count=6 released_bytes=4345600
+Working set trim: success=true, available=1789 MiB, after=Some(1964) MiB, resident=Some(1367) MiB, process commit=Some(18874) MiB, system commit headroom=Some(1268) MiB
+2026-11-27T07:16:38.909952Z  INFO victory_gpu::host: indirect mesh dispatches: the largest group count asked for 233 (run: at most 65535), 2295 groups asked per frame
+2026-11-27T07:16:38.910137Z  INFO victory_gpu::host: submissions sent ahead per frame: 26.2 in 1.0 settles (0.0 flights each time), 2.2 ms waiting for the card in them; settled for: a synchronous submission or present 0.8, the card had run them 0.0, a wait for a memory value 0.0, title memory changed under shader writes 0.2, title memory read 0.0 (by a buffer copy 0.0, a fill of upload memory 0.0, a texture 0.0), a step of ours 0.0, 256 lists in the air 0.0, bottom-of-pipe writes (VICTORY_LATE_WAIT_WRITES=0) 0.0, a blocking fence wait 0.0; 11.5 waits for memory values met by a flight's bottom-of-pipe write, 15.2 fence signals set behind flights
+2026-11-27T07:16:38.910154Z  INFO victory_gpu::host: of the waiting for the card in settles, per frame, by what settled: a synchronous submission or present 1.4 ms, the card had run them 0.0, a wait for a memory value 0.0, title memory changed under shader writes 0.9, title memory read 0.0, a step of ours 0.0, lists in the air 0.0, bottom-of-pipe writes 0.0, a blocking fence wait 0.0
+2026-11-27T07:16:38.910162Z  INFO victory_gpu::host: the relay per frame (VICTORY_RELAY=1): 26.2 flights landed in 16.5 landings by the thread that copies back, beside the submitting thread; that thread waited 61.7 ms for the card with nothing to land and 22.2 ms for fetches of card copies' pieces, and was 48.8 ms landing in all (the frame line's "copying back" is its time; "settles" above are waits of other threads for it)
+2026-11-27T07:16:38.910198Z  INFO victory_gpu::host: title bytes put in under flights' shader writes per frame (VICTORY_LATE_WAIT=2): 11 pages looked at, 0 changed runs, 0.00 MB
+2026-11-27T07:16:38.910214Z  INFO victory_gpu::host: the card's clock per frame: nothing of ours queued 188.6 ms (the card about 32% busy by this count), 158.9 ms of that while the submitting thread was working (the card idle behind us), the rest while the title had not submitted; the submitting thread stood waiting for the card 2.8 ms
+2026-11-27T07:16:38.910224Z  INFO victory_gpu::host: Direct3D title queue calls: 27.2/frame, 3.252 ms/frame in ExecuteCommandLists, longest call 0.787 ms
+2026-11-27T07:16:38.910232Z  INFO victory_gpu::host: Direct3D upload and readback queue calls: 30.2/frame, 4.832 ms/frame in ExecuteCommandLists, longest call 0.544 ms
+2026-11-27T07:16:38.910239Z  INFO victory_gpu::host: guest refresh coverage per frame: 6851.8 MiB legacy envelope, 5851.8 MiB scheduled, 1000.0 MiB excluded gaps, 5316 spans (not measured PCIe traffic)
+2026-11-27T07:16:38.910250Z  INFO victory_gpu::host: our passes over copies in the card's memory per frame: 167 hash passes over 327 pieces after ranges were sent up, 0 redundant hash dispatches avoided, 54 compare passes
+2026-11-27T07:16:38.910256Z  INFO victory_gpu::host: texture refreshes per frame, all threads: 23.6 ms, of them 0.0 ms waiting for a texture another thread is refreshing, 4.4 ms asking the write watch and the guards, 0.0 ms waiting for title memory to hold still (the runtime remapping it); the rest is reading, hashing and detiling
+2026-11-27T07:16:38.910264Z  INFO victory_gpu::host: title buffer copies recorded per frame: 26, of them 0 continue the one before (VICTORY_JOIN_COPIES=1 makes those one copy with it: now on)
+2026-11-27T07:16:38.910269Z  INFO victory_gpu::host: parallel upload preparation per frame: 0.0 batches, 0 fills
+2026-11-27T07:16:39.310544Z  INFO victory_gpu::texture: released completed texture upload leases released_count=3 released_bytes=3342336
+2026-11-27T07:16:40.080601Z  INFO victory_gpu::host: indirect mesh dispatches: the largest group count asked for 233 (run: at most 65535), 1240 groups asked per frame
+2026-11-27T07:16:40.080671Z  INFO victory_gpu::host: submissions sent ahead per frame: 26.8 in 1.0 settles (0.0 flights each time), 2.1 ms waiting for the card in them; settled for: a synchronous submission or present 1.0, the card had run them 0.0, a wait for a memory value 0.0, title memory changed under shader writes 0.0, title memory read 0.0 (by a buffer copy 0.0, a fill of upload memory 0.0, a texture 0.0), a step of ours 0.0, 256 lists in the air 0.0, bottom-of-pipe writes (VICTORY_LATE_WAIT_WRITES=0) 0.0, a blocking fence wait 0.0; 10.6 waits for memory values met by a flight's bottom-of-pipe write, 14.6 fence signals set behind flights
+2026-11-27T07:16:40.080684Z  INFO victory_gpu::host: of the waiting for the card in settles, per frame, by what settled: a synchronous submission or present 2.1 ms, the card had run them 0.0, a wait for a memory value 0.0, title memory changed under shader writes 0.0, title memory read 0.0, a step of ours 0.0, lists in the air 0.0, bottom-of-pipe writes 0.0, a blocking fence wait 0.0
+2026-11-27T07:16:40.080691Z  INFO victory_gpu::host: the relay per frame (VICTORY_RELAY=1): 26.8 flights landed in 17.2 landings by the thread that copies back, beside the submitting thread; that thread waited 47.7 ms for the card with nothing to land and 31.3 ms for fetches of card copies' pieces, and was 55.9 ms landing in all (the frame line's "copying back" is its time; "settles" above are waits of other threads for it)
+2026-11-27T07:16:40.080698Z  INFO victory_gpu::host: title bytes put in under flights' shader writes per frame (VICTORY_LATE_WAIT=2): 13 pages looked at, 0 changed runs, 0.00 MB
+2026-11-27T07:16:40.080704Z  INFO victory_gpu::host: the card's clock per frame: nothing of ours queued 145.8 ms (the card about 38% busy by this count), 105.8 ms of that while the submitting thread was working (the card idle behind us), the rest while the title had not submitted; the submitting thread stood waiting for the card 2.5 ms
+2026-11-27T07:16:40.080719Z  INFO victory_gpu::host: Direct3D title queue calls: 27.8/frame, 2.450 ms/frame in ExecuteCommandLists, longest call 0.379 ms
+2026-11-27T07:16:40.080727Z  INFO victory_gpu::host: Direct3D upload and readback queue calls: 30.0/frame, 4.218 ms/frame in ExecuteCommandLists, longest call 0.499 ms
+2026-11-27T07:16:40.080734Z  INFO victory_gpu::host: guest refresh coverage per frame: 6932.9 MiB legacy envelope, 5990.0 MiB scheduled, 942.9 MiB excluded gaps, 5347 spans (not measured PCIe traffic)
+2026-11-27T07:16:40.080740Z  INFO victory_gpu::host: our passes over copies in the card's memory per frame: 169 hash passes over 325 pieces after ranges were sent up, 0 redundant hash dispatches avoided, 55 compare passes
+2026-11-27T07:16:40.080746Z  INFO victory_gpu::host: texture refreshes per frame, all threads: 12.3 ms, of them 0.0 ms waiting for a texture another thread is refreshing, 2.6 ms asking the write watch and the guards, 0.0 ms waiting for title memory to hold still (the runtime remapping it); the rest is reading, hashing and detiling
+2026-11-27T07:16:40.080752Z  INFO victory_gpu::host: title buffer copies recorded per frame: 26, of them 0 continue the one before (VICTORY_JOIN_COPIES=1 makes those one copy with it: now on)
+2026-11-27T07:16:40.080758Z  INFO victory_gpu::host: parallel upload preparation per frame: 0.0 batches, 0 fills
+2026-11-27T07:16:40.358205Z  INFO victory_gpu::texture: released completed texture upload leases released_count=6 released_bytes=4769280
+Working set trim: success=true, available=1784 MiB, after=Some(1897) MiB, resident=Some(1446) MiB, process commit=Some(18906) MiB, system commit headroom=Some(1240) MiB
+2026-11-27T07:16:41.241947Z  INFO victory_gpu::host: indirect mesh dispatches: the largest group count asked for 166 (run: at most 65535), 386 groups asked per frame
+2026-11-27T07:16:41.242067Z  INFO victory_gpu::host: submissions sent ahead per frame: 26.0 in 0.5 settles (0.0 flights each time), 1.4 ms waiting for the card in them; settled for: a synchronous submission or present 0.5, the card had run them 0.0, a wait for a memory value 0.0, title memory changed under shader writes 0.0, title memory read 0.0 (by a buffer copy 0.0, a fill of upload memory 0.0, a texture 0.0), a step of ours 0.0, 256 lists in the air 0.0, bottom-of-pipe writes (VICTORY_LATE_WAIT_WRITES=0) 0.0, a blocking fence wait 0.0; 10.2 waits for memory values met by a flight's bottom-of-pipe write, 14.0 fence signals set behind flights
+2026-11-27T07:16:41.242084Z  INFO victory_gpu::host: of the waiting for the card in settles, per frame, by what settled: a synchronous submission or present 1.4 ms, the card had run them 0.0, a wait for a memory value 0.0, title memory changed under shader writes 0.0, title memory read 0.0, a step of ours 0.0, lists in the air 0.0, bottom-of-pipe writes 0.0, a blocking fence wait 0.0
+2026-11-27T07:16:41.242092Z  INFO victory_gpu::host: the relay per frame (VICTORY_RELAY=1): 26.0 flights landed in 17.0 landings by the thread that copies back, beside the submitting thread; that thread waited 58.8 ms for the card with nothing to land and 31.1 ms for fetches of card copies' pieces, and was 61.7 ms landing in all (the frame line's "copying back" is its time; "settles" above are waits of other threads for it)
+2026-11-27T07:16:41.242102Z  INFO victory_gpu::host: title bytes put in under flights' shader writes per frame (VICTORY_LATE_WAIT=2): 18 pages looked at, 0 changed runs, 0.00 MB
+2026-11-27T07:16:41.242110Z  INFO victory_gpu::host: the card's clock per frame: nothing of ours queued 193.1 ms (the card about 34% busy by this count), 141.5 ms of that while the submitting thread was working (the card idle behind us), the rest while the title had not submitted; the submitting thread stood waiting for the card 1.9 ms
+2026-11-27T07:16:41.242117Z  INFO victory_gpu::host: Direct3D title queue calls: 27.0/frame, 2.958 ms/frame in ExecuteCommandLists, longest call 0.448 ms
+2026-11-27T07:16:41.242133Z  INFO victory_gpu::host: Direct3D upload and readback queue calls: 29.8/frame, 5.537 ms/frame in ExecuteCommandLists, longest call 0.456 ms
+2026-11-27T07:16:41.242142Z  INFO victory_gpu::host: guest refresh coverage per frame: 6851.4 MiB legacy envelope, 5844.1 MiB scheduled, 1007.2 MiB excluded gaps, 5300 spans (not measured PCIe traffic)
+2026-11-27T07:16:41.242151Z  INFO victory_gpu::host: our passes over copies in the card's memory per frame: 166 hash passes over 307 pieces after ranges were sent up, 0 redundant hash dispatches avoided, 54 compare passes
+2026-11-27T07:16:41.242158Z  INFO victory_gpu::host: texture refreshes per frame, all threads: 21.7 ms, of them 0.0 ms waiting for a texture another thread is refreshing, 2.6 ms asking the write watch and the guards, 0.0 ms waiting for title memory to hold still (the runtime remapping it); the rest is reading, hashing and detiling
+2026-11-27T07:16:41.242166Z  INFO victory_gpu::host: title buffer copies recorded per frame: 26, of them 0 continue the one before (VICTORY_JOIN_COPIES=1 makes those one copy with it: now on)
+2026-11-27T07:16:41.242172Z  INFO victory_gpu::host: parallel upload preparation per frame: 0.0 batches, 0 fills
+2026-11-27T07:16:41.398456Z  INFO victory_gpu::texture: released completed texture upload leases released_count=5 released_bytes=4390912
+Working set trim: success=true, available=1766 MiB, after=Some(1909) MiB, resident=Some(1359) MiB, process commit=Some(18920) MiB, system commit headroom=Some(1170) MiB
+2026-11-27T07:16:42.347047Z  INFO victory_gpu::host: indirect mesh dispatches: the largest group count asked for 233 (run: at most 65535), 954 groups asked per frame
+2026-11-27T07:16:42.347189Z  INFO victory_gpu::host: submissions sent ahead per frame: 26.0 in 0.8 settles (0.0 flights each time), 6.0 ms waiting for the card in them; settled for: a synchronous submission or present 0.8, the card had run them 0.0, a wait for a memory value 0.0, title memory changed under shader writes 0.0, title memory read 0.0 (by a buffer copy 0.0, a fill of upload memory 0.0, a texture 0.0), a step of ours 0.0, 256 lists in the air 0.0, bottom-of-pipe writes (VICTORY_LATE_WAIT_WRITES=0) 0.0, a blocking fence wait 0.0; 12.5 waits for memory values met by a flight's bottom-of-pipe write, 14.8 fence signals set behind flights
+2026-11-27T07:16:42.347208Z  INFO victory_gpu::host: of the waiting for the card in settles, per frame, by what settled: a synchronous submission or present 6.0 ms, the card had run them 0.0, a wait for a memory value 0.0, title memory changed under shader writes 0.0, title memory read 0.0, a step of ours 0.0, lists in the air 0.0, bottom-of-pipe writes 0.0, a blocking fence wait 0.0
+2026-11-27T07:16:42.347216Z  INFO victory_gpu::host: the relay per frame (VICTORY_RELAY=1): 26.0 flights landed in 13.5 landings by the thread that copies back, beside the submitting thread; that thread waited 44.6 ms for the card with nothing to land and 41.6 ms for fetches of card copies' pieces, and was 71.3 ms landing in all (the frame line's "copying back" is its time; "settles" above are waits of other threads for it)
+2026-11-27T07:16:42.347227Z  INFO victory_gpu::host: title bytes put in under flights' shader writes per frame (VICTORY_LATE_WAIT=2): 15 pages looked at, 0 changed runs, 0.00 MB
+2026-11-27T07:16:42.347234Z  INFO victory_gpu::host: the card's clock per frame: nothing of ours queued 178.7 ms (the card about 35% busy by this count), 111.1 ms of that while the submitting thread was working (the card idle behind us), the rest while the title had not submitted; the submitting thread stood waiting for the card 6.6 ms
+2026-11-27T07:16:42.347244Z  INFO victory_gpu::host: Direct3D title queue calls: 27.0/frame, 2.986 ms/frame in ExecuteCommandLists, longest call 0.397 ms
+2026-11-27T07:16:42.347250Z  INFO victory_gpu::host: Direct3D upload and readback queue calls: 29.8/frame, 5.340 ms/frame in ExecuteCommandLists, longest call 0.602 ms
+2026-11-27T07:16:42.347257Z  INFO victory_gpu::host: guest refresh coverage per frame: 6333.8 MiB legacy envelope, 5309.5 MiB scheduled, 1024.3 MiB excluded gaps, 4266 spans (not measured PCIe traffic)
+2026-11-27T07:16:42.347272Z  INFO victory_gpu::host: our passes over copies in the card's memory per frame: 142 hash passes over 276 pieces after ranges were sent up, 0 redundant hash dispatches avoided, 54 compare passes
+2026-11-27T07:16:42.347282Z  INFO victory_gpu::host: texture refreshes per frame, all threads: 13.6 ms, of them 0.0 ms waiting for a texture another thread is refreshing, 3.2 ms asking the write watch and the guards, 0.0 ms waiting for title memory to hold still (the runtime remapping it); the rest is reading, hashing and detiling
+2026-11-27T07:16:42.347289Z  INFO victory_gpu::host: title buffer copies recorded per frame: 26, of them 0 continue the one before (VICTORY_JOIN_COPIES=1 makes those one copy with it: now on)
+2026-11-27T07:16:42.347295Z  INFO victory_gpu::host: parallel upload preparation per frame: 0.0 batches, 0 fills
+2026-11-27T07:16:42.411530Z  INFO victory_gpu::texture: released completed texture upload leases released_count=9 released_bytes=4578048
+Working set trim: success=true, available=1496 MiB, after=Some(2053) MiB, resident=Some(1451) MiB, process commit=Some(18921) MiB, system commit headroom=Some(1155) MiB
+VIctory exited with exit code: 0
+
+[Lines omitted: 4. Empty source: False.]

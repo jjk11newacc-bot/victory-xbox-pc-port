@@ -365,7 +365,11 @@ pub extern "system" fn XMemIsToolsMemAvailable() -> BOOL {
 
 const PAGE: usize = 64 << 10;
 
-struct Section(HANDLE);
+struct Section {
+    handle: HANDLE,
+    needs_commit: bool,
+    _backing_file: Option<std::fs::File>,
+}
 
 // SAFETY: a section handle may be used from any thread.
 unsafe impl Send for Section {}
@@ -375,7 +379,7 @@ unsafe impl Sync for Section {}
 impl Drop for Section {
     fn drop(&mut self) {
         // SAFETY: our handle; views keep the section alive on their own.
-        unsafe { CloseHandle(self.0) };
+        unsafe { CloseHandle(self.handle) };
     }
 }
 
@@ -429,6 +433,75 @@ fn physical() -> MutexGuard<'static, Physical> {
     PHYSICAL.lock().unwrap_or_else(|e| e.into_inner())
 }
 
+/// A sparse data file supplies zero-filled pages and writable shared views
+/// without reserving the size of the section against system commit.
+fn file_backed_section(directory: &std::path::Path, size: usize) -> std::io::Result<Section> {
+    use std::os::windows::ffi::OsStrExt;
+    use std::os::windows::fs::OpenOptionsExt;
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Storage::FileSystem::{FILE_FLAG_DELETE_ON_CLOSE, GetDiskFreeSpaceExW};
+    use windows_sys::Win32::System::IO::DeviceIoControl;
+    use windows_sys::Win32::System::Ioctl::FSCTL_SET_SPARSE;
+
+    let path: Vec<u16> = directory.as_os_str().encode_wide().chain([0]).collect();
+    let mut available = 0;
+    // SAFETY: path is terminated and available points at a writable u64.
+    if unsafe { GetDiskFreeSpaceExW(path.as_ptr(), &mut available, std::ptr::null_mut(), std::ptr::null_mut()) } == 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    if available < (size as u64).saturating_add(16 << 30) {
+        return Err(std::io::Error::other("insufficient disk space for guest page backing"));
+    }
+    static NEXT_FILE: AtomicUsize = AtomicUsize::new(0);
+    let seq = NEXT_FILE.fetch_add(1, Ordering::Relaxed);
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create_new(true)
+        .share_mode(0)
+        .custom_flags(FILE_FLAG_DELETE_ON_CLOSE)
+        .open(directory.join(format!("victory-pages-{}-{seq}.tmp", std::process::id())))?;
+    let raw = file.as_raw_handle();
+    let mut returned = 0;
+    // SAFETY: synchronous file handle, no input or output buffers for this control code.
+    if unsafe {
+        DeviceIoControl(raw, FSCTL_SET_SPARSE, std::ptr::null(), 0,
+            std::ptr::null_mut(), 0, &mut returned, std::ptr::null_mut())
+    } == 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    file.set_len(size as u64)?;
+    // SAFETY: our writable file, with its length set above.
+    let handle = unsafe {
+        CreateFileMappingW(raw, std::ptr::null(), PAGE_READWRITE, 0, 0, std::ptr::null())
+    };
+    if handle.is_null() {
+        return Err(std::io::Error::last_os_error());
+    }
+    Ok(Section { handle, needs_commit: false, _backing_file: Some(file) })
+}
+
+fn pagefile_section(size: usize) -> std::io::Result<Section> {
+    let needs_commit = !on_wine();
+    // SAFETY: creates an anonymous section. Under Wine, a committed
+    // section is a sparse file and avoids a server request per commit.
+    let handle = unsafe {
+        CreateFileMappingW(
+            INVALID_HANDLE_VALUE,
+            std::ptr::null(),
+            PAGE_READWRITE | if needs_commit { SEC_RESERVE } else { SEC_COMMIT },
+            (size as u64 >> 32) as u32,
+            size as u32,
+            std::ptr::null(),
+        )
+    };
+    if handle.is_null() {
+        return Err(std::io::Error::last_os_error());
+    }
+    victory_gpu::title_memory_section(handle as usize, size as u64, !needs_commit);
+    Ok(Section { handle, needs_commit, _backing_file: None })
+}
+
 /// `count` is in and out (pages wanted, pages given); all or nothing here.
 pub extern "system" fn XMemAllocatePhysicalPages(
     flags: u64,
@@ -443,40 +516,37 @@ pub extern "system" fn XMemAllocatePhysicalPages(
     let Some(size) = n.checked_mul(PAGE).filter(|&s| s > 0) else {
         return 0;
     };
-    // A pagefile-backed section of `size` bytes, its pages committed when
-    // first mapped or written (`commit`): the title asks for 6.1
-    // GiB at once, which a busy host often cannot commit (error 1450).
-    // SAFETY: plain section creation.
-    let handle = unsafe {
-        CreateFileMappingW(
-            INVALID_HANDLE_VALUE,
-            std::ptr::null(),
-            // Under Wine a committed section is a sparse file, free until
-            // touched, and committing a reserved one page by page costs a
-            // wineserver request each that scans every range committed so
-            // far: commit it whole there.
-            PAGE_READWRITE | if on_wine() { SEC_COMMIT } else { SEC_RESERVE },
-            (size as u64 >> 32) as u32,
-            size as u32,
-            std::ptr::null(),
-        )
+    let backing_dir = (size >= 512 * MIB && !on_wine())
+        .then(|| std::env::var_os("VICTORY_PAGE_BACKING_DIR"))
+        .flatten()
+        .filter(|path| !path.is_empty());
+    let file_backed = backing_dir.and_then(|directory| {
+        match file_backed_section(std::path::Path::new(&directory), size) {
+            Ok(section) => {
+                victory_gpu::title_memory_section(section.handle as usize, size as u64, false);
+                eprintln!("Guest page file backing: {} MiB", size / MIB);
+                Some(section)
+            }
+            Err(error) => {
+                tracing::warn!(n, %error, "guest page file backing unavailable");
+                None
+            }
+        }
+    });
+    let section = match file_backed.map_or_else(|| pagefile_section(size), Ok) {
+        Ok(section) => Arc::new(section),
+        Err(error) => {
+            tracing::warn!(n, %error, "XMemAllocatePhysicalPages failed");
+            // SAFETY: checked non-null.
+            unsafe { count.write(0) };
+            return 0;
+        }
     };
-    if handle.is_null() {
-        let error = std::io::Error::last_os_error();
-        tracing::warn!(n, %error, "XMemAllocatePhysicalPages failed");
-        // SAFETY: checked non-null.
-        unsafe { count.write(0) };
-        return 0;
-    }
     tracing::debug!(
         n,
         flags = format_args!("{flags:#x}"),
         "XMemAllocatePhysicalPages"
     );
-    // For the GPU side's in-place census: only a committed section can be
-    // opened as a host heap.
-    victory_gpu::title_memory_section(handle as usize, size as u64, on_wine());
-    let section = Arc::new(Section(handle));
     let mut physical = physical();
     let first = physical.next_page;
     physical.next_page += n * FRAMES;
@@ -526,7 +596,7 @@ impl View {
         // SAFETY: slices of a section we own; the view is ours until dropped.
         let at = unsafe {
             MapViewOfFile(
-                slice.section.0,
+                slice.section.handle,
                 FILE_MAP_WRITE,
                 (offset >> 32) as u32,
                 offset as u32,
@@ -537,7 +607,7 @@ impl View {
             return None;
         }
         let view = View { at, len };
-        commit(at.Value as usize, len).then_some(view)
+        (!slice.section.needs_commit || commit(at.Value as usize, len)).then_some(view)
     }
 
     fn bytes(&mut self) -> &mut [u8] {
@@ -798,7 +868,7 @@ fn map(physical: &mut Physical, base: usize, len: usize, slice: Slice) -> bool {
     unsafe { VirtualFree(base as _, len, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER) };
     let replace = || unsafe {
         MapViewOfFile3(
-            slice.section.0,
+            slice.section.handle,
             GetCurrentProcess(),
             base as *const c_void,
             (slice.index * PAGE) as u64,
@@ -827,7 +897,7 @@ fn map(physical: &mut Physical, base: usize, len: usize, slice: Slice) -> bool {
         );
         return false;
     }
-    if !commit(base, len) {
+    if slice.section.needs_commit && !commit(base, len) {
         // SAFETY: the view just mapped, back to a placeholder.
         unsafe { UnmapViewOfFile2(GetCurrentProcess(), view, MEM_PRESERVE_PLACEHOLDER) };
         return false;
@@ -835,7 +905,7 @@ fn map(physical: &mut Physical, base: usize, len: usize, slice: Slice) -> bool {
     // New contents, read-write: the GPU side's copies no longer guard it.
     victory_gpu::title_memory_remapped(base, len);
     // What the range shows now, for the GPU side's in-place census.
-    victory_gpu::title_memory_view(base, len, slice.section.0 as usize, (slice.index * PAGE) as u64);
+    victory_gpu::title_memory_view(base, len, slice.section.handle as usize, (slice.index * PAGE) as u64);
     for k in 0..len / PAGE {
         let shown = physical.shown.entry(slice.key(k)).or_default();
         shown.push(base + k * PAGE);
@@ -889,9 +959,6 @@ fn join_placeholders(base: usize, len: usize) -> bool {
 
 /// Commits the section pages a view shows (once per page, whichever view).
 fn commit(base: usize, len: usize) -> bool {
-    if on_wine() {
-        return true; // sections are committed whole there
-    }
     // SAFETY: `[base, base + len)` is a view of a reserved section.
     if !unsafe { VirtualAlloc(base as *const c_void, len, MEM_COMMIT, PAGE_READWRITE) }.is_null() {
         return true;

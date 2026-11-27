@@ -2854,15 +2854,26 @@ impl Shadow {
             return 0;
         }
         if indexed_pending() {
-            let gaps = self.pending.lock().unwrap_or_else(|e| e.into_inner()).gaps(from, to);
-            return gaps.into_iter().map(|(a,b)| self.update_free(a,b)).sum();
+            let gaps = {
+                let pending = self.pending.lock().unwrap_or_else(|e| e.into_inner());
+                pending.overlaps(from, to).then(|| pending.gaps(from, to))
+            };
+            return match gaps {
+                Some(gaps) => gaps.into_iter().map(|(a, b)| self.update_free(a, b)).sum(),
+                None => self.update_free(from, to),
+            };
         }
         if range_union_enabled() {
             let gaps = {
                 let pending = self.pending.lock().unwrap_or_else(|e| e.into_inner());
-                uncovered(from, to, pending.iter().copied())
+                // Most copies have no outstanding GPU write. Skip allocating
+                // a one-element gap vector for the common full-range refresh.
+                (!pending.is_empty()).then(|| uncovered(from, to, pending.iter().copied()))
             };
-            return gaps.into_iter().map(|(a,b)| self.update_free(a,b)).sum();
+            return match gaps {
+                Some(gaps) => gaps.into_iter().map(|(a, b)| self.update_free(a, b)).sum(),
+                None => self.update_free(from, to),
+            };
         }
         let mut busy: Vec<(usize, usize)> = self
             .pending

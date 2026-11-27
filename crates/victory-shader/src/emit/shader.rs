@@ -26,6 +26,8 @@ pub const ROOT_CBV_SPACE: u32 = 1;
 pub const SLOT_STRIDES: u8 = 255;
 /// Dwords of the [`SLOT_STRIDES`] buffer: heap indices are clamped to it.
 pub const SLOT_STRIDES_COUNT: u32 = 1 << 21;
+/// R32_UINT typed buffer view, recorded alongside its stride.
+pub const SLOT_STRIDE_R32_UINT: u32 = 1 << 31;
 
 /// Title memory by address (`resource::MEMORY`): console code reads and
 /// writes through raw 40-bit addresses it takes from root constants,
@@ -136,6 +138,14 @@ pub(crate) struct Geometry {
 /// larger) hung its GPU (GPU-based validation: "descriptor heap index out of bounds"), and AMD
 /// RDNA3 took a page fault and removed the device.
 static VIEW_LIMIT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+
+/// Slots reserved for runtime descriptor tables and guest memory views.
+pub const DYNAMIC_VIEW_SLOTS: u32 = 1 << 18;
+
+/// Exclusive limit for guest heap indices when a host heap is capped.
+pub fn guest_view_limit() -> u32 {
+    view_heap_limit().saturating_sub(DYNAMIC_VIEW_SLOTS)
+}
 
 /// See [`VIEW_LIMIT`]: `null_slot` is the last slot of the host's view heap, kept null.
 pub fn set_view_heap_limit(null_slot: u32) {

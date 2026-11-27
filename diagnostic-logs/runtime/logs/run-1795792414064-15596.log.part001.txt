@@ -1,0 +1,952 @@
+Runtime [local path removed]
+Game [local path removed]
+Ray tracing requested: off
+build          unknown (b99f876b74d4a77f03af5f878223b27bd647b5c35a79d5decd9f716504239e93)
+mapped at      [address removed] (preferred [address removed])
+title          7952987A, storage [local path removed]
+console        Xbox Series X
+title dll      xboxbvhbuilder.dll at [address removed]
+title dll      amd_fidelityfx_loader_xbox.dll at [address removed]
+title dll      libhttpclient.gdk.dll at [address removed]
+title dll      bink2scarlett.dll at [address removed]
+bound          xboxbvhbuilder.dll: 9 hle, 48 host, 0 title, 0 missing
+bound          amd_fidelityfx_loader_xbox.dll: 4 hle, 18 host, 0 title, 0 missing
+bound          libhttpclient.gdk.dll: 27 hle, 171 host, 0 title, 0 missing
+bound          bink2scarlett.dll: 6 hle, 54 host, 0 title, 0 missing
+bound          game_scarlett_master.exe: 88 hle, 427 host, 72 title, 0 missing
+2026-11-27T15:13:34.461914Z  WARN victory_hle::modules::kernel: a host DLL outside the host policy: refused dll="rpcrt4.dll"
+2026-11-27T15:13:35.516030Z  WARN victory_loader::console_insn: a console CPU instruction this CPU lacks: emulated (logged once) instruction=ClzeroLoop { end_reg: 10 } at=[address removed]
+2026-11-27T15:13:35.868489Z ERROR victory_gpu::descriptor::host: Xbox view heap exceeds the host limit; high title descriptor indices cannot be represented count=1245184 maximum=999999
+2026-11-27T15:13:35.970163Z  WARN victory_loader::console_insn: a console CPU instruction this CPU lacks: emulated (logged once) instruction=Monitorx at=[address removed]
+2026-11-27T15:13:36.037128Z  WARN victory_loader::console_insn: a console CPU instruction this CPU lacks: emulated (logged once) instruction=Mwaitx at=[address removed]
+2026-11-27T15:13:36.137588Z  WARN victory_gpu::draw: a draw whose descriptor table found no free slots is dropped
+2026-11-27T15:13:36.193499Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=25c9d27b1823f2b8 error=converter shader.dxil v1: GFX10 code at 0x3fc: a constant buffer's descriptor read as data is not supported
+2026-11-27T15:13:36.195176Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=51077b76f19637df error=converter shader.dxil v1: GFX10 code at 0x260: a lane mask holding lanes elsewhere read as data is not supported
+2026-11-27T15:13:36.197560Z  WARN victory_gpu::pipeline::host: host pipeline refused error=The parameter is incorrect. (0x80070057) shaders=[compute ba5fad2a0cbff959]
+2026-11-27T15:13:36.198586Z  WARN victory_gpu::pipeline::host: host pipeline refused error=The parameter is incorrect. (0x80070057) shaders=[compute 68a894dfdb6ddfc0]
+2026-11-27T15:13:36.206591Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=14fa68e9a51d9f3c error=converter shader.dxil v1: GFX10 code at 0x1204: a lane mask whose lanes depend on its own value is not supported
+2026-11-27T15:13:36.218489Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=37cfe71c52acecf2 error=converter shader.dxil v1: GFX10 code at 0x1680: a lane mask holding lanes elsewhere read as data is not supported
+2026-11-27T15:13:36.219091Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=4ae520f617d10420 error=converter shader.dxil v1: GFX10 code at 0x1358: a lane mask holding lanes elsewhere read as data is not supported
+2026-11-27T15:13:36.219822Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=77d6694652fce4ee error=converter shader.dxil v1: GFX10 code at 0x16b0: a descriptor outside the heaps is not supported
+2026-11-27T15:13:36.254188Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=5c7987e10778004f error=converter shader.dxil v1: GFX10 code at 0xcc: a descriptor's address or format read as data is not supported
+2026-11-27T15:13:36.258873Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b9064c0a45ee7e71 error=converter shader.dxil v1: GFX10 code at 0x1b34: a typed root view is not supported
+2026-11-27T15:13:36.267574Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=89784d576ca51f57 error=converter shader.dxil v1: GFX10 code at 0x810: a first-lane read where not every lane runs is not supported
+2026-11-27T15:13:36.274714Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=4c58baa9ecb456b6 error=converter shader.dxil v1: GFX10 code at 0x2e4: a lane mask whose lanes depend on its own value is not supported
+2026-11-27T15:13:36.277671Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=ba829a02b4060d91 error=converter shader.dxil v1: GFX10 code at 0x4f8: a lane mask whose lanes depend on its own value is not supported
+2026-11-27T15:13:36.289428Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a89b6de50bd2e7e0 error=converter shader.dxil v1: GFX10 code at 0x934: an opaque lane mask is not supported
+2026-11-27T15:13:36.293714Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=5d311a08f1b89d92 error=converter shader.dxil v1: GFX10 code at 0x294: a lane mask whose lanes depend on its own value is not supported
+2026-11-27T15:13:36.293820Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d88c5423d1e67a08 error=converter shader.dxil v1: GFX10 code at 0x1b34: a typed root view is not supported
+2026-11-27T15:13:36.295804Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=86744269fed22c67 error=converter shader.dxil v1: GFX10 code at 0x2b70: a lane mask whose lanes depend on its own value is not supported
+2026-11-27T15:13:36.304955Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=85e1865f247e0215 error=converter shader.dxil v1: GFX10 code at 0x2484: a constant buffer's descriptor read as data is not supported
+2026-11-27T15:13:36.452204Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=6925e4cd43dff9dc error=converter shader.dxil v1: GFX10 code at 0x16b4: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:13:36.473001Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=8d97a0e6c8007f32 error=converter shader.dxil v1: GFX10 code at 0x4094: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:13:36.473609Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=8facc3b92c631e70 error=converter shader.dxil v1: GFX10 code at 0x1bbc: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:13:36.536340Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=269169d875882e76 error=converter shader.dxil v1: GFX10 code at 0x1ba4: a constant buffer's descriptor read as data is not supported
+2026-11-27T15:13:36.655033Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=36e71c15fcf510fd error=converter shader.dxil v1: GFX10 code at 0x1134: a first-lane read where not every lane runs is not supported
+2026-11-27T15:13:36.685025Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=8c02b63bea928ab2 error=converter shader.dxil v1: GFX10 code at 0x11f4: a first-lane read where not every lane runs is not supported
+2026-11-27T15:13:36.704737Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0c89f7b8518117b1 error=converter shader.dxil v1: GFX10 code at 0x2c78: a first-lane read where not every lane runs is not supported
+2026-11-27T15:13:36.776895Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0d8be2c9aadbd18a error=converter shader.dxil v1: GFX10 code at 0x1174: a first-lane read where not every lane runs is not supported
+2026-11-27T15:13:36.887442Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1894268c8e1d3bf7 error=converter shader.dxil v1: GFX10 code at 0x1274: a first-lane read where not every lane runs is not supported
+2026-11-27T15:13:36.938026Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=fa73ddd022e8d48e error=converter shader.dxil v1: GFX10 code at 0x11b4: a first-lane read where not every lane runs is not supported
+2026-11-27T15:13:37.070091Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=2091eccc735d3596 error=converter shader.dxil v1: GFX10 code at 0x741c: an address with an untracked high half is not supported
+2026-11-27T15:13:37.123570Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=bd945040f67c821f error=converter shader.dxil v1: GFX10 code at 0x1b6c: a first-lane read where not every lane runs is not supported
+2026-11-27T15:13:37.126045Z  WARN victory_gpu::pipeline::host: host pipeline refused error=The parameter is incorrect. (0x80070057) shaders=[compute 1aba2732fc75484f]
+2026-11-27T15:13:37.158848Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=5fdfbda0b354d66f error=converter shader.dxil v1: GFX10 code at 0x1d08: a constant buffer's descriptor read as data is not supported
+2026-11-27T15:13:37.166014Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d91c3c8ef59dea6b error=converter shader.dxil v1: GFX10 code at 0x220: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:13:37.203570Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=2d1043684eb3e818 error=converter shader.dxil v1: GFX10 code at 0x3170: a descriptor's address or format read as data is not supported
+2026-11-27T15:13:37.208417Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1598b9c1d3d04865 error=converter shader.dxil v1: GFX10 code at 0x3e4: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:13:37.212018Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1fac1b066e9e6822 error=converter shader.dxil v1: GFX10 code at 0x1d0: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:13:37.212663Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=4f31a294398be38f error=converter shader.dxil v1: GFX10 code at 0x2f04: a descriptor's address or format read as data is not supported
+2026-11-27T15:13:37.221072Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a3c4d2e8b738063b error=converter shader.dxil v1: GFX10 code at 0x1c8: a structured buffer of unknown stride is not supported
+2026-11-27T15:13:37.228215Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=bf6dfbf9ee57e7e0 error=converter shader.dxil v1: GFX10 code at 0x1580: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:13:37.229566Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=2356033b2aa6e0b6 error=converter shader.dxil v1: GFX10 code at 0xdf4: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:13:37.240570Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=852af7f2e83e9f07 error=converter shader.dxil v1: GFX10 code at 0x154: a lane mask whose lanes depend on its own value is not supported
+2026-11-27T15:13:37.241615Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=2d168cb19b57d407 error=converter shader.dxil v1: GFX10 code at 0x1f8: a lane mask whose lanes depend on its own value is not supported
+2026-11-27T15:13:37.248614Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=cbf67f5dad087c92 error=converter shader.dxil v1: GFX10 code at 0x8c0: a lane mask whose lanes depend on its own value is not supported
+2026-11-27T15:13:37.272898Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=4c568ad1a9a494ca error=converter shader.dxil v1: GFX10 code at 0x628: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:13:37.276674Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e5bd2b296cf051ea error=converter shader.dxil v1: GFX10 code at 0x608: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:13:37.314805Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=7b5a88a86a0288a5 error=converter shader.dxil v1: GFX10 code at 0x2b8: a first-lane read where not every lane runs is not supported
+2026-11-27T15:13:37.701965Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d3ab75435544a08b error=converter shader.dxil v1: GFX10 code at 0x11b4: a first-lane read where not every lane runs is not supported
+2026-11-27T15:13:37.734657Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f0f17bb0ecec119e error=converter shader.dxil v1: GFX10 code at 0x48e0: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:13:37.745239Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=8d9b4fb4012600db error=converter shader.dxil v1: GFX10 code at 0x2b8: a first-lane read where not every lane runs is not supported
+2026-11-27T15:13:37.838683Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=7b2524a7e234b82d error=converter shader.dxil v1: GFX10 code at 0x11f4: a first-lane read where not every lane runs is not supported
+2026-11-27T15:13:37.859972Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=54d9109eb551d803 error=converter shader.dxil v1: GFX10 code at 0x1468: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:13:37.863207Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=da4ab390e1fde848 error=converter shader.dxil v1: GFX10 code at 0xc9c: a descriptor outside the heaps is not supported
+2026-11-27T15:13:37.870013Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d1fbc810d3207146 error=converter shader.dxil v1: GFX10 code at 0x520: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:13:37.871123Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=4bd115ab99076e0e error=converter shader.dxil v1: GFX10 code at 0x13c: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:13:37.881794Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=db0ff51e34f47150 error=converter shader.dxil v1: GFX10 code at 0x3ed4: a descriptor outside the heaps is not supported
+2026-11-27T15:13:37.893928Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d3f137c010b33a8c error=converter shader.dxil v1: GFX10 code at 0x274: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:13:37.901167Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e2730790f11aa61c error=converter shader.dxil v1: GFX10 code at 0x17c: an LDS address is not supported
+2026-11-27T15:13:37.911523Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=98449f6954582a1f error=converter shader.dxil v1: GFX10 code at 0x3d50: a descriptor outside the heaps is not supported
+2026-11-27T15:13:37.919136Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d14f29870c9e5c6c error=converter shader.dxil v1: GFX10 code at 0x2c30: a constant buffer's descriptor read as data is not supported
+2026-11-27T15:13:37.926186Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=7dd21547df5f7372 error=converter shader.dxil v1: GFX10 code at 0x2990: a descriptor outside the heaps is not supported
+2026-11-27T15:13:37.930083Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=ee83ab711970d2d3 error=converter shader.dxil v1: GFX10 code at 0x3dd8: a descriptor outside the heaps is not supported
+2026-11-27T15:13:37.935585Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b542dba146146c21 error=converter shader.dxil v1: GFX10 code at 0x2c14: a descriptor outside the heaps is not supported
+2026-11-27T15:13:37.936247Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=8ec3a254abb50554 error=converter shader.dxil v1: GFX10 code at 0x2084: a descriptor's address or format read as data is not supported
+2026-11-27T15:13:37.946598Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=cf3d733bd3ae2f4a error=converter shader.dxil v1: GFX10 code at 0x1dec: a descriptor's address or format read as data is not supported
+2026-11-27T15:13:37.947345Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=75a8240366f8b888 error=converter shader.dxil v1: GFX10 code at 0x28ac: a descriptor's address or format read as data is not supported
+2026-11-27T15:13:37.951500Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=263c4a93b5855345 error=converter shader.dxil v1: GFX10 code at 0x2050: a descriptor's address or format read as data is not supported
+2026-11-27T15:13:37.960598Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d6e83ed7a8c93e2e error=converter shader.dxil v1: GFX10 code at 0x2b28: a descriptor's address or format read as data is not supported
+2026-11-27T15:13:37.968727Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=807f72263d709afc error=converter shader.dxil v1: GFX10 code at 0x5040: a descriptor changed after loading is not supported
+2026-11-27T15:13:37.976171Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=28e9bed7bb0237a2 error=converter shader.dxil v1: GFX10 code at 0x154: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:13:37.981397Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=71c1c984bbb64fe7 error=converter shader.dxil v1: GFX10 code at 0x3c: a lane mask holding lanes elsewhere read as data is not supported
+2026-11-27T15:13:37.982928Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=72d16bfa7a7b5048 error=converter shader.dxil v1: GFX10 code at 0x14c: a hardware SGPR input is not supported
+2026-11-27T15:13:37.994613Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f293ec334c003148 error=converter shader.dxil v1: GFX10 code at 0xe34: an opaque lane mask is not supported
+2026-11-27T15:13:38.010150Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=7a06a5d322dce725 error=converter shader.dxil v1: GFX10 code at 0x2190: a descriptor's address or format read as data is not supported
+2026-11-27T15:13:38.028708Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=5486e44cc2f25a9b error=converter shader.dxil v1: GFX10 code at 0xc58: a select on an untracked mask is not supported
+2026-11-27T15:13:38.033615Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=34816e910cf08c8a error=converter shader.dxil v1: GFX10 code at 0x1278: an LDS address is not supported
+2026-11-27T15:13:38.059685Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=ce59faba0eec381d error=converter shader.dxil v1: GFX10 code at 0x76c: a constant buffer's descriptor read as data is not supported
+2026-11-27T15:13:38.060952Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=64186cf5d772f1ed error=converter shader.dxil v1: GFX10 code at 0x4f14: a descriptor's address or format read as data is not supported
+2026-11-27T15:13:38.097251Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=29f66a06d70ffd61 error=converter shader.dxil v1: GFX10 code at 0x8b4: a lane mask holding lanes elsewhere read as data is not supported
+2026-11-27T15:13:38.107234Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b3ddfe4a0c8d91a7 error=converter shader.dxil v1: GFX10 code at 0x834: a constant buffer's descriptor read as data is not supported
+2026-11-27T15:13:38.118714Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=94a17a13e1e48129 error=converter shader.dxil v1: GFX10 code at 0x7704: a descriptor outside the heaps is not supported
+2026-11-27T15:13:38.190131Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=efc558bbe549595a error=converter shader.dxil v1: GFX10 code at 0x77d0: a descriptor outside the heaps is not supported
+2026-11-27T15:13:38.253000Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0608e49e6061b2c8 error=converter shader.dxil v1: GFX10 code at 0x7010: a descriptor outside the heaps is not supported
+2026-11-27T15:13:38.257979Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3e2986a9b2d1a309 error=converter shader.dxil v1: GFX10 code at 0x14c: a lane mask whose lanes depend on its own value is not supported
+2026-11-27T15:13:38.437121Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=5b1f79a4c681347e error=converter shader.dxil v1: GFX10 code at 0x9d0: a first-lane read where not every lane runs is not supported
+2026-11-27T15:13:38.464986Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=27ef7a0a8c59b9bb error=converter shader.dxil v1: GFX10 code at 0x1488: a lane mask holding lanes elsewhere read as data is not supported
+2026-11-27T15:13:39.006404Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=5d332754e52cb0cf error=converter shader.dxil v1: GFX10 code at 0x76cc: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:39.007854Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1cfad156fecd39e7 error=converter shader.dxil v1: GFX10 code at 0x15c: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:13:39.015911Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a7be8758a70c75a6 error=converter shader.dxil v1: GFX10 code at 0x578: a global address with a scalar base is not supported
+2026-11-27T15:13:39.170578Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e45769b307aecc03 error=converter shader.dxil v1: GFX10 code at 0x4f08: a descriptor changed after loading is not supported
+2026-11-27T15:13:39.207085Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=5411bacc22f42612 error=converter shader.dxil v1: GFX10 code at 0x7b8: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:13:39.211144Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0138180c3e81df36 error=converter shader.dxil v1: GFX10 code at 0x2e40: a descriptor outside the heaps is not supported
+2026-11-27T15:13:39.228822Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=cb566f18409e438c error=converter shader.dxil v1: GFX10 code at 0x79c: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:13:39.340707Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=ae3bb2726ac079b7 error=converter shader.dxil v1: GFX10 code at 0xa784: a descriptor changed after loading is not supported
+2026-11-27T15:13:39.513412Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d3637a3faa36935f error=converter shader.dxil v1: GFX10 code at 0x398: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:13:39.562905Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=52d4e7a0a57aeb4a error=converter shader.dxil v1: GFX10 code at 0x353c: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:13:39.668860Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1f4739700ccf15b3 error=converter shader.dxil v1: GFX10 code at 0x39dc: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:13:39.854866Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=41a6738be6655430 error=converter shader.dxil v1: GFX10 code at 0x186fc: a descriptor's address or format read as data is not supported
+2026-11-27T15:13:40.020540Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=dadd3b9a1dbd7f9f error=converter shader.dxil v1: GFX10 code at 0x31dc: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:13:40.109988Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f683b0133b46884e error=converter shader.dxil v1: GFX10 code at 0x2f20: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:13:40.167535Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f1a4219913a5b9ac error=converter shader.dxil v1: GFX10 code at 0x344: a lane mask whose lanes depend on its own value is not supported
+2026-11-27T15:13:40.168209Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a03dc320640d6ba0 error=converter shader.dxil v1: GFX10 code at 0x344: a lane mask whose lanes depend on its own value is not supported
+2026-11-27T15:13:40.169646Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=62992e341410389e error=converter shader.dxil v1: GFX10 code at 0x3c0: a lane mask whose lanes depend on its own value is not supported
+2026-11-27T15:13:40.175911Z  WARN victory_gpu::pipeline::host: host pipeline refused error=The parameter is incorrect. (0x80070057) shaders=[compute 94a2127d4d0038cc]
+2026-11-27T15:13:40.177285Z  WARN victory_gpu::pipeline::host: host pipeline refused error=The parameter is incorrect. (0x80070057) shaders=[compute 13ec5eafebf9c499]
+2026-11-27T15:13:40.178137Z  WARN victory_gpu::pipeline::host: host pipeline refused error=The parameter is incorrect. (0x80070057) shaders=[compute d7e5a457bbdf4e85]
+2026-11-27T15:13:40.182152Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=c0e28986fcdb900e error=converter shader.dxil v1: GFX10 code at 0xf0: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:13:40.187504Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d7c0c09dba4fbc59 error=converter shader.dxil v1: GFX10 code at 0x344: a lane mask whose lanes depend on its own value is not supported
+2026-11-27T15:13:40.324884Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e13fbac923f9b86a error=converter shader.dxil v1: GFX10 code at 0x11170: a descriptor's address or format read as data is not supported
+2026-11-27T15:13:40.485059Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e75238a3cce36296 error=converter shader.dxil v1: GFX10 code at 0x0: lane conditions too large
+2026-11-27T15:13:40.491122Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=ab1734fdc080bf64 error=converter shader.dxil v1: GFX10 code at 0x2eb4: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:13:40.515854Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d279bb61b84e8c60 error=converter shader.dxil v1: GFX10 code at 0x30e4: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:13:41.189806Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=eeb0f7f8c42b952e error=converter shader.dxil v1: GFX10 code at 0x10780: a descriptor changed after loading is not supported
+2026-11-27T15:13:41.229244Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3a83351b9f8f2f37 error=converter shader.dxil v1: GFX10 code at 0x73bc: a descriptor changed after loading is not supported
+2026-11-27T15:13:41.443967Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1de18ae9048132c1 error=converter shader.dxil v1: GFX10 code at 0x75f4: a descriptor changed after loading is not supported
+2026-11-27T15:13:41.467908Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=9c611742d0fe1ba4 error=converter shader.dxil v1: GFX10 code at 0x109c0: a descriptor changed after loading is not supported
+2026-11-27T15:13:41.991390Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=4be45e817800defb error=converter shader.dxil v1: GFX10 code at 0x4b88: a descriptor changed after loading is not supported
+2026-11-27T15:13:42.020698Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f99b24f3e897eb0a error=converter shader.dxil v1: GFX10 code at 0x4dec: a descriptor changed after loading is not supported
+2026-11-27T15:13:42.513520Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=798d60750c02b3c4 error=converter shader.dxil v1: GFX10 code at 0x4b88: a descriptor changed after loading is not supported
+2026-11-27T15:13:42.576960Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a48c3a178d81bd6b error=converter shader.dxil v1: GFX10 code at 0xa300: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:42.583284Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=daacb3548405788a error=converter shader.dxil v1: GFX10 code at 0x4dec: a descriptor changed after loading is not supported
+2026-11-27T15:13:42.976263Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=9807250eb13d2678 error=converter shader.dxil v1: GFX10 code at 0xaea8: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:43.308050Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b09c1d93f8e646e7 error=converter shader.dxil v1: GFX10 code at 0x4b88: a descriptor changed after loading is not supported
+2026-11-27T15:13:43.663550Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=9917d887e502072c error=converter shader.dxil v1: GFX10 code at 0x9654: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:43.700278Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a273e238f6836127 error=converter shader.dxil v1: GFX10 code at 0x4dec: a descriptor changed after loading is not supported
+2026-11-27T15:13:43.827249Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d47b6d4deafd2dcc error=converter shader.dxil v1: GFX10 code at 0xa2c0: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:43.907241Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=c3acd542da69ac85 error=converter shader.dxil v1: GFX10 code at 0x9654: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:43.984062Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=df1430f6d018d0bd error=converter shader.dxil v1: GFX10 code at 0xa2c0: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:44.482544Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=aa3d4f98bd82a09f error=converter shader.dxil v1: GFX10 code at 0xcf78: a descriptor joined too often is not supported
+2026-11-27T15:13:44.658773Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a9d1ffd953b3616d error=converter shader.dxil v1: GFX10 code at 0x89d4: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:44.733393Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3c7e08726982ad96 error=converter shader.dxil v1: GFX10 code at 0x2bac: an address with an untracked high half is not supported
+2026-11-27T15:13:44.828291Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=34203ed19bfb6caa error=converter shader.dxil v1: GFX10 code at 0xe654: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:45.360858Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=02c7c063289f930b error=converter shader.dxil v1: GFX10 code at 0xa79c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:45.647554Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=6d74e30528874870 error=converter shader.dxil v1: GFX10 code at 0x4a9c: a descriptor changed after loading is not supported
+2026-11-27T15:13:45.729171Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=2828b26ed2a14515 error=converter shader.dxil v1: GFX10 code at 0x95a8: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:45.813068Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=417255034db83efa error=converter shader.dxil v1: GFX10 code at 0xae5c: a descriptor changed after loading is not supported
+2026-11-27T15:13:45.864735Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=326ba2978f7023c6 error=converter shader.dxil v1: GFX10 code at 0xa1f8: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:45.911030Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=c3a90c9c81973235 error=converter shader.dxil v1: GFX10 code at 0xae70: a descriptor changed after loading is not supported
+2026-11-27T15:13:47.550427Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=ec53c197bad571e5 error=converter shader.dxil v1: GFX10 code at 0x2ecc: a descriptor changed after loading is not supported
+2026-11-27T15:13:47.791087Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=445ef8b2012e27e0 error=converter shader.dxil v1: GFX10 code at 0x133d4: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:47.876563Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a207cc9010473911 error=converter shader.dxil v1: GFX10 code at 0x30c0: a descriptor changed after loading is not supported
+2026-11-27T15:13:47.980104Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=c08a5d693bc8cf0d error=converter shader.dxil v1: GFX10 code at 0x2ecc: a descriptor changed after loading is not supported
+2026-11-27T15:13:47.984045Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e372eb7cd9070772 error=converter shader.dxil v1: GFX10 code at 0x1338c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:48.017576Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d02bd2ca72663ccf error=converter shader.dxil v1: GFX10 code at 0x135b4: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:48.675204Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=bfcc6e71e4a9c3c2 error=converter shader.dxil v1: GFX10 code at 0x10720: a descriptor changed after loading is not supported
+2026-11-27T15:13:48.929838Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3a99bffdc2bcd090 error=converter shader.dxil v1: GFX10 code at 0xdf5c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:49.954214Z  WARN victory_loader::console_insn: a console CPU instruction this CPU lacks: emulated (logged once) instruction=Insertq { dst: 0, src: 1, reg: false, len: 16, idx: 16 } at=[address removed]
+2026-11-27T15:13:50.066881Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=afb31117c8d42225 error=converter shader.dxil v1: GFX10 code at 0x6b80: a descriptor changed after loading is not supported
+2026-11-27T15:13:50.104670Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=197439a524b7ca31 error=converter shader.dxil v1: GFX10 code at 0x3178: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:50.213293Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=fe90d31a9ca5edb5 error=converter shader.dxil v1: GFX10 code at 0x2f7c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:50.327902Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d001cd90ca42b7e3 error=converter shader.dxil v1: GFX10 code at 0x6b80: a descriptor changed after loading is not supported
+2026-11-27T15:13:51.003182Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=6bb7deda543e255a error=converter shader.dxil v1: GFX10 code at 0x2f7c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:51.122559Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=5f1d6d23cc918bcb error=converter shader.dxil v1: GFX10 code at 0x6b80: a descriptor changed after loading is not supported
+2026-11-27T15:13:51.989404Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=5a8787c7db1b2d36 error=converter shader.dxil v1: GFX10 code at 0x3178: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:52.106824Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=7eb0fb8f5099a597 error=converter shader.dxil v1: GFX10 code at 0x3178: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:52.203354Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3b793bff9eae6717 error=converter shader.dxil v1: GFX10 code at 0x6b80: a descriptor changed after loading is not supported
+2026-11-27T15:13:52.388665Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0044a02265dcec02 error=converter shader.dxil v1: GFX10 code at 0x6b80: a descriptor changed after loading is not supported
+2026-11-27T15:13:52.777199Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=cecf5655ceb72e61 error=converter shader.dxil v1: GFX10 code at 0x3178: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:53.083485Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d30f1fa0e53cb9c2 error=converter shader.dxil v1: GFX10 code at 0x6b80: a descriptor changed after loading is not supported
+2026-11-27T15:13:53.622533Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=9b432ea8bd324454 error=converter shader.dxil v1: GFX10 code at 0x6b80: a descriptor changed after loading is not supported
+2026-11-27T15:13:53.951875Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=ad8fa8ca1f9e3fa7 error=converter shader.dxil v1: GFX10 code at 0x3178: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:54.195366Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=247a8a4204d02b3f error=converter shader.dxil v1: GFX10 code at 0x3178: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:54.308058Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b9d419e87eaf815e error=converter shader.dxil v1: GFX10 code at 0x6b80: a descriptor changed after loading is not supported
+2026-11-27T15:13:54.791860Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=5acd2e5c7323221e error=converter shader.dxil v1: GFX10 code at 0x6b80: a descriptor changed after loading is not supported
+2026-11-27T15:13:54.926064Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0b2d9ec3c22fe9c1 error=converter shader.dxil v1: GFX10 code at 0x3178: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:55.282727Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1b4d6ea63b927aaf error=converter shader.dxil v1: GFX10 code at 0xc498: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:55.354395Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b647fbb120a87abb error=converter shader.dxil v1: GFX10 code at 0xa240: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:55.474275Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1823ca85ec58e653 error=converter shader.dxil v1: GFX10 code at 0xf66c: a descriptor changed after loading is not supported
+2026-11-27T15:13:55.495691Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=36cac7738e53343a error=converter shader.dxil v1: GFX10 code at 0x9604: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:56.097137Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=062ac214c073b7b1 error=converter shader.dxil v1: GFX10 code at 0x789c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:56.172110Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=5996b058a952a1e5 error=converter shader.dxil v1: GFX10 code at 0xb1b0: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:56.548371Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=989c4e2d2c9bc921 error=converter shader.dxil v1: GFX10 code at 0x13ad8: a descriptor changed after loading is not supported
+2026-11-27T15:13:56.626595Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=84354d64a38895f4 error=converter shader.dxil v1: GFX10 code at 0x7434: a descriptor changed after loading is not supported
+2026-11-27T15:13:56.871380Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=43b6e08c1ec025fc error=converter shader.dxil v1: GFX10 code at 0x6b68: a descriptor changed after loading is not supported
+2026-11-27T15:13:57.042757Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=7ba7c27225dad941 error=converter shader.dxil v1: GFX10 code at 0x9794: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:57.060977Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=4f6f0390d64c943e error=converter shader.dxil v1: GFX10 code at 0x610c: a descriptor changed after loading is not supported
+2026-11-27T15:13:57.229248Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=203bf5e935097de6 error=converter shader.dxil v1: GFX10 code at 0x904c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:57.903492Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=34ab6ecb0d40eab8 error=converter shader.dxil v1: GFX10 code at 0x7b7c: a descriptor changed after loading is not supported
+2026-11-27T15:13:58.302873Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a87523b95ecd77b8 error=converter shader.dxil v1: GFX10 code at 0x6994: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:58.318985Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=ede0e36f3787ea79 error=converter shader.dxil v1: GFX10 code at 0x7bcc: a descriptor changed after loading is not supported
+2026-11-27T15:13:58.483683Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=776ace321addc79a error=converter shader.dxil v1: GFX10 code at 0xe810: a descriptor changed after loading is not supported
+2026-11-27T15:13:58.920070Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=4cbcf0b6b315887f error=converter shader.dxil v1: GFX10 code at 0x70dc: a descriptor changed after loading is not supported
+2026-11-27T15:13:58.987851Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d7aaeaa333c7e311 error=converter shader.dxil v1: GFX10 code at 0x6a14: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:59.177954Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d9ea53972e3caa70 error=converter shader.dxil v1: GFX10 code at 0x7168: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:59.772326Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=22835ffee88d7a6e error=converter shader.dxil v1: GFX10 code at 0x61e0: a descriptor neither loaded nor built is not supported
+2026-11-27T15:13:59.811364Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=ceb5b07fb8757190 error=converter shader.dxil v1: GFX10 code at 0x6038: a descriptor changed after loading is not supported
+2026-11-27T15:13:59.832836Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b49603eaf5473d66 error=converter shader.dxil v1: GFX10 code at 0x3848: an opaque lane mask is not supported
+2026-11-27T15:13:59.858089Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=90f77d1fa3e9b742 error=converter shader.dxil v1: GFX10 code at 0x9db8: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:00.208031Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=eaa0ff66abb3601d error=converter shader.dxil v1: GFX10 code at 0x9db0: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:00.298279Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=685dd4e636104ecf error=converter shader.dxil v1: GFX10 code at 0x7020: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:00.825960Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a8c0315b58884d87 error=converter shader.dxil v1: GFX10 code at 0x11dd0: a descriptor changed after loading is not supported
+2026-11-27T15:14:00.883446Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f697827cbe9cd7bf error=converter shader.dxil v1: GFX10 code at 0x95f0: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:00.909262Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=408b6e59d03811d3 error=converter shader.dxil v1: GFX10 code at 0x11944: a descriptor changed after loading is not supported
+2026-11-27T15:14:01.130539Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d43949097f8a88ee error=converter shader.dxil v1: GFX10 code at 0x5c38: a descriptor changed after loading is not supported
+2026-11-27T15:14:01.274389Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=cf78b384c38cedd1 error=converter shader.dxil v1: GFX10 code at 0x1176c: a descriptor changed after loading is not supported
+2026-11-27T15:14:01.285108Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f49010c9b9c4fd0d error=converter shader.dxil v1: GFX10 code at 0x11e98: a descriptor changed after loading is not supported
+2026-11-27T15:14:01.814941Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b1023395914f8ae1 error=converter shader.dxil v1: GFX10 code at 0x5688: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:01.935920Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=ced31899c87fb5b4 error=converter shader.dxil v1: GFX10 code at 0x11f54: a descriptor changed after loading is not supported
+2026-11-27T15:14:02.162155Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=134287a444f15f99 error=converter shader.dxil v1: GFX10 code at 0x8180: a descriptor changed after loading is not supported
+2026-11-27T15:14:02.347576Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=68aeb103d19ef8ef error=converter shader.dxil v1: GFX10 code at 0x9634: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:02.460934Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=8f60657823739ad3 error=converter shader.dxil v1: GFX10 code at 0x76c8: a descriptor changed after loading is not supported
+2026-11-27T15:14:02.499630Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=5d3036720da3019c error=converter shader.dxil v1: GFX10 code at 0x83c: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:14:02.503720Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=c5f6d57e0092dc99 error=converter shader.dxil v1: GFX10 code at 0x60c: an opaque lane mask is not supported
+2026-11-27T15:14:02.560988Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=9ffcc81227ebb092 error=converter shader.dxil v1: GFX10 code at 0x19c8: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:14:02.576812Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e5515b280591ba46 error=converter shader.dxil v1: GFX10 code at 0xd9d0: a descriptor changed after loading is not supported
+2026-11-27T15:14:02.612743Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f97affab890b2661 error=converter shader.dxil v1: GFX10 code at 0x3080: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:14:02.696373Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=896cd65f81a21c41 error=converter shader.dxil v1: GFX10 code at 0xaa0: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:14:02.705675Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e5c5e09664bcd74a error=converter shader.dxil v1: GFX10 code at 0x16ac: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:02.734452Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=70b2f970be980c83 error=converter shader.dxil v1: GFX10 code at 0xaa0: a lane mask exchanged where not every lane runs is not supported
+2026-11-27T15:14:02.742594Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=8d7d8fb4fb873f7f error=converter shader.dxil v1: GFX10 code at 0x13e8: a structured buffer of unknown stride is not supported
+2026-11-27T15:14:02.757409Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b59e5184eb92b88c error=converter shader.dxil v1: GFX10 code at 0x14a8: a structured buffer of unknown stride is not supported
+2026-11-27T15:14:02.800116Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=69c6229262f70bd0 error=converter shader.dxil v1: GFX10 code at 0x22b0: a structured buffer of unknown stride is not supported
+2026-11-27T15:14:02.802678Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a1c476876d7d1e8c error=converter shader.dxil v1: GFX10 code at 0x21a8: a structured buffer of unknown stride is not supported
+2026-11-27T15:14:02.839503Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=39a1ff9ec2e15b1e error=converter shader.dxil v1: GFX10 code at 0x27a0: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:02.840217Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b189fd711e23aa3d error=converter shader.dxil v1: GFX10 code at 0x27b0: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:02.878740Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e74f97d521c2bcb2 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:02.883648Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=46551519b7afe831 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:02.923674Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e310e32f1c67f35a error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:02.931955Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=7d9e4ea08e00b945 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:02.959473Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0004a710a347007e error=converter shader.dxil v1: GFX10 code at 0xc634: a descriptor changed after loading is not supported
+2026-11-27T15:14:02.968919Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d0643b10f078a1dc error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:02.981719Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=6dfb8b7477c02aee error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.005669Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d84009b123f7d4b7 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.015180Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0b54043586cd972e error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.028474Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0a1ee286138d533b error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.052403Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=41364cbe7ff8672b error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.058359Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0d5dae835eaf5f6a error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.075978Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=79267bda47b023ea error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.093385Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3d611635de1f6b63 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.106363Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=9d2c2d634c3cd775 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.120519Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=243977ce7a202654 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.143020Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=9db01770fcad6e22 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.157739Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=64dce6df5be3f652 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.173238Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f5667f679e9635d4 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.182132Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d4a80d6fdc3ed9d3 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.207175Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=528b6d70cdfd8a85 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.222169Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=fe4e86e0d945035f error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.236784Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=c3df71240e444811 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.249869Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b3592e3fe47edddb error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.269487Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3cbd63d081530a36 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.277741Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=26181e6b7ef14f53 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.317020Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=212aa5495fe36f08 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.329080Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=53f16a55053156b6 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.337416Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e3d82e335f8feb49 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.367099Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=bd010ae4e6b97bea error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.396520Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=5dc2d5d52b123fa4 error=converter shader.dxil v1: GFX10 code at 0x27b4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.418054Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=09ce9bb585e2834c error=converter shader.dxil v1: GFX10 code at 0x908: a lane mask whose lanes depend on its own value is not supported
+2026-11-27T15:14:03.428530Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=bf8467abe00be277 error=converter shader.dxil v1: GFX10 code at 0xc1c: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:14:03.428687Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=379072d5a47f8ca5 error=converter shader.dxil v1: GFX10 code at 0x258: a hardware SGPR input is not supported
+2026-11-27T15:14:03.428837Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=efc0c4253c92da4d error=converter shader.dxil v1: GFX10 code at 0x294: a lane mask holding lanes elsewhere read as data is not supported
+2026-11-27T15:14:03.437397Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1e218046d79477d8 error=converter shader.dxil v1: GFX10 code at 0x97d4: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:03.442790Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1bf473f0c9dc34db error=converter shader.dxil v1: GFX10 code at 0x6bd0: a descriptor changed after loading is not supported
+2026-11-27T15:14:03.445489Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=9897e8011d02fb24 error=converter shader.dxil v1: GFX10 code at 0xe990: a descriptor changed after loading is not supported
+2026-11-27T15:14:03.446579Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d7cbf5c5680197fd error=converter shader.dxil v1: GFX10 code at 0xc58: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:14:03.446623Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f0c2cd42c9188fc3 error=converter shader.dxil v1: GFX10 code at 0x1ac: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:14:03.447218Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=7d9ba854dd5643b8 error=converter shader.dxil v1: GFX10 code at 0xf74: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.453775Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=69ebf6589efdf5e9 error=converter shader.dxil v1: GFX10 code at 0x168: a lane mask whose lanes depend on its own value is not supported
+2026-11-27T15:14:03.453554Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b10d4568e5504a97 error=converter shader.dxil v1: GFX10 code at 0x138: a lane mask whose lanes depend on its own value is not supported
+2026-11-27T15:14:03.469883Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f789ed6a5517c49e error=converter shader.dxil v1: GFX10 code at 0x724: integer output modifiers is not supported
+2026-11-27T15:14:03.472751Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a554fc7b6fa9bd81 error=converter shader.dxil v1: GFX10 code at 0x1490: a descriptor outside the heaps is not supported
+2026-11-27T15:14:03.473908Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=612ac824ea3018df error=converter shader.dxil v1: GFX10 code at 0x6b4: a 16-bit image atomic is not supported
+2026-11-27T15:14:03.473973Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=902d59af641a2b77 error=converter shader.dxil v1: GFX10 code at 0xdc: a structured buffer of unknown stride is not supported
+2026-11-27T15:14:03.480422Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=72e22cb63469287c error=converter shader.dxil v1: GFX10 code at 0x1b4: an LDS address is not supported
+2026-11-27T15:14:03.501776Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=70f69495e9c6a880 error=converter shader.dxil v1: GFX10 code at 0x110: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.509666Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=849bea936faf15ed error=converter shader.dxil v1: GFX10 code at 0x5d90: a whole-wave section step the simulation does not follow is not supported
+2026-11-27T15:14:03.518115Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3cb543749fae5f22 error=converter shader.dxil v1: GFX10 code at 0x5510: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:03.557747Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=14566a8534473446 error=converter shader.dxil v1: GFX10 code at 0x23c: a hardware SGPR input is not supported
+2026-11-27T15:14:03.559738Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=06030c50b7309876 error=converter shader.dxil v1: GFX10 code at 0x23c: a hardware SGPR input is not supported
+VIctory: first-chance exception 0xc0000005 at nvgpucomp64.dll+0x41ea7e0 (read 0x1c: nothing mapped there) on thread 15380 "D3D Background Thread 3"
+  rax 0x0 rbx [address removed] rcx 0x0 rdx [address removed] rsi [address removed] rdi 0x4 rsp [address removed] rbp 0x4
+  r8 [address removed] r9 0x8 r10 0x14 r11 [address removed] r12 [address removed] r13 [address removed] r14 [address removed] r15 0x2
+  #0  nvgpucomp64.dll+0x41ea7e0
+  #1  nvgpucomp64.dll+0x41e8d22
+  #2  nvgpucomp64.dll+0x41e91bb
+  #3  nvgpucomp64.dll+0x41e9da0
+  #4  nvgpucomp64.dll+0x41e9f20
+  #5  nvgpucomp64.dll+0x3f6ac00
+  #6  nvgpucomp64.dll+0x3f6ace7
+  #7  nvgpucomp64.dll+0x3383508
+  #8  nvgpucomp64.dll+0x33835d4
+  #9  nvgpucomp64.dll+0x45f4f46
+  #10 nvgpucomp64.dll+0x45f3bae
+  #11 nvgpucomp64.dll+0x4608cd1
+  #12 nvgpucomp64.dll+0x1fd3679
+  #13 nvgpucomp64.dll+0x1fcf935
+  #14 nvgpucomp64.dll+0x1fcec9f
+  #15 nvgpucomp64.dll+0x2058f93
+  #16 nvgpucomp64.dll+0x1fcf6a7
+  #17 nvwgf2umx.dll+0x90a96c
+  #18 nvwgf2umx.dll+0xc85854
+  #19 nvwgf2umx.dll+0xc864a7
+  #20 nvwgf2umx.dll+0xc84bb2
+  #21 nvwgf2umx.dll+0xc8057e
+  #22 nvwgf2umx.dll+0x7d5f0f
+  #23 nvwgf2umx.dll+0xb18d65
+  #24 nvwgf2umx.dll+0xb18997
+  #25 nvwgf2umx.dll+0xc107e6
+  #26 D3D12Core.dll+0x817fe
+  #27 D3D12Core.dll+0x11e834
+  #28 ucrtbase.dll+0x2cd30
+  #29 KERNEL32.DLL+0x2dda7
+  #30 ntdll.dll+0xc9c6c
+VIctory: first-chance exception 0xc0000005 at nvgpucomp64.dll+0x41ea7e0 (read 0x1c: nothing mapped there) on thread 7964 "D3D Background Thread 2"
+  rax 0x0 rbx [address removed] rcx 0x0 rdx [address removed] rsi [address removed] rdi 0x4 rsp [address removed] rbp 0x4
+  r8 [address removed] r9 0x8 r10 0x14 r11 [address removed] r12 [address removed] r13 [address removed] r14 [address removed] r15 0x2
+  #0  nvgpucomp64.dll+0x41ea7e0
+  #1  nvgpucomp64.dll+0x41e8d22
+  #2  nvgpucomp64.dll+0x41e91bb
+  #3  nvgpucomp64.dll+0x41e9da0
+  #4  nvgpucomp64.dll+0x41e9f20
+  #5  nvgpucomp64.dll+0x3f6ac00
+  #6  nvgpucomp64.dll+0x3f6ace7
+  #7  nvgpucomp64.dll+0x3383508
+  #8  nvgpucomp64.dll+0x33835d4
+  #9  nvgpucomp64.dll+0x45f4f46
+  #10 nvgpucomp64.dll+0x45f3bae
+  #11 nvgpucomp64.dll+0x4608cd1
+  #12 nvgpucomp64.dll+0x1fd3679
+  #13 nvgpucomp64.dll+0x1fcf935
+  #14 nvgpucomp64.dll+0x1fcec9f
+  #15 nvgpucomp64.dll+0x2058f93
+  #16 nvgpucomp64.dll+0x1fcf6a7
+  #17 nvwgf2umx.dll+0x90a96c
+  #18 nvwgf2umx.dll+0xc85854
+  #19 nvwgf2umx.dll+0xc864a7
+  #20 nvwgf2umx.dll+0xc84bb2
+  #21 nvwgf2umx.dll+0xc8057e
+  #22 nvwgf2umx.dll+0x7d5f0f
+  #23 nvwgf2umx.dll+0xb18d65
+  #24 nvwgf2umx.dll+0xb18997
+  #25 nvwgf2umx.dll+0xc107e6
+  #26 D3D12Core.dll+0x817fe
+  #27 D3D12Core.dll+0x11e834
+  #28 ucrtbase.dll+0x2cd30
+  #29 KERNEL32.DLL+0x2dda7
+  #30 ntdll.dll+0xc9c6c
+VIctory: first-chance exception 0xc0000005 at nvgpucomp64.dll+0x41ea7e0 (read 0x1c: nothing mapped there) on thread 19044 "D3D Background Thread 0"
+  rax 0x1 rbx [address removed] rcx 0x0 rdx [address removed] rsi [address removed] rdi 0x4 rsp [address removed] rbp 0x4
+  r8 [address removed] r9 0x8 r10 0x14 r11 [address removed] r12 [address removed] r13 [address removed] r14 [address removed] r15 0x2
+  #0  nvgpucomp64.dll+0x41ea7e0
+  #1  nvgpucomp64.dll+0x41e8d22
+  #2  nvgpucomp64.dll+0x41e91bb
+  #3  nvgpucomp64.dll+0x41e9da0
+  #4  nvgpucomp64.dll+0x41e9f20
+  #5  nvgpucomp64.dll+0x3f6ac00
+  #6  nvgpucomp64.dll+0x3f6ace7
+  #7  nvgpucomp64.dll+0x3383508
+  #8  nvgpucomp64.dll+0x33835d4
+  #9  nvgpucomp64.dll+0x45f4f46
+  #10 nvgpucomp64.dll+0x45f3bae
+  #11 nvgpucomp64.dll+0x4608cd1
+  #12 nvgpucomp64.dll+0x1fd3679
+  #13 nvgpucomp64.dll+0x1fcf935
+  #14 nvgpucomp64.dll+0x1fcec9f
+  #15 nvgpucomp64.dll+0x2058f93
+  #16 nvgpucomp64.dll+0x1fcf6a7
+  #17 nvwgf2umx.dll+0x90a96c
+  #18 nvwgf2umx.dll+0xc85854
+  #19 nvwgf2umx.dll+0xc864a7
+  #20 nvwgf2umx.dll+0xc84bb2
+  #21 nvwgf2umx.dll+0xc8057e
+  #22 nvwgf2umx.dll+0x7d5f0f
+  #23 nvwgf2umx.dll+0xb18d65
+  #24 nvwgf2umx.dll+0xb18997
+  #25 nvwgf2umx.dll+0xc107e6
+  #26 D3D12Core.dll+0x817fe
+  #27 D3D12Core.dll+0x11e834
+  #28 ucrtbase.dll+0x2cd30
+  #29 KERNEL32.DLL+0x2dda7
+  #30 ntdll.dll+0xc9c6c
+VIctory: first-chance exception 0xc0000005 at nvgpucomp64.dll+0x41ea7e0 (read 0x1c: nothing mapped there) on thread 17136 "D3D Background Thread 1"
+  rax 0x1 rbx [address removed] rcx 0x0 rdx [address removed] rsi [address removed] rdi 0x4 rsp [address removed] rbp 0x4
+  r8 [address removed] r9 0x8 r10 0x14 r11 [address removed] r12 [address removed] r13 [address removed] r14 [address removed] r15 0x2
+  #0  nvgpucomp64.dll+0x41ea7e0
+  #1  nvgpucomp64.dll+0x41e8d22
+  #2  nvgpucomp64.dll+0x41e91bb
+  #3  nvgpucomp64.dll+0x41e9da0
+  #4  nvgpucomp64.dll+0x41e9f20
+  #5  nvgpucomp64.dll+0x3f6ac00
+  #6  nvgpucomp64.dll+0x3f6ace7
+  #7  nvgpucomp64.dll+0x3383508
+  #8  nvgpucomp64.dll+0x33835d4
+  #9  nvgpucomp64.dll+0x45f4f46
+  #10 nvgpucomp64.dll+0x45f3bae
+  #11 nvgpucomp64.dll+0x4608cd1
+  #12 nvgpucomp64.dll+0x1fd3679
+  #13 nvgpucomp64.dll+0x1fcf935
+  #14 nvgpucomp64.dll+0x1fcec9f
+  #15 nvgpucomp64.dll+0x2058f93
+  #16 nvgpucomp64.dll+0x1fcf6a7
+  #17 nvwgf2umx.dll+0x90a96c
+  #18 nvwgf2umx.dll+0xc85854
+  #19 nvwgf2umx.dll+0xc864a7
+  #20 nvwgf2umx.dll+0xc84bb2
+  #21 nvwgf2umx.dll+0xc8057e
+  #22 nvwgf2umx.dll+0x7d5f0f
+  #23 nvwgf2umx.dll+0xb18d65
+  #24 nvwgf2umx.dll+0xb18997
+  #25 nvwgf2umx.dll+0xc107e6
+  #26 D3D12Core.dll+0x817fe
+  #27 D3D12Core.dll+0x11e834
+  #28 ucrtbase.dll+0x2cd30
+  #29 KERNEL32.DLL+0x2dda7
+  #30 ntdll.dll+0xc9c6c
+VIctory: first-chance exception 0xc0000005 at nvgpucomp64.dll+0x41ea7e0 (read 0x1c: nothing mapped there) on thread 15380 "D3D Background Thread 3"
+  rax 0x1 rbx [address removed] rcx 0x0 rdx [address removed] rsi [address removed] rdi 0x4 rsp [address removed] rbp 0x4
+  r8 [address removed] r9 0x8 r10 0x14 r11 [address removed] r12 [address removed] r13 [address removed] r14 [address removed] r15 0x2
+  #0  nvgpucomp64.dll+0x41ea7e0
+  #1  nvgpucomp64.dll+0x41e8d22
+  #2  nvgpucomp64.dll+0x41e91bb
+  #3  nvgpucomp64.dll+0x41e9da0
+  #4  nvgpucomp64.dll+0x41e9f20
+  #5  nvgpucomp64.dll+0x3f6ac00
+  #6  nvgpucomp64.dll+0x3f6ace7
+  #7  nvgpucomp64.dll+0x3383508
+  #8  nvgpucomp64.dll+0x33835d4
+  #9  nvgpucomp64.dll+0x45f4f46
+  #10 nvgpucomp64.dll+0x45f3bae
+  #11 nvgpucomp64.dll+0x4608cd1
+  #12 nvgpucomp64.dll+0x1fd3679
+  #13 nvgpucomp64.dll+0x1fcf935
+  #14 nvgpucomp64.dll+0x1fcec9f
+  #15 nvgpucomp64.dll+0x2058f93
+  #16 nvgpucomp64.dll+0x1fcf6a7
+  #17 nvwgf2umx.dll+0x90a96c
+  #18 nvwgf2umx.dll+0xc85854
+  #19 nvwgf2umx.dll+0xc864a7
+  #20 nvwgf2umx.dll+0xc84bb2
+  #21 nvwgf2umx.dll+0xc8057e
+  #22 nvwgf2umx.dll+0x7d5f0f
+  #23 nvwgf2umx.dll+0xb18d65
+  #24 nvwgf2umx.dll+0xb18997
+  #25 nvwgf2umx.dll+0xc107e6
+  #26 D3D12Core.dll+0x817fe
+  #27 D3D12Core.dll+0x11e834
+  #28 ucrtbase.dll+0x2cd30
+  #29 KERNEL32.DLL+0x2dda7
+  #30 ntdll.dll+0xc9c6c
+VIctory: first-chance exception 0xc0000005 at nvgpucomp64.dll+0x41ea7e0 (read 0x1c: nothing mapped there) on thread 19044 "D3D Background Thread 0"
+  rax 0x0 rbx [address removed] rcx 0x0 rdx [address removed] rsi [address removed] rdi 0x4 rsp [address removed] rbp 0x4
+  r8 [address removed] r9 0x8 r10 0x14 r11 [address removed] r12 [address removed] r13 [address removed] r14 [address removed] r15 0x2
+  #0  nvgpucomp64.dll+0x41ea7e0
+  #1  nvgpucomp64.dll+0x41e8d22
+  #2  nvgpucomp64.dll+0x41e91bb
+  #3  nvgpucomp64.dll+0x41e9da0
+  #4  nvgpucomp64.dll+0x41e9f20
+  #5  nvgpucomp64.dll+0x3f6ac00
+  #6  nvgpucomp64.dll+0x3f6ace7
+  #7  nvgpucomp64.dll+0x3383508
+  #8  nvgpucomp64.dll+0x33835d4
+  #9  nvgpucomp64.dll+0x45f4f46
+  #10 nvgpucomp64.dll+0x45f3bae
+  #11 nvgpucomp64.dll+0x4608cd1
+  #12 nvgpucomp64.dll+0x1fd3679
+  #13 nvgpucomp64.dll+0x1fcf935
+  #14 nvgpucomp64.dll+0x1fcec9f
+  #15 nvgpucomp64.dll+0x2058f93
+  #16 nvgpucomp64.dll+0x1fcf6a7
+  #17 nvwgf2umx.dll+0x90a96c
+  #18 nvwgf2umx.dll+0xc85854
+  #19 nvwgf2umx.dll+0xc864a7
+  #20 nvwgf2umx.dll+0xc84bb2
+  #21 nvwgf2umx.dll+0xc8057e
+  #22 nvwgf2umx.dll+0x7d5f0f
+  #23 nvwgf2umx.dll+0xb18d65
+  #24 nvwgf2umx.dll+0xb18997
+  #25 nvwgf2umx.dll+0xc107e6
+  #26 D3D12Core.dll+0x817fe
+  #27 D3D12Core.dll+0x11e834
+  #28 ucrtbase.dll+0x2cd30
+  #29 KERNEL32.DLL+0x2dda7
+  #30 ntdll.dll+0xc9c6c
+VIctory: first-chance exception 0xc0000005 at nvgpucomp64.dll+0x41ea7e0 (read 0x1c: nothing mapped there) on thread 7964 "D3D Background Thread 2"
+  rax 0x1 rbx [address removed] rcx 0x0 rdx [address removed] rsi [address removed] rdi 0x4 rsp [address removed] rbp 0x4
+  r8 [address removed] r9 0x8 r10 0x14 r11 [address removed] r12 [address removed] r13 [address removed] r14 [address removed] r15 0x2
+  #0  nvgpucomp64.dll+0x41ea7e0
+  #1  nvgpucomp64.dll+0x41e8d22
+  #2  nvgpucomp64.dll+0x41e91bb
+  #3  nvgpucomp64.dll+0x41e9da0
+  #4  nvgpucomp64.dll+0x41e9f20
+  #5  nvgpucomp64.dll+0x3f6ac00
+  #6  nvgpucomp64.dll+0x3f6ace7
+  #7  nvgpucomp64.dll+0x3383508
+  #8  nvgpucomp64.dll+0x33835d4
+  #9  nvgpucomp64.dll+0x45f4f46
+  #10 nvgpucomp64.dll+0x45f3bae
+  #11 nvgpucomp64.dll+0x4608cd1
+  #12 nvgpucomp64.dll+0x1fd3679
+  #13 nvgpucomp64.dll+0x1fcf935
+  #14 nvgpucomp64.dll+0x1fcec9f
+  #15 nvgpucomp64.dll+0x2058f93
+  #16 nvgpucomp64.dll+0x1fcf6a7
+  #17 nvwgf2umx.dll+0x90a96c
+  #18 nvwgf2umx.dll+0xc85854
+  #19 nvwgf2umx.dll+0xc864a7
+  #20 nvwgf2umx.dll+0xc84bb2
+  #21 nvwgf2umx.dll+0xc8057e
+  #22 nvwgf2umx.dll+0x7d5f0f
+  #23 nvwgf2umx.dll+0xb18d65
+  #24 nvwgf2umx.dll+0xb18997
+  #25 nvwgf2umx.dll+0xc107e6
+  #26 D3D12Core.dll+0x817fe
+  #27 D3D12Core.dll+0x11e834
+  #28 ucrtbase.dll+0x2cd30
+  #29 KERNEL32.DLL+0x2dda7
+  #30 ntdll.dll+0xc9c6c
+VIctory: first-chance exception 0xc0000005 at nvgpucomp64.dll+0x41ea7e0 (read 0x1c: nothing mapped there) on thread 15380 "D3D Background Thread 3"
+  rax 0x0 rbx [address removed] rcx 0x0 rdx [address removed] rsi [address removed] rdi 0x4 rsp [address removed] rbp 0x4
+  r8 [address removed] r9 0x8 r10 0x14 r11 [address removed] r12 [address removed] r13 [address removed] r14 [address removed] r15 0x2
+  #0  nvgpucomp64.dll+0x41ea7e0
+  #1  nvgpucomp64.dll+0x41e8d22
+  #2  nvgpucomp64.dll+0x41e91bb
+  #3  nvgpucomp64.dll+0x41e9da0
+  #4  nvgpucomp64.dll+0x41e9f20
+  #5  nvgpucomp64.dll+0x3f6ac00
+  #6  nvgpucomp64.dll+0x3f6ace7
+  #7  nvgpucomp64.dll+0x3383508
+  #8  nvgpucomp64.dll+0x33835d4
+  #9  nvgpucomp64.dll+0x45f4f46
+  #10 nvgpucomp64.dll+0x45f3bae
+  #11 nvgpucomp64.dll+0x4608cd1
+  #12 nvgpucomp64.dll+0x1fd3679
+  #13 nvgpucomp64.dll+0x1fcf935
+  #14 nvgpucomp64.dll+0x1fcec9f
+  #15 nvgpucomp64.dll+0x2058f93
+  #16 nvgpucomp64.dll+0x1fcf6a7
+  #17 nvwgf2umx.dll+0x90a96c
+  #18 nvwgf2umx.dll+0xc85854
+  #19 nvwgf2umx.dll+0xc864a7
+  #20 nvwgf2umx.dll+0xc84bb2
+  #21 nvwgf2umx.dll+0xc8057e
+  #22 nvwgf2umx.dll+0x7d5f0f
+  #23 nvwgf2umx.dll+0xb18d65
+  #24 nvwgf2umx.dll+0xb18997
+  #25 nvwgf2umx.dll+0xc107e6
+  #26 D3D12Core.dll+0x817fe
+  #27 D3D12Core.dll+0x11e834
+  #28 ucrtbase.dll+0x2cd30
+  #29 KERNEL32.DLL+0x2dda7
+  #30 ntdll.dll+0xc9c6c
+2026-11-27T15:14:04.713948Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3eca51277f53edbd error=converter shader.dxil v1: GFX10 code at 0xd768: a descriptor changed after loading is not supported
+VIctory: first-chance exception 0xc0000005 at nvgpucomp64.dll+0x41ea7e0 (read 0x1c: nothing mapped there) on thread 17136 "D3D Background Thread 1"
+  rax 0x1 rbx [address removed] rcx 0x0 rdx [address removed] rsi [address removed] rdi 0x4 rsp [address removed] rbp 0x4
+  r8 [address removed] r9 0x8 r10 0x14 r11 [address removed] r12 [address removed] r13 [address removed] r14 [address removed] r15 0x2
+  #0  nvgpucomp64.dll+0x41ea7e0
+  #1  nvgpucomp64.dll+0x41e8d22
+  #2  nvgpucomp64.dll+0x41e91bb
+  #3  nvgpucomp64.dll+0x41e9da0
+  #4  nvgpucomp64.dll+0x41e9f20
+  #5  nvgpucomp64.dll+0x3f6ac00
+  #6  nvgpucomp64.dll+0x3f6ace7
+  #7  nvgpucomp64.dll+0x3383508
+  #8  nvgpucomp64.dll+0x33835d4
+  #9  nvgpucomp64.dll+0x45f4f46
+  #10 nvgpucomp64.dll+0x45f3bae
+  #11 nvgpucomp64.dll+0x4608cd1
+  #12 nvgpucomp64.dll+0x1fd3679
+  #13 nvgpucomp64.dll+0x1fcf935
+  #14 nvgpucomp64.dll+0x1fcec9f
+  #15 nvgpucomp64.dll+0x2058f93
+  #16 nvgpucomp64.dll+0x1fcf6a7
+  #17 nvwgf2umx.dll+0x90a96c
+  #18 nvwgf2umx.dll+0xc85854
+  #19 nvwgf2umx.dll+0xc864a7
+  #20 nvwgf2umx.dll+0xc84bb2
+  #21 nvwgf2umx.dll+0xc8057e
+  #22 nvwgf2umx.dll+0x7d5f0f
+  #23 nvwgf2umx.dll+0xb18d65
+  #24 nvwgf2umx.dll+0xb18997
+  #25 nvwgf2umx.dll+0xc107e6
+  #26 D3D12Core.dll+0x817fe
+  #27 D3D12Core.dll+0x11e834
+  #28 ucrtbase.dll+0x2cd30
+  #29 KERNEL32.DLL+0x2dda7
+  #30 ntdll.dll+0xc9c6c
+VIctory: first-chance exception 0xc0000005 at nvgpucomp64.dll+0x41ea7e0 (read 0x1c: nothing mapped there) on thread 19044 "D3D Background Thread 0"
+  rax 0x0 rbx [address removed] rcx 0x0 rdx [address removed] rsi [address removed] rdi 0x4 rsp [address removed] rbp 0x4
+  r8 [address removed] r9 0x8 r10 0x14 r11 [address removed] r12 [address removed] r13 [address removed] r14 [address removed] r15 0x2
+  #0  nvgpucomp64.dll+0x41ea7e0
+  #1  nvgpucomp64.dll+0x41e8d22
+  #2  nvgpucomp64.dll+0x41e91bb
+  #3  nvgpucomp64.dll+0x41e9da0
+  #4  nvgpucomp64.dll+0x41e9f20
+  #5  nvgpucomp64.dll+0x3f6ac00
+  #6  nvgpucomp64.dll+0x3f6ace7
+  #7  nvgpucomp64.dll+0x3383508
+  #8  nvgpucomp64.dll+0x33835d4
+  #9  nvgpucomp64.dll+0x45f4f46
+  #10 nvgpucomp64.dll+0x45f3bae
+  #11 nvgpucomp64.dll+0x4608cd1
+  #12 nvgpucomp64.dll+0x1fd3679
+  #13 nvgpucomp64.dll+0x1fcf935
+  #14 nvgpucomp64.dll+0x1fcec9f
+  #15 nvgpucomp64.dll+0x2058f93
+  #16 nvgpucomp64.dll+0x1fcf6a7
+  #17 nvwgf2umx.dll+0x90a96c
+  #18 nvwgf2umx.dll+0xc85854
+  #19 nvwgf2umx.dll+0xc864a7
+  #20 nvwgf2umx.dll+0xc84bb2
+  #21 nvwgf2umx.dll+0xc8057e
+  #22 nvwgf2umx.dll+0x7d5f0f
+  #23 nvwgf2umx.dll+0xb18d65
+  #24 nvwgf2umx.dll+0xb18997
+  #25 nvwgf2umx.dll+0xc107e6
+  #26 D3D12Core.dll+0x817fe
+  #27 D3D12Core.dll+0x11e834
+  #28 ucrtbase.dll+0x2cd30
+  #29 KERNEL32.DLL+0x2dda7
+  #30 ntdll.dll+0xc9c6c
+VIctory: first-chance exception 0xc0000005 at nvgpucomp64.dll+0x41ea7e0 (read 0x1c: nothing mapped there) on thread 7964 "D3D Background Thread 2"
+  rax 0x0 rbx [address removed] rcx 0x0 rdx [address removed] rsi [address removed] rdi 0x4 rsp [address removed] rbp 0x4
+  r8 [address removed] r9 0x8 r10 0x14 r11 [address removed] r12 [address removed] r13 [address removed] r14 [address removed] r15 0x2
+  #0  nvgpucomp64.dll+0x41ea7e0
+  #1  nvgpucomp64.dll+0x41e8d22
+  #2  nvgpucomp64.dll+0x41e91bb
+  #3  nvgpucomp64.dll+0x41e9da0
+  #4  nvgpucomp64.dll+0x41e9f20
+  #5  nvgpucomp64.dll+0x3f6ac00
+  #6  nvgpucomp64.dll+0x3f6ace7
+  #7  nvgpucomp64.dll+0x3383508
+  #8  nvgpucomp64.dll+0x33835d4
+  #9  nvgpucomp64.dll+0x45f4f46
+  #10 nvgpucomp64.dll+0x45f3bae
+  #11 nvgpucomp64.dll+0x4608cd1
+  #12 nvgpucomp64.dll+0x1fd3679
+  #13 nvgpucomp64.dll+0x1fcf935
+  #14 nvgpucomp64.dll+0x1fcec9f
+  #15 nvgpucomp64.dll+0x2058f93
+  #16 nvgpucomp64.dll+0x1fcf6a7
+  #17 nvwgf2umx.dll+0x90a96c
+  #18 nvwgf2umx.dll+0xc85854
+  #19 nvwgf2umx.dll+0xc864a7
+  #20 nvwgf2umx.dll+0xc84bb2
+  #21 nvwgf2umx.dll+0xc8057e
+  #22 nvwgf2umx.dll+0x7d5f0f
+  #23 nvwgf2umx.dll+0xb18d65
+  #24 nvwgf2umx.dll+0xb18997
+  #25 nvwgf2umx.dll+0xc107e6
+  #26 D3D12Core.dll+0x817fe
+  #27 D3D12Core.dll+0x11e834
+  #28 ucrtbase.dll+0x2cd30
+  #29 KERNEL32.DLL+0x2dda7
+  #30 ntdll.dll+0xc9c6c
+2026-11-27T15:14:04.838826Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=cbc8c376f13a7ae9 error=converter shader.dxil v1: GFX10 code at 0x14404: a descriptor outside the heaps is not supported
+VIctory: first-chance exception 0xc0000005 at nvgpucomp64.dll+0x41ea7e0 (read 0x1c: nothing mapped there) on thread 15380 "D3D Background Thread 3"
+  rax 0x0 rbx [address removed] rcx 0x0 rdx [address removed] rsi [address removed] rdi 0x4 rsp [address removed] rbp 0x4
+  r8 [address removed] r9 0x8 r10 0x14 r11 [address removed] r12 [address removed] r13 [address removed] r14 [address removed] r15 0x2
+  #0  nvgpucomp64.dll+0x41ea7e0
+  #1  nvgpucomp64.dll+0x41e8d22
+  #2  nvgpucomp64.dll+0x41e91bb
+  #3  nvgpucomp64.dll+0x41e9da0
+  #4  nvgpucomp64.dll+0x41e9f20
+  #5  nvgpucomp64.dll+0x3f6ac00
+  #6  nvgpucomp64.dll+0x3f6ace7
+  #7  nvgpucomp64.dll+0x3383508
+  #8  nvgpucomp64.dll+0x33835d4
+  #9  nvgpucomp64.dll+0x45f4f46
+  #10 nvgpucomp64.dll+0x45f3bae
+  #11 nvgpucomp64.dll+0x4608cd1
+  #12 nvgpucomp64.dll+0x1fd3679
+  #13 nvgpucomp64.dll+0x1fcf935
+  #14 nvgpucomp64.dll+0x1fcec9f
+  #15 nvgpucomp64.dll+0x2058f93
+  #16 nvgpucomp64.dll+0x1fcf6a7
+  #17 nvwgf2umx.dll+0x90a96c
+  #18 nvwgf2umx.dll+0xc85854
+  #19 nvwgf2umx.dll+0xc864a7
+  #20 nvwgf2umx.dll+0xc84bb2
+  #21 nvwgf2umx.dll+0xc8057e
+  #22 nvwgf2umx.dll+0x7d5f0f
+  #23 nvwgf2umx.dll+0xb18d65
+  #24 nvwgf2umx.dll+0xb18997
+  #25 nvwgf2umx.dll+0xc107e6
+  #26 D3D12Core.dll+0x817fe
+  #27 D3D12Core.dll+0x11e834
+  #28 ucrtbase.dll+0x2cd30
+  #29 KERNEL32.DLL+0x2dda7
+  #30 ntdll.dll+0xc9c6c
+VIctory: first-chance exception 0xc0000005 at nvgpucomp64.dll+0x41ea7e0 (read 0x1c: nothing mapped there) on thread 19044 "D3D Background Thread 0"
+  rax 0x0 rbx [address removed] rcx 0x0 rdx [address removed] rsi [address removed] rdi 0x4 rsp [address removed] rbp 0x4
+  r8 [address removed] r9 0x8 r10 0x14 r11 [address removed] r12 [address removed] r13 [address removed] r14 [address removed] r15 0x2
+  #0  nvgpucomp64.dll+0x41ea7e0
+  #1  nvgpucomp64.dll+0x41e8d22
+  #2  nvgpucomp64.dll+0x41e91bb
+  #3  nvgpucomp64.dll+0x41e9da0
+  #4  nvgpucomp64.dll+0x41e9f20
+  #5  nvgpucomp64.dll+0x3f6ac00
+  #6  nvgpucomp64.dll+0x3f6ace7
+  #7  nvgpucomp64.dll+0x3383508
+  #8  nvgpucomp64.dll+0x33835d4
+  #9  nvgpucomp64.dll+0x45f4f46
+  #10 nvgpucomp64.dll+0x45f3bae
+  #11 nvgpucomp64.dll+0x4608cd1
+  #12 nvgpucomp64.dll+0x1fd3679
+  #13 nvgpucomp64.dll+0x1fcf935
+  #14 nvgpucomp64.dll+0x1fcec9f
+  #15 nvgpucomp64.dll+0x2058f93
+  #16 nvgpucomp64.dll+0x1fcf6a7
+  #17 nvwgf2umx.dll+0x90a96c
+  #18 nvwgf2umx.dll+0xc85854
+  #19 nvwgf2umx.dll+0xc864a7
+  #20 nvwgf2umx.dll+0xc84bb2
+  #21 nvwgf2umx.dll+0xc8057e
+  #22 nvwgf2umx.dll+0x7d5f0f
+  #23 nvwgf2umx.dll+0xb18d65
+  #24 nvwgf2umx.dll+0xb18997
+  #25 nvwgf2umx.dll+0xc107e6
+  #26 D3D12Core.dll+0x817fe
+  #27 D3D12Core.dll+0x11e834
+  #28 ucrtbase.dll+0x2cd30
+  #29 KERNEL32.DLL+0x2dda7
+  #30 ntdll.dll+0xc9c6c
+VIctory: first-chance exception 0xc0000005 at nvgpucomp64.dll+0x41ea7e0 (read 0x1c: nothing mapped there) on thread 17136 "D3D Background Thread 1"
+  rax 0x0 rbx [address removed] rcx 0x0 rdx [address removed] rsi [address removed] rdi 0x4 rsp [address removed] rbp 0x4
+  r8 [address removed] r9 0x8 r10 0x14 r11 [address removed] r12 [address removed] r13 [address removed] r14 [address removed] r15 0x2
+  #0  nvgpucomp64.dll+0x41ea7e0
+  #1  nvgpucomp64.dll+0x41e8d22
+  #2  nvgpucomp64.dll+0x41e91bb
+  #3  nvgpucomp64.dll+0x41e9da0
+  #4  nvgpucomp64.dll+0x41e9f20
+  #5  nvgpucomp64.dll+0x3f6ac00
+  #6  nvgpucomp64.dll+0x3f6ace7
+  #7  nvgpucomp64.dll+0x3383508
+  #8  nvgpucomp64.dll+0x33835d4
+  #9  nvgpucomp64.dll+0x45f4f46
+  #10 nvgpucomp64.dll+0x45f3bae
+  #11 nvgpucomp64.dll+0x4608cd1
+  #12 nvgpucomp64.dll+0x1fd3679
+  #13 nvgpucomp64.dll+0x1fcf935
+  #14 nvgpucomp64.dll+0x1fcec9f
+  #15 nvgpucomp64.dll+0x2058f93
+  #16 nvgpucomp64.dll+0x1fcf6a7
+  #17 nvwgf2umx.dll+0x90a96c
+  #18 nvwgf2umx.dll+0xc85854
+  #19 nvwgf2umx.dll+0xc864a7
+  #20 nvwgf2umx.dll+0xc84bb2
+  #21 nvwgf2umx.dll+0xc8057e
+  #22 nvwgf2umx.dll+0x7d5f0f
+  #23 nvwgf2umx.dll+0xb18d65
+  #24 nvwgf2umx.dll+0xb18997
+  #25 nvwgf2umx.dll+0xc107e6
+  #26 D3D12Core.dll+0x817fe
+  #27 D3D12Core.dll+0x11e834
+  #28 ucrtbase.dll+0x2cd30
+  #29 KERNEL32.DLL+0x2dda7
+  #30 ntdll.dll+0xc9c6c
+2026-11-27T15:14:05.296270Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=36cdb7d7d980ec2b error=converter shader.dxil v1: GFX10 code at 0x9bdc: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:05.362386Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b53f46ba45d805f4 error=converter shader.dxil v1: GFX10 code at 0x9c28: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:05.477742Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=116b2aece36b0d9c error=converter shader.dxil v1: GFX10 code at 0x6af0: a descriptor changed after loading is not supported
+2026-11-27T15:14:05.589055Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=ee6ef9ccbb97f5f4 error=converter shader.dxil v1: GFX10 code at 0x62b8: a descriptor changed after loading is not supported
+2026-11-27T15:14:05.842435Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=cace330cc8d57b4a error=converter shader.dxil v1: GFX10 code at 0x93bc: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:05.908726Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=83b72f05739b2061 error=converter shader.dxil v1: GFX10 code at 0x9690: a descriptor changed after loading is not supported
+2026-11-27T15:14:05.961008Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3a9b8291745b64c8 error=converter shader.dxil v1: GFX10 code at 0x7188: a descriptor changed after loading is not supported
+2026-11-27T15:14:06.138330Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1c64c7e18640f588 error=converter shader.dxil v1: GFX10 code at 0x7188: a descriptor changed after loading is not supported
+2026-11-27T15:14:06.316847Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=cf93da2fd6a517c2 error=converter shader.dxil v1: GFX10 code at 0x75bc: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:06.509865Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=29df6fef6bb039e7 error=converter shader.dxil v1: GFX10 code at 0x75bc: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:06.988801Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0c01cfe726eae637 error=converter shader.dxil v1: GFX10 code at 0x7208: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:07.267374Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=6affe3453e255f72 error=converter shader.dxil v1: GFX10 code at 0x7208: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:07.268109Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e74968285864baf6 error=converter shader.dxil v1: GFX10 code at 0x715c: a descriptor changed after loading is not supported
+2026-11-27T15:14:07.365669Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b0125d6820b67d10 error=converter shader.dxil v1: GFX10 code at 0x715c: a descriptor changed after loading is not supported
+2026-11-27T15:14:07.516735Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=32eb76f10d8bfe01 error=converter shader.dxil v1: GFX10 code at 0x7080: a descriptor changed after loading is not supported
+2026-11-27T15:14:07.716218Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=86d61993afbe9bf7 error=converter shader.dxil v1: GFX10 code at 0x678c: a descriptor changed after loading is not supported
+2026-11-27T15:14:08.201384Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=913400e1531be1dc error=converter shader.dxil v1: GFX10 code at 0x70c0: a descriptor changed after loading is not supported
+2026-11-27T15:14:08.466002Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=93eaa559b1b652c0 error=converter shader.dxil v1: GFX10 code at 0x67cc: a descriptor changed after loading is not supported
+2026-11-27T15:14:08.499953Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=2cf8c23736faab47 error=converter shader.dxil v1: GFX10 code at 0x9c88: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:08.589224Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=c5ce0e03ce3d9478 error=converter shader.dxil v1: GFX10 code at 0xa410: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:08.592959Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=eeef566e7fba40d5 error=converter shader.dxil v1: GFX10 code at 0x8458: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:08.671927Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d2690a6e3651ff05 error=converter shader.dxil v1: GFX10 code at 0x6b3c: a descriptor changed after loading is not supported
+2026-11-27T15:14:09.523992Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b75d2ae942926850 error=converter shader.dxil v1: GFX10 code at 0x754c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:09.530953Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=eb60f24a03a84ae0 error=converter shader.dxil v1: GFX10 code at 0xb13c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:09.632196Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a634565b9b8469ca error=converter shader.dxil v1: GFX10 code at 0xb18c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:09.727085Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f4d0b4dc42a8613e error=converter shader.dxil v1: GFX10 code at 0xa0e4: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:09.908407Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=23248daac3636012 error=converter shader.dxil v1: GFX10 code at 0xb1ec: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:10.050556Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=c9ad3aef0d6f695a error=converter shader.dxil v1: GFX10 code at 0x7638: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:10.345586Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e88efced59d5352c error=converter shader.dxil v1: GFX10 code at 0xa0a4: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:10.553267Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=7484b6c71ed43895 error=converter shader.dxil v1: GFX10 code at 0x8f4c: a descriptor changed after loading is not supported
+2026-11-27T15:14:10.674679Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0c01e32325df4a15 error=converter shader.dxil v1: GFX10 code at 0x6c3c: a descriptor changed after loading is not supported
+2026-11-27T15:14:10.878801Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0a2e642690396eba error=converter shader.dxil v1: GFX10 code at 0x97bc: a descriptor changed after loading is not supported
+2026-11-27T15:14:10.964988Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=2c1fbf4d09a0b970 error=converter shader.dxil v1: GFX10 code at 0x9754: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:11.201787Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f1f23e1f5d6d83c2 error=converter shader.dxil v1: GFX10 code at 0xb5cc: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:11.229330Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=81c8fd459971973a error=converter shader.dxil v1: GFX10 code at 0x954c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:11.472899Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=5a6e52f9fe1d3078 error=converter shader.dxil v1: GFX10 code at 0x75fc: a descriptor changed after loading is not supported
+2026-11-27T15:14:11.823147Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=188bad2644c56c2c error=converter shader.dxil v1: GFX10 code at 0x9c54: a descriptor changed after loading is not supported
+2026-11-27T15:14:11.856097Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3845e714a1a769db error=converter shader.dxil v1: GFX10 code at 0x40e4: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:11.903964Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=57196d42bf0ebcd6 error=converter shader.dxil v1: GFX10 code at 0x770c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:12.039825Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=864e9747580904f7 error=converter shader.dxil v1: GFX10 code at 0x97bc: a descriptor changed after loading is not supported
+2026-11-27T15:14:12.071037Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d91cbdd26a82b930 error=converter shader.dxil v1: GFX10 code at 0x4198: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:12.164923Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b0abd897cf752f29 error=converter shader.dxil v1: GFX10 code at 0x9514: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:12.302770Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=ffd7e73fd2e519de error=converter shader.dxil v1: GFX10 code at 0xad5c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:12.451053Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0d0946f427485cec error=converter shader.dxil v1: GFX10 code at 0x70e8: a descriptor changed after loading is not supported
+2026-11-27T15:14:13.155532Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=4b91a1e09735508e error=converter shader.dxil v1: GFX10 code at 0xbd48: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:13.204510Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=6f4a2e7aa10646e5 error=converter shader.dxil v1: GFX10 code at 0xc24c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:13.259571Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=64c6f300472c9171 error=converter shader.dxil v1: GFX10 code at 0x78b8: a descriptor changed after loading is not supported
+2026-11-27T15:14:13.294596Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=beb0b0e61b645b46 error=converter shader.dxil v1: GFX10 code at 0x842c: a descriptor changed after loading is not supported
+2026-11-27T15:14:13.325596Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0febc5c7551370e9 error=converter shader.dxil v1: GFX10 code at 0x4d30: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:13.427941Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=70bd3bd03e1d6c2c error=converter shader.dxil v1: GFX10 code at 0xc5b0: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:14.214239Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=43960d5a8c4f9e2e error=converter shader.dxil v1: GFX10 code at 0xbc94: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:14.222196Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=795eadd87ac762c8 error=converter shader.dxil v1: GFX10 code at 0x978c: a descriptor changed after loading is not supported
+2026-11-27T15:14:14.292428Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=04e3b937cf724d4e error=converter shader.dxil v1: GFX10 code at 0x3c4c: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:14.303713Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e64e68c2550e9461 error=converter shader.dxil v1: GFX10 code at 0xa418: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:14.371830Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0b3b2c33c3f17608 error=converter shader.dxil v1: GFX10 code at 0x9fb8: a descriptor changed after loading is not supported
+2026-11-27T15:14:14.441884Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=7472341c65e5ea79 error=converter shader.dxil v1: GFX10 code at 0xb774: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:14.495839Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=4689b17cb378e4ba error=converter shader.dxil v1: GFX10 code at 0xc8bc: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:15.461873Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=ed4c0b1a7dd28f37 error=converter shader.dxil v1: GFX10 code at 0x68a8: a descriptor joined in several blocks is not supported
+2026-11-27T15:14:15.521733Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=62ae92a9bedba5d4 error=converter shader.dxil v1: GFX10 code at 0x6994: a descriptor joined in several blocks is not supported
+2026-11-27T15:14:15.586825Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=51652c2a6182e168 error=converter shader.dxil v1: GFX10 code at 0x5704: a descriptor changed after loading is not supported
+2026-11-27T15:14:15.594619Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e4dc6cf739dcc8bd error=converter shader.dxil v1: GFX10 code at 0x6e64: a descriptor joined in several blocks is not supported
+2026-11-27T15:14:15.596436Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3d8079b35cdf5f85 error=converter shader.dxil v1: GFX10 code at 0xc6ec: a descriptor changed after loading is not supported
+2026-11-27T15:14:15.707743Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b359a37541e21497 error=converter shader.dxil v1: GFX10 code at 0xa44c: a descriptor changed after loading is not supported
+2026-11-27T15:14:16.425871Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=8f6be2664e5c1b41 error=converter shader.dxil v1: GFX10 code at 0x5798: a descriptor joined in several blocks is not supported
+2026-11-27T15:14:16.490540Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=bf4d1f5136acbd94 error=converter shader.dxil v1: GFX10 code at 0x68bc: a descriptor joined in several blocks is not supported
+2026-11-27T15:14:16.572661Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f05a3bd7d3b27615 error=converter shader.dxil v1: GFX10 code at 0x6e88: a descriptor joined in several blocks is not supported
+2026-11-27T15:14:16.609387Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=2e5698f074cf4217 error=converter shader.dxil v1: GFX10 code at 0x68bc: a descriptor joined in several blocks is not supported
+2026-11-27T15:14:16.620368Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=c626a6597c398476 error=converter shader.dxil v1: GFX10 code at 0x9468: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:16.821141Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=724d565f5b134bf0 error=converter shader.dxil v1: GFX10 code at 0x9470: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:17.700456Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=c69ca8c60f083ee7 error=converter shader.dxil v1: GFX10 code at 0x6968: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:17.973534Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f230708394b5df9b error=converter shader.dxil v1: GFX10 code at 0xc6ec: a descriptor changed after loading is not supported
+2026-11-27T15:14:18.331320Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=9787148cf4fe98e1 error=converter shader.dxil v1: GFX10 code at 0x9468: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:18.597789Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d1ae42a741f3bcdb error=converter shader.dxil v1: GFX10 code at 0xace4: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:18.739604Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=74fdd86258947c8d error=converter shader.dxil v1: GFX10 code at 0xad48: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:18.868127Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=18f0851de5460e98 error=converter shader.dxil v1: GFX10 code at 0x5eac: a descriptor changed after loading is not supported
+2026-11-27T15:14:20.008424Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=9a3655965a366d4e error=converter shader.dxil v1: GFX10 code at 0xace4: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:20.087588Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=8f99e46c5b20f98b error=converter shader.dxil v1: GFX10 code at 0x5ecc: a descriptor changed after loading is not supported
+2026-11-27T15:14:20.129628Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b1249feeb251fdeb error=converter shader.dxil v1: GFX10 code at 0xac28: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:20.339524Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=c0a6be85cdd66aaa error=converter shader.dxil v1: GFX10 code at 0x76a0: a descriptor changed after loading is not supported
+2026-11-27T15:14:20.607942Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=fd300d0d762750dc error=converter shader.dxil v1: GFX10 code at 0x5eac: a descriptor changed after loading is not supported
+2026-11-27T15:14:20.918841Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=6f3f8e51a0a6f575 error=converter shader.dxil v1: GFX10 code at 0xad48: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:21.908808Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=97da692c6d019fd9 error=converter shader.dxil v1: GFX10 code at 0xac28: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:22.000732Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a480f0dd4f23205a error=converter shader.dxil v1: GFX10 code at 0x76a0: a descriptor changed after loading is not supported
+2026-11-27T15:14:22.032726Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=030fb60971ae34f3 error=converter shader.dxil v1: GFX10 code at 0x6fbc: a descriptor changed after loading is not supported
+2026-11-27T15:14:22.432196Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=16bc3328c83bb0b6 error=converter shader.dxil v1: GFX10 code at 0x5ecc: a descriptor changed after loading is not supported
+2026-11-27T15:14:22.563677Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=6af88a168788d661 error=converter shader.dxil v1: GFX10 code at 0x66f8: a descriptor joined in several blocks is not supported
+2026-11-27T15:14:23.442665Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=57e3b5fc7c58be60 error=converter shader.dxil v1: GFX10 code at 0x6f3c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:23.458642Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=eff7b8f73c537743 error=converter shader.dxil v1: GFX10 code at 0x6f84: a descriptor changed after loading is not supported
+2026-11-27T15:14:24.154653Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=8a3ed184821961fb error=converter shader.dxil v1: GFX10 code at 0x5ae4: a descriptor changed after loading is not supported
+2026-11-27T15:14:24.455657Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=9737e0a720ea10db error=converter shader.dxil v1: GFX10 code at 0x630c: a descriptor changed after loading is not supported
+2026-11-27T15:14:24.639528Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=25442e1bc56d3fd1 error=converter shader.dxil v1: GFX10 code at 0x5ac4: a descriptor changed after loading is not supported
+2026-11-27T15:14:24.802232Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=2a70c7af04e7e60a error=converter shader.dxil v1: GFX10 code at 0x630c: a descriptor changed after loading is not supported
+2026-11-27T15:14:24.927136Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d1bf7b45e7536ca4 error=converter shader.dxil v1: GFX10 code at 0x9928: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:24.966832Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=36d9aceddf8e6d39 error=converter shader.dxil v1: GFX10 code at 0x6d88: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:25.024720Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=dfa01bb97cb687c0 error=converter shader.dxil v1: GFX10 code at 0x3b9c: a descriptor's address or format read as data is not supported
+2026-11-27T15:14:25.341962Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=6cb2409d00f1f763 error=converter shader.dxil v1: GFX10 code at 0x6b78: a descriptor changed after loading is not supported
+2026-11-27T15:14:25.763015Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0ec662af61485c85 error=converter shader.dxil v1: GFX10 code at 0x59fc: a descriptor changed after loading is not supported
+2026-11-27T15:14:26.214168Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=cfdb29484dcf9a27 error=converter shader.dxil v1: GFX10 code at 0x6e20: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:26.404050Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=ae6b66ab4a0369e4 error=converter shader.dxil v1: GFX10 code at 0x99bc: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:26.836372Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=80ab464bbc301d26 error=converter shader.dxil v1: GFX10 code at 0x840c: a descriptor changed after loading is not supported
+2026-11-27T15:14:26.953893Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a33a78e35ca776eb error=converter shader.dxil v1: GFX10 code at 0xea78: a descriptor changed after loading is not supported
+2026-11-27T15:14:26.972773Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=16cbf6aeefd7c164 error=converter shader.dxil v1: GFX10 code at 0x6e98: a descriptor changed after loading is not supported
+2026-11-27T15:14:27.527344Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=4b0979a8850dce49 error=converter shader.dxil v1: GFX10 code at 0x9ac4: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:27.723453Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=dd442abb3b725f48 error=converter shader.dxil v1: GFX10 code at 0x7368: a descriptor changed after loading is not supported
+2026-11-27T15:14:28.148227Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=5cf951cd92ec6f85 error=converter shader.dxil v1: GFX10 code at 0xc224: a descriptor changed after loading is not supported
+2026-11-27T15:14:28.687604Z  WARN victory_hle::modules::dstorage: dstorage: a request ran before its page array was filled requests=1 pages=1 waited_ms=2 filled=true
+2026-11-27T15:14:28.687999Z  WARN victory_hle::modules::dstorage: dstorage: a request ran before its page array was filled requests=2 pages=1 waited_ms=2 filled=true
+2026-11-27T15:14:28.712947Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d0135c609d796599 error=converter shader.dxil v1: GFX10 code at 0x67a8: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:28.885695Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=ea7de36f10625989 error=converter shader.dxil v1: GFX10 code at 0x7458: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:29.104810Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=97967e041d85f407 error=converter shader.dxil v1: GFX10 code at 0x8588: a descriptor changed after loading is not supported
+2026-11-27T15:14:29.421781Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=6f5405b9d1562d65 error=converter shader.dxil v1: GFX10 code at 0x828c: a descriptor changed after loading is not supported
+2026-11-27T15:14:29.737945Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1e9ca9b599383915 error=converter shader.dxil v1: GFX10 code at 0x8ba0: a descriptor changed after loading is not supported
+2026-11-27T15:14:30.065382Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=4049118626b28c66 error=converter shader.dxil v1: GFX10 code at 0x3918: a descriptor changed after loading is not supported
+2026-11-27T15:14:30.205626Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=9eab7482bffb394a error=converter shader.dxil v1: GFX10 code at 0x166e8: a descriptor joined too often is not supported
+2026-11-27T15:14:30.467553Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=6d31a7b0c6eeef9d error=converter shader.dxil v1: GFX10 code at 0xc2b8: a descriptor changed after loading is not supported
+2026-11-27T15:14:31.563109Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3525260479e51fbd error=converter shader.dxil v1: GFX10 code at 0x9d7c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:31.609868Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a41a6181ac55ea15 error=converter shader.dxil v1: GFX10 code at 0x6318: a descriptor changed after loading is not supported
+2026-11-27T15:14:31.946756Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e17d09db6ad81af1 error=converter shader.dxil v1: GFX10 code at 0x635c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:32.010128Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=95404cdd54c61adb error=converter shader.dxil v1: GFX10 code at 0x5aa8: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:32.065395Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3646dbeba5c8adf5 error=converter shader.dxil v1: GFX10 code at 0xaca8: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:32.252185Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=71eb5ece2e4bf101 error=converter shader.dxil v1: GFX10 code at 0xa504: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:33.611152Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a09b50848d505473 error=converter shader.dxil v1: GFX10 code at 0x5ad4: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:33.830451Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d2078302d4259296 error=converter shader.dxil v1: GFX10 code at 0x9c4c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:33.893958Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=4de15da27db941e7 error=converter shader.dxil v1: GFX10 code at 0x6388: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:34.160813Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=44587196742b591f error=converter shader.dxil v1: GFX10 code at 0x9518: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:34.312890Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a11a0067adf61eba error=converter shader.dxil v1: GFX10 code at 0xa5a0: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:34.990978Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3fa099f18ea05b25 error=converter shader.dxil v1: GFX10 code at 0x67f0: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:35.886066Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=88afec0c2599bd91 error=converter shader.dxil v1: GFX10 code at 0x6338: a descriptor changed after loading is not supported
+2026-11-27T15:14:36.344921Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=6fdaadbd9693c433 error=converter shader.dxil v1: GFX10 code at 0x9c4c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:36.417757Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=9b6e70f91bc7faee error=converter shader.dxil v1: GFX10 code at 0x9fac: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:36.487156Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=428b8ccc534a55c9 error=converter shader.dxil v1: GFX10 code at 0x6fc0: a descriptor changed after loading is not supported
+2026-11-27T15:14:36.773890Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1b0bb6a96aba5051 error=converter shader.dxil v1: GFX10 code at 0x7684: a descriptor changed after loading is not supported
+2026-11-27T15:14:36.954025Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d8ab344ec6c50795 error=converter shader.dxil v1: GFX10 code at 0x64a4: a descriptor changed after loading is not supported
+2026-11-27T15:14:37.624739Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e3c6da99a4cbcd56 error=converter shader.dxil v1: GFX10 code at 0x9e50: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:37.958463Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1128b6882eb6214d error=converter shader.dxil v1: GFX10 code at 0x93fc: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:38.536035Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=32b3e0d1e8857ffe error=converter shader.dxil v1: GFX10 code at 0x5b6c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:38.852575Z  WARN victory_gpu::descriptor::host: constant buffer not 256-byte aligned on the host address=0x33aee020
+2026-11-27T15:14:38.933218Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=52dde2dcdb17fd0d error=converter shader.dxil v1: GFX10 code at 0x8124: a descriptor changed after loading is not supported
+2026-11-27T15:14:39.065637Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=deeb85d5afd82825 error=converter shader.dxil v1: GFX10 code at 0x72d0: a descriptor changed after loading is not supported
+2026-11-27T15:14:39.093705Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3d8630c4677c123d error=converter shader.dxil v1: GFX10 code at 0x3f04: a sampler's descriptor read as data is not supported
+2026-11-27T15:14:39.616994Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a7ef99150d7faab4 error=converter shader.dxil v1: GFX10 code at 0x6f58: a descriptor changed after loading is not supported
+2026-11-27T15:14:39.877349Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=cd5be92167d1e3b7 error=converter shader.dxil v1: GFX10 code at 0x9a2c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:39.906676Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=194e1be8364284b1 error=converter shader.dxil v1: GFX10 code at 0x1054: a descriptor outside the heaps is not supported
+2026-11-27T15:14:39.936792Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=e6b376c03c8cdcc1 error=converter shader.dxil v1: GFX10 code at 0x6274: a descriptor changed after loading is not supported
+2026-11-27T15:14:40.855334Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=0fbc0ea2ee2665ab error=converter shader.dxil v1: GFX10 code at 0xa49c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:41.105162Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a3c3aeefb37dfde4 error=converter shader.dxil v1: GFX10 code at 0x9c28: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:41.186176Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1c984194e2f51949 error=converter shader.dxil v1: GFX10 code at 0x62b8: a descriptor changed after loading is not supported
+2026-11-27T15:14:41.335482Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=66322c3590dfd0ff error=converter shader.dxil v1: GFX10 code at 0x60e0: a descriptor changed after loading is not supported
+2026-11-27T15:14:41.410863Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=02b71182a7b0a117 error=converter shader.dxil v1: GFX10 code at 0x7ae4: a descriptor changed after loading is not supported
+2026-11-27T15:14:41.487177Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=a7d99b9621dcb4fc error=converter shader.dxil v1: GFX10 code at 0x7eb8: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:42.531728Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1b532118f4711e5b error=converter shader.dxil v1: GFX10 code at 0x6960: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:43.008216Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d971b62b17aebee5 error=converter shader.dxil v1: GFX10 code at 0x944c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:43.346836Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=8f0b76b31a5dbb4e error=converter shader.dxil v1: GFX10 code at 0x6ef8: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:43.390020Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b72553821e912fb8 error=converter shader.dxil v1: GFX10 code at 0xc5f4: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:43.473213Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=7c87e95cfcf05306 error=converter shader.dxil v1: GFX10 code at 0x61fc: a descriptor changed after loading is not supported
+2026-11-27T15:14:43.881948Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f61db3414d0aa595 error=converter shader.dxil v1: GFX10 code at 0x9888: a descriptor changed after loading is not supported
+2026-11-27T15:14:44.904892Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=2c589d6919c26ee1 error=converter shader.dxil v1: GFX10 code at 0xc5f4: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:44.956585Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=4df3e8afc3ab26b9 error=converter shader.dxil v1: GFX10 code at 0x9888: a descriptor changed after loading is not supported
+2026-11-27T15:14:46.020041Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=09e2a2d3c2d740b9 error=converter shader.dxil v1: GFX10 code at 0xb960: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:46.107319Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=9d030a8e67976c45 error=converter shader.dxil v1: GFX10 code at 0xb5cc: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:46.287799Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1a1b3ba36b12c2b9 error=converter shader.dxil v1: GFX10 code at 0x9b64: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:46.649852Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=dd07b9ac1b85e46a error=converter shader.dxil v1: GFX10 code at 0xb95c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:46.785251Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=952a1ecffdc91939 error=converter shader.dxil v1: GFX10 code at 0xaa74: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:46.875637Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=2d811a69273b4e62 error=converter shader.dxil v1: GFX10 code at 0x7fb4: a descriptor changed after loading is not supported
+2026-11-27T15:14:47.872996Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3adbd302772cfe04 error=converter shader.dxil v1: GFX10 code at 0xb96c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:48.331347Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=8734488c5b241952 error=converter shader.dxil v1: GFX10 code at 0x7ffc: a descriptor changed after loading is not supported
+2026-11-27T15:14:48.455291Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=adfabce6451f55e5 error=converter shader.dxil v1: GFX10 code at 0xb96c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:48.625011Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=1a720e8279821d60 error=converter shader.dxil v1: GFX10 code at 0x7ff0: a descriptor changed after loading is not supported
+2026-11-27T15:14:48.803469Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=6f47449c3f4af7fc error=converter shader.dxil v1: GFX10 code at 0xb964: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:49.067092Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=5f95ba5420194f52 error=converter shader.dxil v1: GFX10 code at 0x7ff0: a descriptor changed after loading is not supported
+2026-11-27T15:14:50.161745Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=35f99d8fb5768c12 error=converter shader.dxil v1: GFX10 code at 0x7ff0: a descriptor changed after loading is not supported
+2026-11-27T15:14:50.278827Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=f8292cb44cfaf201 error=converter shader.dxil v1: GFX10 code at 0xb930: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:51.300828Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=48ae7456a7326d30 error=converter shader.dxil v1: GFX10 code at 0x639c: a descriptor changed after loading is not supported
+2026-11-27T15:14:51.671306Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=890640193d957e17 error=converter shader.dxil v1: GFX10 code at 0xa7cc: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:51.742543Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b86fe0e20ebc5222 error=converter shader.dxil v1: GFX10 code at 0xd3c0: a descriptor changed after loading is not supported
+2026-11-27T15:14:51.759332Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=02a08cc5e9631c83 error=converter shader.dxil v1: GFX10 code at 0xc170: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:52.735276Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=3d4b11848df9c680 error=converter shader.dxil v1: GFX10 code at 0x62b4: a descriptor changed after loading is not supported
+2026-11-27T15:14:52.966271Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=19ab7440eaf2772f error=converter shader.dxil v1: GFX10 code at 0xa0ac: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:53.496266Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=6912e32a4a8b66f1 error=converter shader.dxil v1: GFX10 code at 0x8358: a descriptor changed after loading is not supported
+2026-11-27T15:14:54.029569Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=d5bd36dd3cc7af96 error=converter shader.dxil v1: GFX10 code at 0xa15c: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:54.477281Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=b9775866d3da2c06 error=converter shader.dxil v1: GFX10 code at 0xc170: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:54.675639Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=474d90b5e4cd0521 error=converter shader.dxil v1: GFX10 code at 0xa7cc: a descriptor neither loaded nor built is not supported
+2026-11-27T15:14:56.189546Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=bc9050767386a20c error=converter shader.dxil v1: GFX10 code at 0x8624: a descriptor changed after loading is not supported
+2026-11-27T15:14:56.354309Z  WARN victory_gpu::pipeline: shader does not translate; its pipelines' draws are dropped stage="compute" hash=db9085837161e8b4 error=converter shader.dxil v1: GFX10 code at 0x73a8: a descriptor changed after loading is not supported
+VIctory exited with exit code: 0xffffffff

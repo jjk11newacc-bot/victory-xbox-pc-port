@@ -85,8 +85,7 @@ impl StagedCopy {
         const MAX_POOL: u64 = 2 << 30;
         let adaptive = crate::budget::enabled();
         let headroom = local.map_or(0, |[budget, used, ..]| {
-            let cap = if adaptive { crate::budget::ceiling(budget, 90) } else { budget / 10 * 9 };
-            cap.saturating_sub(used)
+            crate::resource::texture_budget_ceiling(budget).saturating_sub(used)
         });
         let max_pool = if adaptive { local.map_or(MAX_POOL, |[budget, ..]| crate::budget::pool_cap(budget)) } else { MAX_POOL };
         self.texture.sparse.as_ref().map_or(0, |sparse| {
@@ -680,6 +679,7 @@ pub(crate) fn let_go_idle() {
     drop(released_uploads);
     if released_count > 0 {
         upload::trim_idle_under_pressure(available);
+        tracing::info!(released_count, released_bytes, "released completed texture upload leases");
         crate::host::trail(|| format!("GPU-only textures: released {released_count} CPU staging leases ({} KiB)", released_bytes >> 10));
     }
     if went > 0 {

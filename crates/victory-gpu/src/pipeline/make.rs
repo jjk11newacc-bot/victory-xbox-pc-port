@@ -498,7 +498,7 @@ const MAKING: u8 = 3;
 
 struct Queue {
     early: VecDeque<Arc<Pending>>,
-    early_depth: VecDeque<Arc<Pending>>,
+    early_dependencies: VecDeque<Arc<Pending>>,
     requested: VecDeque<Arc<Pending>>,
 }
 
@@ -506,7 +506,7 @@ impl Queue {
     const fn new() -> Self {
         Self {
             early: VecDeque::new(),
-            early_depth: VecDeque::new(),
+            early_dependencies: VecDeque::new(),
             requested: VecDeque::new(),
         }
     }
@@ -521,10 +521,10 @@ impl Queue {
         p.queue_state.store(priority, Ordering::Relaxed);
         if priority == REQUESTED {
             self.requested.push_back(p.clone());
-        } else if p.graphics.as_ref().is_some_and(|state| state.writes_depth_only()) {
-            // Shadow maps and depth prepasses supply several later draws. Rebuild
-            // their previously used PSOs first while no draw is requesting one.
-            self.early_depth.push_back(p.clone());
+        } else if p.computes() || p.graphics.as_ref().is_some_and(|state| state.writes_depth_only()) {
+            // World setup can dispatch a compute pipeline once. Give those and
+            // depth prepasses a head start over other speculative graphics work.
+            self.early_dependencies.push_back(p.clone());
         } else {
             self.early.push_back(p.clone());
         }
@@ -532,7 +532,7 @@ impl Queue {
     }
 
     fn prune_promoted(&mut self, retired: &mut Vec<Arc<Pending>>) {
-        for queue in [&mut self.early, &mut self.early_depth] {
+        for queue in [&mut self.early, &mut self.early_dependencies] {
             queue.retain(|p| {
                 if p.queue_state.load(Ordering::Relaxed) == EARLY { true }
                 else { retired.push(p.clone()); false }
@@ -543,7 +543,7 @@ impl Queue {
     fn pop(&mut self) -> Option<Arc<Pending>> {
         let p = self.requested.pop_front().or_else(|| {
             // An early entry can have been promoted and claimed already.
-            std::iter::from_fn(|| self.early_depth.pop_front().or_else(|| self.early.pop_front()))
+            std::iter::from_fn(|| self.early_dependencies.pop_front().or_else(|| self.early.pop_front()))
                 .find(|p| p.queue_state.load(Ordering::Relaxed) == EARLY)
         })?;
         p.queue_state.store(MAKING, Ordering::Relaxed);
@@ -796,7 +796,7 @@ mod tests {
     }
 
     #[test]
-    fn early_depth_precedes_other_prewarming_and_requests_precede_both() {
+    fn early_compute_and_depth_precede_other_prewarming() {
         use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_D32_FLOAT;
         let depth_pipeline = || {
             let mut depth = Box::new(GraphicsState::default());
@@ -808,12 +808,23 @@ mod tests {
         let normal = Arc::new(Pending::new(Vec::new(), None));
         let promoted = depth_pipeline();
         let shadow = depth_pipeline();
+        let compute = Arc::new(Pending::new(
+            vec![Arc::new(Shader {
+                stage: "compute",
+                hash: "early-compute-test".to_owned(),
+                container: Vec::new(),
+                cached: false,
+                translated: OnceLock::new(),
+                ray_work: OnceLock::new(),
+            })],
+            None,
+        ));
         let mut queue = Queue::new();
-        for p in [&normal, &shadow, &promoted] {
+        for p in [&normal, &shadow, &compute, &promoted] {
             assert_eq!(queue.push(p, EARLY), Some(true));
         }
         assert_eq!(queue.push(&promoted, REQUESTED), Some(false));
-        for expected in [&promoted, &shadow, &normal] {
+        for expected in [&promoted, &shadow, &compute, &normal] {
             assert!(Arc::ptr_eq(&queue.pop().unwrap(), expected));
         }
         assert!(queue.pop().is_none());

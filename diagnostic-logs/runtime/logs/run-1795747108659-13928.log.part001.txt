@@ -1,0 +1,986 @@
+Runtime [local path removed]
+Game [local path removed]
+VICTORY_FILL_WORKERS: 2
+VICTORY_PIPELINE_WORKERS: 2
+VICTORY_JOIN_COPIES: 1
+VICTORY_WIDE_REFRESH: 0
+VICTORY_TEXTURE_NO_WAIT: 0
+VICTORY_PARALLEL_PRELUDES: 0
+VICTORY_PARALLEL_DETILE: 0
+VICTORY_WIDE_MERGE: 0
+VICTORY_CARD_WINDOWS_MB: 128
+VICTORY_TEXTURE_ROOM_PERCENT: 80
+VICTORY_STRICT_ADMISSION: 1
+VICTORY_ADAPTIVE_BUDGET: 1
+VICTORY_TEXTURE_CATCHUP: 0
+VICTORY_TEXTURE_STAGE_MS: 24
+VICTORY_TEXTURE_STAGE_MB: 96
+VICTORY_EARLY_TEXTURES_MS: 3
+VICTORY_BAKE_TEXTURES_MS: 8
+VICTORY_LOCAL_GPU_INPUTS: 1
+VICTORY_RANGE_UNION: 1
+NVIDIA performance profile; compare against baseline fallback if needed
+VICTORY_INDEXED_WATCH: 1
+VICTORY_WATCH_CLEAN_FAST: 1
+VICTORY_INDEXED_PENDING: 1
+VICTORY_INDEX_WRITE_GROUPS: 1
+VICTORY_BATCH_HAZARD_QUERY: 1
+VICTORY_BATCH_RAW_WORK: 1
+VICTORY_BATCH_PAGE_RANGES: 1
+VICTORY_SPARSE_MERGE: 1
+VICTORY_SETTLED_BLOCK_MERGE: 1
+VICTORY_SPARSE_REFRESH: 1
+VICTORY_SHARED_COMPARE_RUNS: 1
+VICTORY_PACK_SYNC_READBACK: 1
+VICTORY_REUSE_ROOT_DATA: 1
+VICTORY_REUSE_GRAPHICS_BINDINGS: 1
+VICTORY_COMPACT_MIP_UPLOAD: 1
+VICTORY_STICKY_RAM_PRESSURE: 1
+VICTORY_TRIM_READBACKS: 1
+VICTORY_STREAMING_FULL_BUDGET: 1
+VICTORY_STREAMING_SLOW_RECOVERY: 1
+VICTORY_MATERIAL_TEXTURE_DEMAND: 1
+VICTORY_TEXTURE_NO_WAIT: 0
+NVIDIA low-memory profile; RT off; native display patch: false
+Ray tracing requested: off
+Quiet NVIDIA run; use --nvidia-profile-log for diagnostic counters
+Texture copy queue requested: off
+Sparse texture mips requested
+Inherited VICTORY_CARD_WINDOWS_MB=128
+Inherited VICTORY_MEMORY_GUARD=1
+Inherited VICTORY_STICKY_RAM_PRESSURE=1
+Inherited VICTORY_TEXTURE_BUDGET_MB=3072
+Inherited VICTORY_TRIM_READBACKS=1
+build          unknown (b99f876b74d4a77f03af5f878223b27bd647b5c35a79d5decd9f716504239e93)
+mapped at      [address removed] (preferred [address removed])
+title          7952987A, storage [local path removed]
+console        Xbox Series S
+title dll      xboxbvhbuilder.dll at [address removed]
+title dll      amd_fidelityfx_loader_xbox.dll at [address removed]
+title dll      libhttpclient.gdk.dll at [address removed]
+title dll      bink2scarlett.dll at [address removed]
+bound          xboxbvhbuilder.dll: 9 hle, 48 host, 0 title, 0 missing
+bound          amd_fidelityfx_loader_xbox.dll: 4 hle, 18 host, 0 title, 0 missing
+bound          libhttpclient.gdk.dll: 27 hle, 171 host, 0 title, 0 missing
+bound          bink2scarlett.dll: 6 hle, 54 host, 0 title, 0 missing
+bound          game_scarlett_master.exe: 88 hle, 427 host, 72 title, 0 missing
+2026-11-27T02:38:30.644810Z  WARN victory_hle::modules::kernel: a host DLL outside the host policy: refused dll="rpcrt4.dll"
+2026-11-27T02:38:31.372726Z  INFO victory_gpu::pipeline::ray_tracing: configured ray-tracing passes master=Some(false) static_bvh=false builder=false activation=false traversal=false resolve=false quarantine=false
+2026-11-27T02:38:31.430448Z  INFO victory_gpu::pipeline::library: title pipelines to start early pipelines=1046
+2026-11-27T02:38:31.430542Z  INFO victory_gpu::pipeline::make: pipeline worker concurrency workers=2 default_workers=6
+2026-11-27T02:38:31.432562Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=dfafaf385b2f94e8 user_data=0 samplers=0
+2026-11-27T02:38:31.432828Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=06295fb1d1aefb78 user_data=0 samplers=0
+2026-11-27T02:38:31.460179Z  INFO victory_gpu::pipeline::library: host pipeline library loaded bytes=60279612 mapped=true
+2026-11-27T02:38:31.463486Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex dfafaf385b2f94e8, pixel 06295fb1d1aefb78]
+2026-11-27T02:38:31.463553Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex dfafaf385b2f94e8, pixel 06295fb1d1aefb78]
+2026-11-27T02:38:31.883059Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=1 description=Some([2d255e6e340, 904b18594, 184, 904b18718, bc, 948a27300, 200, 904b187d4, d0, 948a27500, 200, 904b188a4, b0, 0, 0, 0]) first_points_at=Some([7ff673ddf828, 300000000, 530, 2d255f55fc0, 530, 80001003e5cc74fa, e926dcc8e0, 18, 4140000000000000, 2d255e6e220, 1500000000, 80001103e5cf74f5, 7ffb29de9738, 100000000, 44, 2d255de3dc0])
+2026-11-27T02:38:31.883104Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=2 description=Some([2d255e6e250, 904d33cc8, 184, 904d33e4c, bc, 948ab3400, 1c0, 904d33f08, d0, 948ab3600, 180, 904d33fd8, 2f0, 0, 0, 0]) first_points_at=Some([7ff673ddf828, 4000000000, 70, 2d255f58890, 70, 88000b00e5dd74eb, 7ff673ddf828, 300000000, 44, 2d255de3d70, 44, 80000c00e5d074e6, 2d24e5850f0, 100000060, 2c, 2d255e6e3d0])
+2026-11-27T02:38:31.883145Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=4 description=Some([2d255e6e250, 904d342c8, 184, 904d3444c, bc, 948ab3800, 300, 904d34508, d0, 948ab3b00, 140, 904d345d8, 2f0, 0, 0, 0]) first_points_at=Some([7ff673ddf828, 4a00000000, 70, 2d255f58890, 70, 88000b00e5dd74eb, 7ff673ddf828, 300000000, 44, 2d255de3d70, 44, 80000c00e5d074e6, 2d24e5850f0, 100000060, 2c, 2d255e6e3d0])
+2026-11-27T02:38:31.883171Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=8 description=Some([2d255e6e250, 904d305c8, 184, 904d3074c, bc, 948aafc00, 180, 904d30808, 70, 948aafe00, 140, 904d30878, 30, 0, 0, 0]) first_points_at=Some([7ff673ddf828, 4a00000000, 70, 2d255f58890, 70, 88000b00e5dd74eb, 7ff673ddf828, 300000000, 44, 2d255de3d70, 44, 80000c00e5d074e6, 2d24e5850f0, 100000060, 2c, 2d255e6e3d0])
+2026-11-27T02:38:31.883145Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=3 description=Some([2d255e6e280, 9055887fc, 17c, 905588978, bc, 0, 0, 0, 0, 94f3dfa00, 140, 905588a34, 30, 0, 0, 0]) first_points_at=Some([7ff673ddf828, 300000000, 44, 2d255de3d70, 44, 80000c00e5d074e6, 2d24e5850f0, 100000060, 2c, 2d255e6e3d0, 4, 80000d01e5d374e1, 2d24f27ed80, 100000018, 18, 2d255e6e310])
+2026-11-27T02:38:31.883180Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=16 description=Some([2d255e6e250, 90531998c, 184, 905319f4c, bc, 94e5f1600, 140, 90531a008, 90, 94e5f1400, 140, 905319c5c, 2f0, 0, 0, 0]) first_points_at=Some([7ff673ddf828, 4c00000000, 70, 2d255f58890, 70, 88000b00e5dd74eb, 7ff673ddf828, 300000000, 44, 2d255de3d70, 44, 80000c00e5d074e6, 2d24e5850f0, 100000060, 2c, 2d255e6e3d0])
+2026-11-27T02:38:31.883633Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=32 description=Some([2d255e6e250, 904d31668, 184, 904d317ec, bc, 948ab1000, 380, 904d318a8, 190, 948ab1400, 240, 904d31a38, f0, 0, 0, 0]) first_points_at=Some([7ff673ddf828, a400000000, 70, 2d255f58890, 70, 88000b00e5dd74eb, 7ff673ddf828, 900000000, 44, 2d255de3d70, 44, 80000c00e5d074e6, 2d24f27eea0, 100000018, 18, 2d255e6e3a0])
+2026-11-27T02:38:31.883727Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=64 description=Some([2d255e6e070, 904c1c238, 184, 904c1c3bc, 78, 948a28300, 180, 904b1999c, b0, 948a27900, 1c0, 904b18c00, 70, 0, 0, 0]) first_points_at=Some([7ff673ddf828, 500000000, a0, 2d255c48db0, a0, 80000104e5ff74c5, e926dccde0, 18, 0, 2d255e6e130, 300000003, 88000200e5f274c0, 7ff673ddf828, 300000000, 560, 2d255ed8a20])
+2026-11-27T02:38:31.883736Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=128 description=Some([2d255e6e070, 904baf078, 184, 904baf1fc, 78, 948a28500, 1c0, 904b19e44, f0, 948a28100, 1c0, 904b19730, 70, 0, 0, 0]) first_points_at=Some([7ff673ddf828, 900000000, a0, 2d255c48db0, a0, 80000104e5ff74c5, e926dccde0, 18, 0, 2d255e6e130, 300000003, 88000200e5f274c0, 7ff673ddf828, 300000000, 560, 2d255ed8a20])
+2026-11-27T02:38:31.883761Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=256 description=Some([2d255e6e070, 904c8ae34, 18c, 904cc446c, 78, 948a2a500, 1c0, 904b1cb7c, b0, 948a29900, 200, 904b1bb24, 70, 0, 0, 0]) first_points_at=Some([7ff673ddf828, 1200000000, a0, 2d255c48db0, a0, 80000104e5ff74c5, e926dccde0, 18, 0, 2d255e6e130, 300000003, 88000200e5f274c0, 7ff673ddf828, 300000000, 560, 2d255ed8a20])
+2026-11-27T02:38:31.883820Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=512 description=Some([2d255e6e070, 904cf97b8, 18c, 904cfb028, 98, 948a2d100, 1c0, 904b1f694, b0, 948a2ca00, 200, 904b1f1ec, 70, 0, 0, 0]) first_points_at=Some([7ff673ddf828, 2900000000, a0, 2d255c48db0, a0, 80000104e5ff74c5, e926dccde0, 18, 0, 2d255e6e130, 300000003, 88000200e5f274c0, 7ff673ddf828, 300000000, 560, 2d255ed8a20])
+2026-11-27T02:38:31.883936Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=1024 description=Some([2d255e6e070, 904c1d8a0, 184, 904c5c9e0, 98, 948a32700, 1c0, 904b241e0, f0, 948a32100, 200, 904b23cb4, 70, 0, 0, 0]) first_points_at=Some([7ff673ddf828, 5300000000, a0, 2d255c48db0, a0, 80000104e5ff74c5, e926dccde0, 18, 0, 2d255e6e130, 300000003, 88000200e5f274c0, 7ff673ddf828, 300000000, 560, 2d255ed8a20])
+2026-11-27T02:38:31.884631Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=2048 description=Some([2d255e6e070, 904c2ab84, 18c, 904c63184, 98, 948a3fc00, 200, 904b2ed64, f0, 948a3f700, 2c0, 904b2e858, 70, 0, 0, 0]) first_points_at=Some([7ff673ddf828, 12100000000, a0, 2d255c48db0, a0, 80000104e5ff74c5, e926dccde0, 18, 0, 2d255e6e130, 300000003, 88000200e5f274c0, 7ff673ddf828, 300000000, 560, 2d255ed8a20])
+2026-11-27T02:38:31.886178Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=4096 description=Some([2d255e6e070, 904c2672c, 18c, 904c44fb4, bc, 948a7a600, 200, 904b58f24, b0, 948a79e00, 240, 904b58a64, 70, 0, 0, 0]) first_points_at=Some([7ff673ddf828, 36500000000, a0, 2d255c48db0, a0, 80000104e5ff74c5, e926dccde0, 18, 0, 2d255e6e130, 300000003, 88000200e5f274c0, 7ff673ddf828, 300000000, 560, 2d255ed8a20])
+2026-11-27T02:38:31.887723Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=8192 description=Some([2d255e6e070, 904bbcfb4, 18c, 904c13374, 98, 948a93700, 400, 904b68ddc, 1b0, 948a86200, 2c0, 904b603b0, 70, 0, 0, 0]) first_points_at=Some([7ff673ddf828, 4f300000000, a0, 2d255c48db0, a0, 80000104e5ff74c5, e926dccde0, 18, 0, 2d255e6e130, 300000003, 88000200e5f274c0, 7ff673ddf828, 300000000, 560, 2d255ed8a20])
+2026-11-27T02:38:31.888766Z  WARN victory_loader::console_insn: a console CPU instruction this CPU lacks: emulated (logged once) instruction=ClzeroLoop { end_reg: 10 } at=[address removed]
+2026-11-27T02:38:31.997741Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=bbc8a9d9207f6dcf user_data=1 samplers=0
+2026-11-27T02:38:31.997975Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=82ba5eae46a856a4 user_data=2 samplers=0
+2026-11-27T02:38:31.998707Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=67e814f3c3be6dac user_data=1 samplers=0
+2026-11-27T02:38:31.998852Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=46447d58f4954cd1 user_data=2 samplers=0
+2026-11-27T02:38:31.999640Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex bbc8a9d9207f6dcf, pixel 82ba5eae46a856a4]
+2026-11-27T02:38:31.999894Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=6719e1bc1f82443a user_data=1 samplers=0
+2026-11-27T02:38:32.000018Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 67e814f3c3be6dac, pixel 46447d58f4954cd1]
+2026-11-27T02:38:32.000134Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a1f23b1756077215 user_data=2 samplers=0
+2026-11-27T02:38:32.000630Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=a59924ecd59ce5dd user_data=1 samplers=0
+2026-11-27T02:38:32.000849Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a820d0c3bdb59905 user_data=0 samplers=0
+2026-11-27T02:38:32.002720Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex a59924ecd59ce5dd, pixel a820d0c3bdb59905]
+2026-11-27T02:38:32.002773Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 6719e1bc1f82443a, pixel a1f23b1756077215]
+2026-11-27T02:38:32.003077Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=571fe570756bc393 user_data=1 samplers=0
+2026-11-27T02:38:32.003453Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=02c6cf86ca283ce1 user_data=0 samplers=0
+2026-11-27T02:38:32.004195Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 571fe570756bc393, pixel 02c6cf86ca283ce1]
+2026-11-27T02:38:32.010529Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=5b78f46254d0a0f7 user_data=1 samplers=0
+2026-11-27T02:38:32.010703Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=013b71326830b11b user_data=0 samplers=0
+2026-11-27T02:38:32.011236Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 5b78f46254d0a0f7, pixel 013b71326830b11b]
+2026-11-27T02:38:32.011573Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=d166c341988178de user_data=1 samplers=0
+2026-11-27T02:38:32.011785Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=98b739f0e80dfb84 user_data=1 samplers=0
+2026-11-27T02:38:32.011918Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=e370f602fa0db9b2 user_data=0 samplers=0
+2026-11-27T02:38:32.012137Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=872592596b3651f0 user_data=2 samplers=0
+2026-11-27T02:38:32.012549Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex d166c341988178de, pixel e370f602fa0db9b2]
+2026-11-27T02:38:32.013088Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 98b739f0e80dfb84, pixel 872592596b3651f0]
+2026-11-27T02:38:32.024906Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=ea212fca1f658aef user_data=1 samplers=0
+2026-11-27T02:38:32.025118Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=1579833b3d76cfb1 user_data=1 samplers=0
+2026-11-27T02:38:32.026233Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex ea212fca1f658aef, pixel 1579833b3d76cfb1]
+2026-11-27T02:38:32.028019Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=d5b1bcfe40fd84b2 user_data=1 samplers=0
+2026-11-27T02:38:32.028064Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=3cbf9d0ff906c983 user_data=1 samplers=0
+2026-11-27T02:38:32.028262Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=b424d979b3c665e4 user_data=2 samplers=0
+2026-11-27T02:38:32.028272Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=fb0b42420f99e5e7 user_data=2 samplers=0
+2026-11-27T02:38:32.029151Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex d5b1bcfe40fd84b2, pixel fb0b42420f99e5e7]
+2026-11-27T02:38:32.029162Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 3cbf9d0ff906c983, pixel b424d979b3c665e4]
+2026-11-27T02:38:32.047680Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 6719e1bc1f82443a, pixel a1f23b1756077215]
+2026-11-27T02:38:32.048427Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 571fe570756bc393, pixel 02c6cf86ca283ce1]
+2026-11-27T02:38:32.063183Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex dfafaf385b2f94e8, pixel 06295fb1d1aefb78]
+2026-11-27T02:38:32.227514Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=58d926085fca4999 user_data=0 samplers=0
+2026-11-27T02:38:32.227775Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=edc1cad8ffb79bc9 user_data=1 samplers=0
+2026-11-27T02:38:32.229268Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 58d926085fca4999, pixel edc1cad8ffb79bc9]
+2026-11-27T02:38:32.236738Z  INFO victory_gpu::pipeline: first bind pipeline=[address removed] frame=3 stage="vertex" size=1100 hash=58d926085fca4999
+2026-11-27T02:38:32.236767Z  INFO victory_gpu::pipeline: first bind pipeline=[address removed] frame=3 stage="pixel" size=1180 hash=edc1cad8ffb79bc9
+2026-11-27T02:38:32.236806Z  WARN victory_gpu::descriptor::host: host view heap capped at 1000000; views past it read a null slot count=1245184
+2026-11-27T02:38:32.239004Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=f7f331c8c5b3a0d8 user_data=1 samplers=0
+2026-11-27T02:38:32.239069Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=80cb958cde505e15 user_data=1 samplers=0
+2026-11-27T02:38:32.239332Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=3bfe730f7e24ee1a user_data=1 samplers=1
+2026-11-27T02:38:32.239359Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=f9bf13c6c099ccec user_data=1 samplers=1
+2026-11-27T02:38:32.246374Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex f7f331c8c5b3a0d8, pixel 3bfe730f7e24ee1a]
+2026-11-27T02:38:32.246538Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 80cb958cde505e15, pixel f9bf13c6c099ccec]
+2026-11-27T02:38:32.304954Z  WARN victory_loader::console_insn: a console CPU instruction this CPU lacks: emulated (logged once) instruction=Monitorx at=[address removed]
+2026-11-27T02:38:32.305139Z  WARN victory_loader::console_insn: a console CPU instruction this CPU lacks: emulated (logged once) instruction=Mwaitx at=[address removed]
+2026-11-27T02:38:32.603900Z  INFO victory_gpu::pipeline: shader translated stage="compute" hash=a74fae278955f617 user_data=2 samplers=0
+2026-11-27T02:38:32.604289Z  INFO victory_gpu::pipeline: shader translated stage="compute" hash=cf385ae2ec9eb0e3 user_data=1 samplers=0
+2026-11-27T02:38:32.604690Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[compute a74fae278955f617]
+2026-11-27T02:38:32.605082Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[compute cf385ae2ec9eb0e3]
+2026-11-27T02:38:32.605268Z  INFO victory_gpu::pipeline: shader translated stage="compute" hash=7b098235a1e4e9a9 user_data=2 samplers=0
+2026-11-27T02:38:32.605996Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[compute 7b098235a1e4e9a9]
+2026-11-27T02:38:32.817527Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=16384 description=Some([2d263e8f3f0, 90646d760, 200, 90646d960, 50, 955040500, 4a40, 9063b2ba4, 5b0, 0, 0, 0, 0, 955045000, d80, 9063b3154]) first_points_at=Some([7ff673ddf828, 1daf00000000, 165c, 2d19b8bfab0, 165c, 80039600ec49958d, 2d27f2b8f80, 18, 0, 2d263e8f720, 0, 88039700ec4c9588, 7ff673ddf828, 16d00000000, e38, 2d261b53f50])
+2026-11-27T02:38:33.172519Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=ed8559670386bfe1 user_data=0 samplers=0
+2026-11-27T02:38:33.172659Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=387423b7209fa45c user_data=1 samplers=1
+2026-11-27T02:38:33.173541Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex ed8559670386bfe1, pixel 387423b7209fa45c]
+2026-11-27T02:38:34.042800Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=089d6271be6650ef user_data=0 samplers=0
+2026-11-27T02:38:34.043097Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=d126bcae5d5d8d26 user_data=1 samplers=1
+2026-11-27T02:38:34.044110Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 089d6271be6650ef, pixel d126bcae5d5d8d26]
+2026-11-27T02:38:34.044458Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=d4111a6e6ea49d91 user_data=1 samplers=0
+2026-11-27T02:38:34.044774Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c0a7fe77b1862e10 user_data=1 samplers=1
+2026-11-27T02:38:34.047544Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh d4111a6e6ea49d91, pixel c0a7fe77b1862e10]
+2026-11-27T02:38:34.057449Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=5d3a25d932263bb7 user_data=1 samplers=0
+2026-11-27T02:38:34.057870Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c94c4c7b5775cc2b user_data=2 samplers=3
+2026-11-27T02:38:34.058906Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 5d3a25d932263bb7, pixel c94c4c7b5775cc2b]
+2026-11-27T02:38:34.058906Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 5d3a25d932263bb7, pixel c94c4c7b5775cc2b]
+2026-11-27T02:38:34.059119Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=4d4a2a8c824cceae user_data=1 samplers=0
+2026-11-27T02:38:34.059540Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=15c34c906ac8b908 user_data=2 samplers=6
+2026-11-27T02:38:34.059562Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=531722868851e35a user_data=1 samplers=0
+2026-11-27T02:38:34.059966Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=55e52a40b5d79b20 user_data=2 samplers=3
+2026-11-27T02:38:34.060543Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 4d4a2a8c824cceae, pixel 15c34c906ac8b908]
+2026-11-27T02:38:34.061744Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 531722868851e35a, pixel 55e52a40b5d79b20]
+2026-11-27T02:38:34.061774Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 531722868851e35a, pixel 55e52a40b5d79b20]
+2026-11-27T02:38:34.063419Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=ea44aeafa5b7e1aa user_data=1 samplers=0
+2026-11-27T02:38:34.063987Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a885ba5d98ce46bf user_data=2 samplers=3
+2026-11-27T02:38:34.064855Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex ea44aeafa5b7e1aa, pixel a885ba5d98ce46bf]
+2026-11-27T02:38:34.064900Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex ea44aeafa5b7e1aa, pixel a885ba5d98ce46bf]
+2026-11-27T02:38:34.067199Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=39936c25c221af47 user_data=1 samplers=0
+2026-11-27T02:38:34.067852Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=1407289e381df336 user_data=2 samplers=3
+2026-11-27T02:38:34.069377Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 39936c25c221af47, pixel 1407289e381df336]
+2026-11-27T02:38:34.070107Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=5661fc67ffeefd94 user_data=3 samplers=0
+2026-11-27T02:38:34.070356Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=b611cae927f41d36 user_data=2 samplers=1
+2026-11-27T02:38:34.071162Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 5661fc67ffeefd94, pixel b611cae927f41d36]
+2026-11-27T02:38:34.071371Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=f99dde99a70a0c43 user_data=2 samplers=0
+2026-11-27T02:38:34.071511Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=98d64e449af39d03 user_data=2 samplers=0
+2026-11-27T02:38:34.072058Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=81749e9de9a48b7b user_data=3 samplers=0
+2026-11-27T02:38:34.072222Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a09dcf112c9345a7 user_data=2 samplers=0
+2026-11-27T02:38:34.072295Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex f99dde99a70a0c43, pixel 98d64e449af39d03]
+2026-11-27T02:38:34.073025Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 81749e9de9a48b7b, pixel a09dcf112c9345a7]
+2026-11-27T02:38:34.074208Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=b8fc3874094e2b6d user_data=1 samplers=0
+2026-11-27T02:38:34.074333Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=91ab4f26e3c6f348 user_data=1 samplers=0
+2026-11-27T02:38:34.075082Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex b8fc3874094e2b6d, pixel 91ab4f26e3c6f348]
+2026-11-27T02:38:34.079494Z  WARN victory_hle::modules::kernel: a host DLL outside the host policy: refused dll="amd_fidelityfx_upscaler_xbox.dll"
+title dll      amd_fidelityfx_upscaler_xbox.dll at [address removed] (loaded by the title)
+bound          amd_fidelityfx_upscaler_xbox.dll: 7 hle, 79 host, 0 title, 0 missing
+2026-11-27T02:38:34.100879Z  INFO victory_gpu::pipeline: first bind pipeline=[address removed] frame=54 stage="compute" size=12852 hash=cf385ae2ec9eb0e3
+2026-11-27T02:38:34.103867Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=0d1575a396dfe513 user_data=1 samplers=1
+2026-11-27T02:38:34.104530Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 089d6271be6650ef, pixel 0d1575a396dfe513]
+2026-11-27T02:38:34.117049Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=280967ad158cee0b user_data=1 samplers=1
+2026-11-27T02:38:34.117821Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 089d6271be6650ef, pixel 280967ad158cee0b]
+2026-11-27T02:38:34.167376Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=fa455c8a3c32577b user_data=1 samplers=1
+2026-11-27T02:38:34.168487Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 089d6271be6650ef, pixel fa455c8a3c32577b]
+2026-11-27T02:38:34.288198Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh d4111a6e6ea49d91, pixel c0a7fe77b1862e10]
+2026-11-27T02:38:34.308226Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh d4111a6e6ea49d91, pixel c0a7fe77b1862e10]
+2026-11-27T02:38:34.505593Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=2d539d4d776445e4 user_data=1 samplers=0
+2026-11-27T02:38:34.505817Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=088013d3dd53cab2 user_data=2 samplers=1
+2026-11-27T02:38:34.507237Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 2d539d4d776445e4, pixel 088013d3dd53cab2]
+2026-11-27T02:38:34.540731Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=bb17060a3ca7b24d user_data=0 samplers=0
+2026-11-27T02:38:34.541108Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=b084b0f94910ed53 user_data=1 samplers=1
+2026-11-27T02:38:34.541192Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a5a79f925460d149 user_data=1 samplers=1
+2026-11-27T02:38:34.542628Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex bb17060a3ca7b24d, pixel b084b0f94910ed53]
+2026-11-27T02:38:34.542640Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex bb17060a3ca7b24d, pixel a5a79f925460d149]
+2026-11-27T02:38:34.588973Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=7affbd5bbaa830f3 user_data=1 samplers=0
+2026-11-27T02:38:34.589379Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=5970ee6dbc47ec61 user_data=2 samplers=3
+2026-11-27T02:38:34.590385Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 7affbd5bbaa830f3, pixel 5970ee6dbc47ec61]
+2026-11-27T02:38:34.593992Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=5fb767919e60b890 user_data=1 samplers=0
+2026-11-27T02:38:34.594162Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=42ac930cbc57650f user_data=1 samplers=1
+2026-11-27T02:38:34.594877Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 5fb767919e60b890, pixel 42ac930cbc57650f]
+2026-11-27T02:38:34.598771Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=3dfbe36ee169849b user_data=1 samplers=0
+2026-11-27T02:38:34.598943Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=e2074561159aaa87 user_data=1 samplers=1
+2026-11-27T02:38:34.598962Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=0d007b998ee2d8b2 user_data=1 samplers=0
+2026-11-27T02:38:34.599130Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c19a0b6c544d5e78 user_data=1 samplers=1
+2026-11-27T02:38:34.599675Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 3dfbe36ee169849b, pixel e2074561159aaa87]
+2026-11-27T02:38:34.599796Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 0d007b998ee2d8b2, pixel c19a0b6c544d5e78]
+2026-11-27T02:38:34.599854Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=30ee260ef303ac7b user_data=0 samplers=0
+2026-11-27T02:38:34.600038Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=f987c56098b9faff user_data=1 samplers=1
+2026-11-27T02:38:34.601109Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 30ee260ef303ac7b, pixel f987c56098b9faff]
+2026-11-27T02:38:34.601990Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=e732a8b4bea4c0dd user_data=1 samplers=0
+2026-11-27T02:38:34.602158Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=456f02b52910aabc user_data=2 samplers=3
+2026-11-27T02:38:34.602727Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=43d3afaf6e3c1fb3 user_data=0 samplers=0
+2026-11-27T02:38:34.602865Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=f51f7e1be64e6e9e user_data=1 samplers=1
+2026-11-27T02:38:34.603227Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 43d3afaf6e3c1fb3, pixel f51f7e1be64e6e9e]
+2026-11-27T02:38:34.603301Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex e732a8b4bea4c0dd, pixel 456f02b52910aabc]
+2026-11-27T02:38:34.603385Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=497c5fc6019a502a user_data=0 samplers=0
+2026-11-27T02:38:34.603483Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=96c9731667f957ab user_data=0 samplers=0
+2026-11-27T02:38:34.603526Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=914a3a6c07cfc8e3 user_data=1 samplers=1
+2026-11-27T02:38:34.603636Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=6800ca4531a415e8 user_data=1 samplers=1
+2026-11-27T02:38:34.604028Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 497c5fc6019a502a, pixel 914a3a6c07cfc8e3]
+2026-11-27T02:38:34.604082Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 96c9731667f957ab, pixel 6800ca4531a415e8]
+2026-11-27T02:38:34.604181Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=c5310733d58458c8 user_data=0 samplers=0
+2026-11-27T02:38:34.604266Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=2fa687db9a9f04fd user_data=0 samplers=0
+2026-11-27T02:38:34.604342Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=5460ce5f3b925eee user_data=1 samplers=1
+2026-11-27T02:38:34.604473Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=98bd9f9ae5f9c7e3 user_data=1 samplers=1
+2026-11-27T02:38:34.604959Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex c5310733d58458c8, pixel 5460ce5f3b925eee]
+2026-11-27T02:38:34.605129Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 2fa687db9a9f04fd, pixel 98bd9f9ae5f9c7e3]
+2026-11-27T02:38:34.605144Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=60422bd8ecd0ba6f user_data=0 samplers=0
+2026-11-27T02:38:34.605348Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=9ad046a0c386b75d user_data=0 samplers=0
+2026-11-27T02:38:34.605442Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=0ae87df57872cddb user_data=2 samplers=3
+2026-11-27T02:38:34.605534Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a9f81cb27f8acf70 user_data=1 samplers=1
+2026-11-27T02:38:34.605929Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 9ad046a0c386b75d, pixel a9f81cb27f8acf70]
+2026-11-27T02:38:34.606085Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=e3c73deaeb0bd936 user_data=0 samplers=0
+2026-11-27T02:38:34.606235Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 60422bd8ecd0ba6f, pixel 0ae87df57872cddb]
+2026-11-27T02:38:34.606250Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a1f08b8b7d514a39 user_data=2 samplers=1
+2026-11-27T02:38:34.606518Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=fbf743aed16d2bcd user_data=0 samplers=0
+2026-11-27T02:38:34.606826Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=d141233c6ef29641 user_data=1 samplers=1
+2026-11-27T02:38:34.607464Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex e3c73deaeb0bd936, pixel a1f08b8b7d514a39]
+2026-11-27T02:38:34.607789Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex fbf743aed16d2bcd, pixel d141233c6ef29641]
+2026-11-27T02:38:34.610228Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=ec04f2362b9755db user_data=0 samplers=0
+2026-11-27T02:38:34.610442Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=9b75e0fbdd13c3aa user_data=1 samplers=2
+2026-11-27T02:38:34.610584Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=06411d5a37ed0cfa user_data=1 samplers=0
+2026-11-27T02:38:34.610748Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=4273011b11446435 user_data=1 samplers=0
+2026-11-27T02:38:34.611351Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex ec04f2362b9755db, pixel 9b75e0fbdd13c3aa]
+2026-11-27T02:38:34.611656Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 06411d5a37ed0cfa, pixel 4273011b11446435]
+2026-11-27T02:38:35.023671Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=ce57291b5a1750ca user_data=1 samplers=0
+2026-11-27T02:38:35.024137Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=8992ac65c3b6b5eb user_data=0 samplers=0
+2026-11-27T02:38:35.024226Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a467d848ace5810d user_data=0 samplers=0
+2026-11-27T02:38:35.025060Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex ce57291b5a1750ca, pixel a467d848ace5810d]
+2026-11-27T02:38:35.025111Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex ce57291b5a1750ca, pixel 8992ac65c3b6b5eb]
+2026-11-27T02:38:35.025326Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=f9b6e2728e0628b0 user_data=0 samplers=0
+2026-11-27T02:38:35.025397Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=1b86ffadd1d70850 user_data=0 samplers=0
+2026-11-27T02:38:35.025748Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex ce57291b5a1750ca, pixel f9b6e2728e0628b0]
+2026-11-27T02:38:35.025771Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex ce57291b5a1750ca, pixel 1b86ffadd1d70850]
+2026-11-27T02:38:35.025957Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=2a0d503ba0532798 user_data=0 samplers=0
+2026-11-27T02:38:35.026036Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=8919e24c5ce2816a user_data=0 samplers=0
+2026-11-27T02:38:35.026341Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex ce57291b5a1750ca, pixel 2a0d503ba0532798]
+2026-11-27T02:38:35.026558Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex ce57291b5a1750ca, pixel 8919e24c5ce2816a]
+2026-11-27T02:38:35.026603Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=1f908c28f4c7db57 user_data=0 samplers=0
+2026-11-27T02:38:35.026813Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=b774c4cd8f38d36a user_data=1 samplers=0
+2026-11-27T02:38:35.026946Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=282d84fbf51e4675 user_data=0 samplers=0
+2026-11-27T02:38:35.027115Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=e2945217ae6bb2de user_data=0 samplers=0
+2026-11-27T02:38:35.027763Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1f908c28f4c7db57, pixel b774c4cd8f38d36a]
+2026-11-27T02:38:35.027988Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=61035531f438567c user_data=0 samplers=0
+2026-11-27T02:38:35.028198Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=b75f06eeffbba0d3 user_data=1 samplers=1
+2026-11-27T02:38:35.028387Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 282d84fbf51e4675, pixel e2945217ae6bb2de]
+2026-11-27T02:38:35.028673Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=25ebc92075b62822 user_data=4 samplers=0
+2026-11-27T02:38:35.029088Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 61035531f438567c, pixel b75f06eeffbba0d3]
+2026-11-27T02:38:35.029953Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=1cd9bc634417a981 user_data=2 samplers=5
+2026-11-27T02:38:35.030311Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=48e74d16cbfa45e3 user_data=2 samplers=5
+2026-11-27T02:38:35.032085Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 1cd9bc634417a981]
+2026-11-27T02:38:35.032257Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 48e74d16cbfa45e3]
+2026-11-27T02:38:35.032391Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=1d7b30217b395cd8 user_data=4 samplers=0
+2026-11-27T02:38:35.033978Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=d36c1d9b2c71eb0e user_data=2 samplers=5
+2026-11-27T02:38:35.033997Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a2f4056b21115d43 user_data=2 samplers=5
+2026-11-27T02:38:35.035727Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel a2f4056b21115d43]
+2026-11-27T02:38:35.035771Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel d36c1d9b2c71eb0e]
+2026-11-27T02:38:35.036037Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=72c739b61097456d user_data=4 samplers=0
+2026-11-27T02:38:35.037873Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=318677e7a4d285a0 user_data=2 samplers=5
+2026-11-27T02:38:35.038174Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=6118bc6caf96212f user_data=2 samplers=5
+2026-11-27T02:38:35.039691Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 318677e7a4d285a0]
+2026-11-27T02:38:35.040100Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 6118bc6caf96212f]
+2026-11-27T02:38:35.041479Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=d45b2b89640bf050 user_data=2 samplers=5
+2026-11-27T02:38:35.041506Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=64952657564ac80b user_data=2 samplers=5
+2026-11-27T02:38:35.043374Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 64952657564ac80b]
+2026-11-27T02:38:35.043589Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel d45b2b89640bf050]
+2026-11-27T02:38:35.045478Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=f9ee29866711515f user_data=2 samplers=5
+2026-11-27T02:38:35.045615Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=aad45a3abf2dd14e user_data=2 samplers=5
+2026-11-27T02:38:35.047000Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel f9ee29866711515f]
+2026-11-27T02:38:35.047381Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel aad45a3abf2dd14e]
+2026-11-27T02:38:35.048855Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=92b0b849091e5555 user_data=2 samplers=5
+2026-11-27T02:38:35.049059Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=aad19532d7780c6c user_data=2 samplers=5
+2026-11-27T02:38:35.050692Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel aad19532d7780c6c]
+2026-11-27T02:38:35.050771Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 92b0b849091e5555]
+2026-11-27T02:38:35.052084Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=b9bc79bfd0277e66 user_data=2 samplers=5
+2026-11-27T02:38:35.052260Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=e9dc7a3acfe9caae user_data=2 samplers=5
+2026-11-27T02:38:35.053928Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel b9bc79bfd0277e66]
+2026-11-27T02:38:35.054220Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel e9dc7a3acfe9caae]
+2026-11-27T02:38:35.055457Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=ba7e8d0c6d4fe972 user_data=2 samplers=5
+2026-11-27T02:38:35.055837Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=2b4c23611363ca49 user_data=2 samplers=5
+2026-11-27T02:38:35.057426Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 2b4c23611363ca49]
+2026-11-27T02:38:35.057444Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel ba7e8d0c6d4fe972]
+2026-11-27T02:38:35.059423Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=19a0f73f65b212da user_data=2 samplers=5
+2026-11-27T02:38:35.059685Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a243de59b2d011e6 user_data=2 samplers=5
+2026-11-27T02:38:35.061537Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 19a0f73f65b212da]
+2026-11-27T02:38:35.061582Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel a243de59b2d011e6]
+2026-11-27T02:38:35.063407Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=5681f3efec027bb3 user_data=2 samplers=5
+2026-11-27T02:38:35.063545Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c486b5b0998694d8 user_data=2 samplers=5
+2026-11-27T02:38:35.065547Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 5681f3efec027bb3]
+2026-11-27T02:38:35.065587Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel c486b5b0998694d8]
+2026-11-27T02:38:35.067698Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=657fde7e6b7c5022 user_data=2 samplers=5
+2026-11-27T02:38:35.067867Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c8c9598f8c4da0f7 user_data=2 samplers=5
+2026-11-27T02:38:35.069568Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 657fde7e6b7c5022]
+2026-11-27T02:38:35.069587Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel c8c9598f8c4da0f7]
+2026-11-27T02:38:35.071496Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=ea9a83af99e236cf user_data=2 samplers=5
+2026-11-27T02:38:35.071774Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=995ba081f7e2b0cd user_data=2 samplers=5
+2026-11-27T02:38:35.073565Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel ea9a83af99e236cf]
+2026-11-27T02:38:35.073865Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 995ba081f7e2b0cd]
+2026-11-27T02:38:35.075569Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=1b14318ca02eeada user_data=2 samplers=5
+2026-11-27T02:38:35.075570Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=612df2975f0911b8 user_data=2 samplers=5
+2026-11-27T02:38:35.078144Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 612df2975f0911b8]
+2026-11-27T02:38:35.078153Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 1b14318ca02eeada]
+2026-11-27T02:38:35.079925Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=926aa2a378c45939 user_data=2 samplers=5
+2026-11-27T02:38:35.080289Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=9f4fb3cfc4b1ade5 user_data=2 samplers=5
+2026-11-27T02:38:35.081986Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 926aa2a378c45939]
+2026-11-27T02:38:35.082262Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 9f4fb3cfc4b1ade5]
+2026-11-27T02:38:35.083931Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=3e7b4f542f8df12c user_data=2 samplers=5
+2026-11-27T02:38:35.084054Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=300260edd2874f2d user_data=2 samplers=5
+2026-11-27T02:38:35.086752Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 300260edd2874f2d]
+2026-11-27T02:38:35.086752Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 3e7b4f542f8df12c]
+2026-11-27T02:38:35.088591Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=1702071f810bed34 user_data=2 samplers=5
+2026-11-27T02:38:35.088869Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a9a0b814cd938ec0 user_data=2 samplers=5
+2026-11-27T02:38:35.090343Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 1702071f810bed34]
+2026-11-27T02:38:35.090581Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel a9a0b814cd938ec0]
+2026-11-27T02:38:35.092037Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=3be5dacd1837226a user_data=2 samplers=5
+2026-11-27T02:38:35.092081Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=05a8a301c0003780 user_data=2 samplers=5
+2026-11-27T02:38:35.093959Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 3be5dacd1837226a]
+2026-11-27T02:38:35.093954Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 05a8a301c0003780]
+2026-11-27T02:38:35.095822Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=ab5a4fcfd3397eff user_data=2 samplers=5
+2026-11-27T02:38:35.095975Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=0d95a0ceb34fc6f1 user_data=2 samplers=5
+2026-11-27T02:38:35.097817Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel ab5a4fcfd3397eff]
+2026-11-27T02:38:35.097957Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 0d95a0ceb34fc6f1]
+2026-11-27T02:38:35.099210Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a944b2f732760372 user_data=2 samplers=5
+2026-11-27T02:38:35.099494Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=e5a6ec7657990b89 user_data=2 samplers=5
+2026-11-27T02:38:35.100667Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel a944b2f732760372]
+2026-11-27T02:38:35.100936Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel e5a6ec7657990b89]
+2026-11-27T02:38:35.102019Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=6714207ed48b0464 user_data=2 samplers=5
+2026-11-27T02:38:35.102105Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=8be3f98f633e3561 user_data=2 samplers=5
+2026-11-27T02:38:35.103593Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 8be3f98f633e3561]
+2026-11-27T02:38:35.103596Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 6714207ed48b0464]
+2026-11-27T02:38:35.105009Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a526d35fb055216b user_data=2 samplers=5
+2026-11-27T02:38:35.105264Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=6992feba843e3b84 user_data=2 samplers=5
+2026-11-27T02:38:35.107458Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel a526d35fb055216b]
+2026-11-27T02:38:35.107480Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 6992feba843e3b84]
+2026-11-27T02:38:35.109808Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=21e71a8255a23fba user_data=2 samplers=5
+2026-11-27T02:38:35.110128Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=78a7a69c077ecfdc user_data=2 samplers=5
+2026-11-27T02:38:35.112978Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 21e71a8255a23fba]
+2026-11-27T02:38:35.113035Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 78a7a69c077ecfdc]
+2026-11-27T02:38:35.116015Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=04fd420176be05c1 user_data=2 samplers=5
+2026-11-27T02:38:35.116184Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=2891d4c723a11554 user_data=2 samplers=5
+2026-11-27T02:38:35.118348Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 04fd420176be05c1]
+2026-11-27T02:38:35.118387Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 2891d4c723a11554]
+2026-11-27T02:38:35.120312Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=b3cee404a0434d80 user_data=2 samplers=5
+2026-11-27T02:38:35.120656Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=960a7c706257ea0b user_data=2 samplers=5
+2026-11-27T02:38:35.122580Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel b3cee404a0434d80]
+2026-11-27T02:38:35.122787Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 960a7c706257ea0b]
+2026-11-27T02:38:35.124798Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=8dc057ff021fc7f1 user_data=2 samplers=5
+2026-11-27T02:38:35.125159Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a4d6fe2c1450281b user_data=2 samplers=5
+2026-11-27T02:38:35.127118Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 8dc057ff021fc7f1]
+2026-11-27T02:38:35.127746Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel a4d6fe2c1450281b]
+2026-11-27T02:38:35.129695Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c01891759d6c4f2f user_data=2 samplers=5
+2026-11-27T02:38:35.129810Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=fd940a43c740ed46 user_data=2 samplers=5
+2026-11-27T02:38:35.131645Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel c01891759d6c4f2f]
+2026-11-27T02:38:35.131701Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel fd940a43c740ed46]
+2026-11-27T02:38:35.134202Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=05e66d0be49e027a user_data=2 samplers=5
+2026-11-27T02:38:35.134930Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c3b4b08090e25acf user_data=2 samplers=5
+2026-11-27T02:38:35.137037Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 05e66d0be49e027a]
+2026-11-27T02:38:35.137713Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel c3b4b08090e25acf]
+2026-11-27T02:38:35.138646Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=017e20bf5d2a2258 user_data=2 samplers=5
+2026-11-27T02:38:35.138915Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=6779f6d8f122374e user_data=2 samplers=5
+2026-11-27T02:38:35.140500Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 017e20bf5d2a2258]
+2026-11-27T02:38:35.140910Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 6779f6d8f122374e]
+2026-11-27T02:38:35.142960Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=5911a3b7090199fb user_data=2 samplers=5
+2026-11-27T02:38:35.143141Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=d75041520a656dbf user_data=2 samplers=5
+2026-11-27T02:38:35.145244Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 5911a3b7090199fb]
+2026-11-27T02:38:35.145249Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel d75041520a656dbf]
+2026-11-27T02:38:35.146973Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=3e8ad5988701d3f6 user_data=2 samplers=5
+2026-11-27T02:38:35.147257Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=fccd4ff79c0c664d user_data=2 samplers=5
+2026-11-27T02:38:35.148874Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 3e8ad5988701d3f6]
+2026-11-27T02:38:35.148999Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel fccd4ff79c0c664d]
+2026-11-27T02:38:35.150404Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c78c88091754e7c2 user_data=2 samplers=5
+2026-11-27T02:38:35.150591Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=be640574342f9145 user_data=2 samplers=5
+2026-11-27T02:38:35.152580Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel c78c88091754e7c2]
+2026-11-27T02:38:35.152580Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel be640574342f9145]
+2026-11-27T02:38:35.154452Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=9d611ede930e5962 user_data=2 samplers=5
+2026-11-27T02:38:35.154611Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=ebc77e1cefd43d5f user_data=2 samplers=5
+2026-11-27T02:38:35.156691Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel ebc77e1cefd43d5f]
+2026-11-27T02:38:35.156691Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 9d611ede930e5962]
+2026-11-27T02:38:35.158613Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=edb2f543cc59a381 user_data=2 samplers=5
+2026-11-27T02:38:35.158690Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=839a71b2ae1ed3cc user_data=2 samplers=5
+2026-11-27T02:38:35.160541Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 839a71b2ae1ed3cc]
+2026-11-27T02:38:35.160541Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel edb2f543cc59a381]
+2026-11-27T02:38:35.162307Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=47072c7c53d05ebc user_data=2 samplers=5
+2026-11-27T02:38:35.162316Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=98c5128c42d140fe user_data=2 samplers=5
+2026-11-27T02:38:35.164134Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 98c5128c42d140fe]
+2026-11-27T02:38:35.164364Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 47072c7c53d05ebc]
+2026-11-27T02:38:35.165964Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=0ee1af2a410b17d8 user_data=2 samplers=5
+2026-11-27T02:38:35.166032Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a054e7d60e882066 user_data=2 samplers=5
+2026-11-27T02:38:35.168480Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel a054e7d60e882066]
+2026-11-27T02:38:35.168548Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 0ee1af2a410b17d8]
+2026-11-27T02:38:35.170616Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=5c328c66aebf35c2 user_data=2 samplers=5
+2026-11-27T02:38:35.170979Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=15a5b58a3a22df2a user_data=2 samplers=5
+2026-11-27T02:38:35.172919Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 5c328c66aebf35c2]
+2026-11-27T02:38:35.173206Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 15a5b58a3a22df2a]
+2026-11-27T02:38:35.175156Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=2b12548ea9a26733 user_data=2 samplers=5
+2026-11-27T02:38:35.176088Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=823fb4575dcee101 user_data=2 samplers=5
+2026-11-27T02:38:35.177162Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 2b12548ea9a26733]
+2026-11-27T02:38:35.178299Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 823fb4575dcee101]
+2026-11-27T02:38:35.179437Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=fd7e2d86959f135e user_data=2 samplers=5
+2026-11-27T02:38:35.179768Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=23833b143a9df9a1 user_data=2 samplers=5
+2026-11-27T02:38:35.182013Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 23833b143a9df9a1]
+2026-11-27T02:38:35.182132Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel fd7e2d86959f135e]
+2026-11-27T02:38:35.184128Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c9fd5909b862647c user_data=2 samplers=5
+2026-11-27T02:38:35.184568Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=3406fa59069f6845 user_data=2 samplers=5
+2026-11-27T02:38:35.186349Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel c9fd5909b862647c]
+2026-11-27T02:38:35.186814Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 3406fa59069f6845]
+2026-11-27T02:38:35.188204Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=509c6f5687ee4a8a user_data=2 samplers=5
+2026-11-27T02:38:35.188313Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=611b6752059e35b4 user_data=2 samplers=5
+2026-11-27T02:38:35.190231Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 509c6f5687ee4a8a]
+2026-11-27T02:38:35.190377Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 611b6752059e35b4]
+2026-11-27T02:38:35.192439Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=0add77586f25189d user_data=2 samplers=5
+2026-11-27T02:38:35.192524Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=f58238fa543d5ce3 user_data=2 samplers=5
+2026-11-27T02:38:35.194220Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 0add77586f25189d]
+2026-11-27T02:38:35.194347Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel f58238fa543d5ce3]
+2026-11-27T02:38:35.195871Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=56547b837d9925bd user_data=2 samplers=5
+2026-11-27T02:38:35.196003Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=eb4f145a7e0568ee user_data=2 samplers=5
+2026-11-27T02:38:35.197705Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 56547b837d9925bd]
+2026-11-27T02:38:35.197830Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel eb4f145a7e0568ee]
+2026-11-27T02:38:35.199543Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=bd8c9aae0855b150 user_data=2 samplers=5
+2026-11-27T02:38:35.199890Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=801757b6b310456b user_data=2 samplers=5
+2026-11-27T02:38:35.201542Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel bd8c9aae0855b150]
+2026-11-27T02:38:35.202128Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 801757b6b310456b]
+2026-11-27T02:38:35.204034Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c0a91bf2b86b59ba user_data=2 samplers=5
+2026-11-27T02:38:35.204033Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=ecdb5b426197607e user_data=2 samplers=5
+2026-11-27T02:38:35.206775Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel c0a91bf2b86b59ba]
+2026-11-27T02:38:35.206775Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel ecdb5b426197607e]
+2026-11-27T02:38:35.210262Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=652059bbff01b947 user_data=2 samplers=5
+2026-11-27T02:38:35.210601Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=56f461b68c70d514 user_data=2 samplers=5
+2026-11-27T02:38:35.213396Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 652059bbff01b947]
+2026-11-27T02:38:35.213446Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 56f461b68c70d514]
+2026-11-27T02:38:35.215333Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=92ef2381790a1276 user_data=2 samplers=5
+2026-11-27T02:38:35.215635Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=b83c0eb36755cd84 user_data=2 samplers=5
+2026-11-27T02:38:35.217505Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 92ef2381790a1276]
+2026-11-27T02:38:35.218009Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel b83c0eb36755cd84]
+2026-11-27T02:38:35.219971Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=71fd409891c40b7a user_data=2 samplers=5
+2026-11-27T02:38:35.220623Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=80879448645a5770 user_data=2 samplers=5
+2026-11-27T02:38:35.222938Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 71fd409891c40b7a]
+2026-11-27T02:38:35.223564Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 80879448645a5770]
+2026-11-27T02:38:35.226218Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=9ea0bbe23e1d1aad user_data=2 samplers=5
+2026-11-27T02:38:35.226406Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=28c70aed49666625 user_data=2 samplers=5
+2026-11-27T02:38:35.229404Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 9ea0bbe23e1d1aad]
+2026-11-27T02:38:35.229405Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 28c70aed49666625]
+2026-11-27T02:38:35.231336Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=4208aa08680e120d user_data=2 samplers=5
+2026-11-27T02:38:35.231465Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=f7856b17a664eb79 user_data=2 samplers=5
+2026-11-27T02:38:35.233826Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 4208aa08680e120d]
+2026-11-27T02:38:35.233973Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel f7856b17a664eb79]
+2026-11-27T02:38:35.236094Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=78f880b15bdf527c user_data=2 samplers=5
+2026-11-27T02:38:35.236449Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=20ff9e83842556e7 user_data=2 samplers=5
+2026-11-27T02:38:35.238866Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 20ff9e83842556e7]
+2026-11-27T02:38:35.238866Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 78f880b15bdf527c]
+2026-11-27T02:38:35.241199Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=af2eb4e9bca12fb6 user_data=2 samplers=5
+2026-11-27T02:38:35.241850Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c268a62e75a6e6cd user_data=2 samplers=5
+2026-11-27T02:38:35.244108Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel af2eb4e9bca12fb6]
+2026-11-27T02:38:35.244796Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel c268a62e75a6e6cd]
+2026-11-27T02:38:35.247454Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=7b53bfb908e600dc user_data=2 samplers=5
+2026-11-27T02:38:35.247884Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=b2b24814c181f319 user_data=2 samplers=5
+2026-11-27T02:38:35.249832Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 7b53bfb908e600dc]
+2026-11-27T02:38:35.250445Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel b2b24814c181f319]
+2026-11-27T02:38:35.252924Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=5c0525c0cfb49a4c user_data=2 samplers=5
+2026-11-27T02:38:35.253241Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=bc2a04b36a530fb6 user_data=2 samplers=5
+2026-11-27T02:38:35.256054Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel bc2a04b36a530fb6]
+2026-11-27T02:38:35.256075Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 5c0525c0cfb49a4c]
+2026-11-27T02:38:35.259290Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=d1bab293b9855d7a user_data=2 samplers=5
+2026-11-27T02:38:35.260306Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=8efefcb585ea794b user_data=2 samplers=5
+2026-11-27T02:38:35.262426Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel d1bab293b9855d7a]
+2026-11-27T02:38:35.263630Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 8efefcb585ea794b]
+2026-11-27T02:38:35.264594Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=eb85ee57dc64978f user_data=2 samplers=5
+2026-11-27T02:38:35.265277Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=e719b4c6e4da60b5 user_data=2 samplers=5
+2026-11-27T02:38:35.267600Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel e719b4c6e4da60b5]
+2026-11-27T02:38:35.267949Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel eb85ee57dc64978f]
+2026-11-27T02:38:35.270077Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=9c51ec9ad7c1e018 user_data=2 samplers=5
+2026-11-27T02:38:35.270421Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=0296ce709dc01870 user_data=2 samplers=5
+2026-11-27T02:38:35.273121Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 0296ce709dc01870]
+2026-11-27T02:38:35.273121Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 9c51ec9ad7c1e018]
+2026-11-27T02:38:35.275927Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=5af770c45604f8ce user_data=2 samplers=5
+2026-11-27T02:38:35.276569Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=e3c5c6e1a15f4cd2 user_data=2 samplers=5
+2026-11-27T02:38:35.279370Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 5af770c45604f8ce]
+2026-11-27T02:38:35.279362Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel e3c5c6e1a15f4cd2]
+2026-11-27T02:38:35.282154Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=5a53c4e2b9144bea user_data=2 samplers=5
+2026-11-27T02:38:35.282202Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=677ea27c05f1a634 user_data=2 samplers=5
+2026-11-27T02:38:35.284880Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 5a53c4e2b9144bea]
+2026-11-27T02:38:35.284880Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 677ea27c05f1a634]
+2026-11-27T02:38:35.287296Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=1dfc591be994933e user_data=2 samplers=5
+2026-11-27T02:38:35.287624Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a9dca1630af9a7e2 user_data=2 samplers=5
+2026-11-27T02:38:35.289911Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 1dfc591be994933e]
+2026-11-27T02:38:35.290013Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel a9dca1630af9a7e2]
+2026-11-27T02:38:35.292377Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c54460b5beb4c89e user_data=2 samplers=5
+2026-11-27T02:38:35.292666Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=bb126ca8a9cffa15 user_data=2 samplers=5
+2026-11-27T02:38:35.295463Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel c54460b5beb4c89e]
+2026-11-27T02:38:35.295585Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel bb126ca8a9cffa15]
+2026-11-27T02:38:35.297399Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=9ae1a9dbf3fb93b7 user_data=2 samplers=5
+2026-11-27T02:38:35.297868Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=95088e9dd85295fd user_data=2 samplers=5
+2026-11-27T02:38:35.299843Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 9ae1a9dbf3fb93b7]
+2026-11-27T02:38:35.300261Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 95088e9dd85295fd]
+2026-11-27T02:38:35.302625Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=e96f7139032f8f5d user_data=2 samplers=5
+2026-11-27T02:38:35.302711Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=40bb538794d42890 user_data=2 samplers=5
+2026-11-27T02:38:35.305806Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 40bb538794d42890]
+2026-11-27T02:38:35.305807Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel e96f7139032f8f5d]
+2026-11-27T02:38:35.308545Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=bf18e2718c0d440e user_data=2 samplers=5
+2026-11-27T02:38:35.308858Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=7359cd38fb6f4e5f user_data=2 samplers=5
+2026-11-27T02:38:35.311616Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel bf18e2718c0d440e]
+2026-11-27T02:38:35.311691Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 7359cd38fb6f4e5f]
+2026-11-27T02:38:35.313926Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=4f09104daf5ba5ca user_data=2 samplers=5
+2026-11-27T02:38:35.314394Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c18de7d104e56b65 user_data=2 samplers=5
+2026-11-27T02:38:35.318407Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 4f09104daf5ba5ca]
+2026-11-27T02:38:35.318420Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel c18de7d104e56b65]
+2026-11-27T02:38:35.321096Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a9e081652a1aef19 user_data=2 samplers=5
+2026-11-27T02:38:35.321153Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=7f1732ffa6159eb1 user_data=2 samplers=5
+2026-11-27T02:38:35.324419Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 7f1732ffa6159eb1]
+2026-11-27T02:38:35.324540Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel a9e081652a1aef19]
+2026-11-27T02:38:35.327231Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=5d6f22410f5949b7 user_data=2 samplers=5
+2026-11-27T02:38:35.327865Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=de68993bba6ad983 user_data=2 samplers=5
+2026-11-27T02:38:35.330821Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 5d6f22410f5949b7]
+2026-11-27T02:38:35.330903Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel de68993bba6ad983]
+2026-11-27T02:38:35.333502Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=54d209e7e321ba05 user_data=2 samplers=5
+2026-11-27T02:38:35.333822Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=f51f10b884794568 user_data=2 samplers=5
+2026-11-27T02:38:35.336187Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 54d209e7e321ba05]
+2026-11-27T02:38:35.336563Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel f51f10b884794568]
+2026-11-27T02:38:35.339239Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=dc17f8b88d0e48a4 user_data=2 samplers=5
+2026-11-27T02:38:35.339270Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=e6f7b6d9e22cd324 user_data=2 samplers=5
+2026-11-27T02:38:35.342514Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel e6f7b6d9e22cd324]
+2026-11-27T02:38:35.342555Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel dc17f8b88d0e48a4]
+2026-11-27T02:38:35.345824Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=1fa497691eb7c266 user_data=2 samplers=5
+2026-11-27T02:38:35.346327Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=1cfc0a2558857e87 user_data=2 samplers=5
+2026-11-27T02:38:35.349247Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 1fa497691eb7c266]
+2026-11-27T02:38:35.349497Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 1cfc0a2558857e87]
+2026-11-27T02:38:35.352007Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=2c8d50980febb198 user_data=2 samplers=5
+2026-11-27T02:38:35.352007Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=785ec243988600c6 user_data=2 samplers=5
+2026-11-27T02:38:35.355025Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 785ec243988600c6]
+2026-11-27T02:38:35.355026Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 2c8d50980febb198]
+2026-11-27T02:38:35.357454Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=84b8a5a6f75d51ab user_data=2 samplers=5
+2026-11-27T02:38:35.357695Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=112608299bba6140 user_data=2 samplers=5
+2026-11-27T02:38:35.360449Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 84b8a5a6f75d51ab]
+2026-11-27T02:38:35.360461Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 112608299bba6140]
+2026-11-27T02:38:35.362830Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a85222eff5bb9244 user_data=2 samplers=5
+2026-11-27T02:38:35.362855Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c37f4bac82b9a6a2 user_data=2 samplers=5
+2026-11-27T02:38:35.365285Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel c37f4bac82b9a6a2]
+2026-11-27T02:38:35.365286Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel a85222eff5bb9244]
+2026-11-27T02:38:35.367114Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=2df9f97cd6586068 user_data=2 samplers=5
+2026-11-27T02:38:35.367282Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=ebe3cfbb7f589b5a user_data=2 samplers=5
+2026-11-27T02:38:35.369454Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel ebe3cfbb7f589b5a]
+2026-11-27T02:38:35.369454Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 2df9f97cd6586068]
+2026-11-27T02:38:35.371465Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=76c4122122312996 user_data=2 samplers=5
+2026-11-27T02:38:35.371664Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=19fa793c58887164 user_data=2 samplers=5
+2026-11-27T02:38:35.374278Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 76c4122122312996]
+2026-11-27T02:38:35.374278Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 19fa793c58887164]
+2026-11-27T02:38:35.376897Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=0d17116cce6cd5e3 user_data=2 samplers=5
+2026-11-27T02:38:35.377367Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=dbbaadd28af3826d user_data=2 samplers=5
+2026-11-27T02:38:35.380563Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 0d17116cce6cd5e3]
+2026-11-27T02:38:35.380592Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel dbbaadd28af3826d]
+2026-11-27T02:38:35.382664Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=81e89c94c362212c user_data=2 samplers=5
+2026-11-27T02:38:35.383059Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=68f05ab862676b0d user_data=2 samplers=5
+2026-11-27T02:38:35.385168Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 81e89c94c362212c]
+2026-11-27T02:38:35.385214Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 68f05ab862676b0d]
+2026-11-27T02:38:35.387565Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=91c9a0113a71a427 user_data=2 samplers=5
+2026-11-27T02:38:35.387848Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=252d7d1918382b30 user_data=2 samplers=5
+2026-11-27T02:38:35.390797Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 91c9a0113a71a427]
+2026-11-27T02:38:35.390797Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 252d7d1918382b30]
+2026-11-27T02:38:35.393367Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=e976a8bdc0d7f6a6 user_data=2 samplers=5
+2026-11-27T02:38:35.393730Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=911d7fc4b8c8a0f2 user_data=2 samplers=5
+2026-11-27T02:38:35.396796Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 911d7fc4b8c8a0f2]
+2026-11-27T02:38:35.396796Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel e976a8bdc0d7f6a6]
+2026-11-27T02:38:35.399116Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=7e39ed4b99383eeb user_data=2 samplers=5
+2026-11-27T02:38:35.399618Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=60aa3af524b8e3d4 user_data=2 samplers=5
+2026-11-27T02:38:35.401948Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 60aa3af524b8e3d4]
+2026-11-27T02:38:35.401948Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 7e39ed4b99383eeb]
+2026-11-27T02:38:35.404207Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=6f6b8d4baad18e0c user_data=2 samplers=5
+2026-11-27T02:38:35.405142Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=ae6cafce2e785964 user_data=2 samplers=5
+2026-11-27T02:38:35.407380Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 6f6b8d4baad18e0c]
+2026-11-27T02:38:35.408071Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel ae6cafce2e785964]
+2026-11-27T02:38:35.411834Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=fd9018fe65219125 user_data=2 samplers=5
+2026-11-27T02:38:35.412916Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=2374acfc10e2856d user_data=2 samplers=5
+2026-11-27T02:38:35.416017Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel fd9018fe65219125]
+2026-11-27T02:38:35.416527Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 2374acfc10e2856d]
+2026-11-27T02:38:35.418663Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=8e7bd6d0b2ecdc6f user_data=2 samplers=5
+2026-11-27T02:38:35.419015Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a36c8b6617d1f517 user_data=2 samplers=5
+2026-11-27T02:38:35.421050Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 8e7bd6d0b2ecdc6f]
+2026-11-27T02:38:35.421236Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel a36c8b6617d1f517]
+2026-11-27T02:38:35.423865Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c27a93c925d7e8ae user_data=2 samplers=5
+2026-11-27T02:38:35.424512Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=49e779574d6106dd user_data=2 samplers=5
+2026-11-27T02:38:35.426805Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel c27a93c925d7e8ae]
+2026-11-27T02:38:35.427546Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 49e779574d6106dd]
+2026-11-27T02:38:35.430102Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=ea322c5300aa2796 user_data=2 samplers=5
+2026-11-27T02:38:35.430154Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=2e51149d58cc6777 user_data=2 samplers=5
+2026-11-27T02:38:35.433408Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 2e51149d58cc6777]
+2026-11-27T02:38:35.433426Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel ea322c5300aa2796]
+2026-11-27T02:38:35.435482Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=cfa481f13ee33032 user_data=2 samplers=5
+2026-11-27T02:38:35.435623Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=0e44bcc54eaebe5f user_data=2 samplers=5
+2026-11-27T02:38:35.437756Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel cfa481f13ee33032]
+2026-11-27T02:38:35.437797Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 0e44bcc54eaebe5f]
+2026-11-27T02:38:35.439878Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=5257b845b0f23ebc user_data=2 samplers=5
+2026-11-27T02:38:35.440003Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=0aabf9978d6c1976 user_data=2 samplers=5
+2026-11-27T02:38:35.442722Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 5257b845b0f23ebc]
+2026-11-27T02:38:35.443107Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 0aabf9978d6c1976]
+2026-11-27T02:38:35.445110Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=70f21bca39f8ad66 user_data=2 samplers=5
+2026-11-27T02:38:35.445532Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=cf56badd6a32cc9d user_data=2 samplers=5
+2026-11-27T02:38:35.448088Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 70f21bca39f8ad66]
+2026-11-27T02:38:35.448088Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel cf56badd6a32cc9d]
+2026-11-27T02:38:35.450125Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=e3bcc5316b65b7b0 user_data=2 samplers=5
+2026-11-27T02:38:35.450272Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=01999631eaafe981 user_data=2 samplers=5
+2026-11-27T02:38:35.452421Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel e3bcc5316b65b7b0]
+2026-11-27T02:38:35.452433Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 25ebc92075b62822, pixel 01999631eaafe981]
+2026-11-27T02:38:35.454433Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=7fb750dd116507fe user_data=2 samplers=5
+2026-11-27T02:38:35.455011Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=2c062bc42807dc97 user_data=2 samplers=5
+2026-11-27T02:38:35.457172Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 7fb750dd116507fe]
+2026-11-27T02:38:35.457977Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d7b30217b395cd8, pixel 2c062bc42807dc97]
+2026-11-27T02:38:35.459927Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=60b227610d3c32bc user_data=2 samplers=5
+2026-11-27T02:38:35.459936Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a836ba3bd6a5b237 user_data=2 samplers=5
+2026-11-27T02:38:35.462697Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel 60b227610d3c32bc]
+2026-11-27T02:38:35.462697Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 72c739b61097456d, pixel a836ba3bd6a5b237]
+2026-11-27T02:38:35.463452Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=445209c4ba12b9b4 user_data=2 samplers=0
+2026-11-27T02:38:35.463452Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=a67d0bcde30cead3 user_data=2 samplers=0
+2026-11-27T02:38:35.466060Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=5ad3a82b1c3cc63a user_data=2 samplers=0
+2026-11-27T02:38:35.469087Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 445209c4ba12b9b4, pixel 5ad3a82b1c3cc63a]
+2026-11-27T02:38:35.469087Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex a67d0bcde30cead3, pixel 5ad3a82b1c3cc63a]
+2026-11-27T02:38:35.469722Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=7f4b62129572a14d user_data=2 samplers=0
+2026-11-27T02:38:35.469728Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=1d2c970773ce2183 user_data=4 samplers=0
+2026-11-27T02:38:35.470466Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=e070816c3b889df0 user_data=2 samplers=1
+2026-11-27T02:38:35.470913Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 7f4b62129572a14d, pixel 5ad3a82b1c3cc63a]
+2026-11-27T02:38:35.471417Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=167501e87c356551 user_data=2 samplers=0
+2026-11-27T02:38:35.471657Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=9727fc3c51b2f11c user_data=2 samplers=0
+2026-11-27T02:38:35.473326Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1d2c970773ce2183, pixel e070816c3b889df0]
+2026-11-27T02:38:35.473582Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 167501e87c356551, pixel 9727fc3c51b2f11c]
+2026-11-27T02:38:35.473929Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=30ff0068faa0329b user_data=2 samplers=0
+2026-11-27T02:38:35.473936Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=a200eee5c17e3d39 user_data=2 samplers=0
+2026-11-27T02:38:35.474654Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=58ec3b27a79f7cd1 user_data=2 samplers=3
+2026-11-27T02:38:35.474705Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=bd768869e6a9bbb9 user_data=2 samplers=7
+2026-11-27T02:38:35.477683Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 30ff0068faa0329b, pixel bd768869e6a9bbb9]
+2026-11-27T02:38:35.477803Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex a200eee5c17e3d39, pixel 58ec3b27a79f7cd1]
+2026-11-27T02:38:35.478531Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=58eff6a8780dd898 user_data=2 samplers=0
+2026-11-27T02:38:35.478560Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=11ecd5ec8032a477 user_data=2 samplers=0
+2026-11-27T02:38:35.479304Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=fb3bd6f6259b7335 user_data=2 samplers=3
+2026-11-27T02:38:35.480077Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=6c21bcbcc3416dce user_data=2 samplers=7
+2026-11-27T02:38:35.482482Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 58eff6a8780dd898, pixel fb3bd6f6259b7335]
+2026-11-27T02:38:35.483064Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=9ec97fba31754284 user_data=2 samplers=0
+2026-11-27T02:38:35.483088Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 11ecd5ec8032a477, pixel 6c21bcbcc3416dce]
+2026-11-27T02:38:35.483459Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=221ceb385ecf49e4 user_data=2 samplers=0
+2026-11-27T02:38:35.483977Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=9507e549b138f78a user_data=2 samplers=7
+2026-11-27T02:38:35.484744Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=285bc1521b85c013 user_data=2 samplers=5
+2026-11-27T02:38:35.487431Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 9ec97fba31754284, pixel 9507e549b138f78a]
+2026-11-27T02:38:35.487743Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 221ceb385ecf49e4, pixel 285bc1521b85c013]
+2026-11-27T02:38:35.488090Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=2298b7d0500f8f34 user_data=2 samplers=0
+2026-11-27T02:38:35.488246Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=13951cc8ec15e217 user_data=2 samplers=0
+2026-11-27T02:38:35.488903Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=7b1b6399c06a004c user_data=2 samplers=2
+2026-11-27T02:38:35.489319Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=1f8ed9edbc018811 user_data=2 samplers=7
+2026-11-27T02:38:35.491733Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 2298b7d0500f8f34, pixel 1f8ed9edbc018811]
+2026-11-27T02:38:35.491970Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 13951cc8ec15e217, pixel 7b1b6399c06a004c]
+2026-11-27T02:38:35.492399Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=ff70d542d6ee59e1 user_data=2 samplers=0
+2026-11-27T02:38:35.492399Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=9e35c87f4456a2ab user_data=2 samplers=0
+2026-11-27T02:38:35.493146Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=b975c1ecdcf3c65d user_data=2 samplers=3
+2026-11-27T02:38:35.493219Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=75165dea28997f64 user_data=2 samplers=7
+2026-11-27T02:38:35.495342Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex ff70d542d6ee59e1, pixel 75165dea28997f64]
+2026-11-27T02:38:35.495342Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 9e35c87f4456a2ab, pixel b975c1ecdcf3c65d]
+2026-11-27T02:38:35.495967Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=f899698165512557 user_data=2 samplers=0
+2026-11-27T02:38:35.495967Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=cfe7d71f3e71f78b user_data=2 samplers=0
+2026-11-27T02:38:35.496725Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=b233957cd1edb253 user_data=2 samplers=3
+2026-11-27T02:38:35.497360Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=979be1a39ef9a780 user_data=2 samplers=7
+2026-11-27T02:38:35.499294Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex cfe7d71f3e71f78b, pixel b233957cd1edb253]
+2026-11-27T02:38:35.499566Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex f899698165512557, pixel 979be1a39ef9a780]
+2026-11-27T02:38:35.500078Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=97f6602ef92f466d user_data=2 samplers=0
+2026-11-27T02:38:35.500078Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=9a7847a47dcd9851 user_data=2 samplers=0
+2026-11-27T02:38:35.501184Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=1d19dead161179e0 user_data=2 samplers=7
+2026-11-27T02:38:35.501423Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=9306efcde433d852 user_data=2 samplers=5
+2026-11-27T02:38:35.504418Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 9a7847a47dcd9851, pixel 1d19dead161179e0]
+2026-11-27T02:38:35.504821Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 97f6602ef92f466d, pixel 9306efcde433d852]
+2026-11-27T02:38:35.505351Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=158d6b25888affae user_data=2 samplers=0
+2026-11-27T02:38:35.505351Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=e7aa1aa62089c50b user_data=2 samplers=0
+2026-11-27T02:38:35.506234Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=7169adfee3fc41d9 user_data=2 samplers=2
+2026-11-27T02:38:35.507165Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=45d9fb41a3f091ad user_data=2 samplers=7
+2026-11-27T02:38:35.509201Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex e7aa1aa62089c50b, pixel 7169adfee3fc41d9]
+2026-11-27T02:38:35.509922Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=eeb9f36a6926cc69 user_data=2 samplers=0
+2026-11-27T02:38:35.510425Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 158d6b25888affae, pixel 45d9fb41a3f091ad]
+2026-11-27T02:38:35.510826Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=2abade932d4f9953 user_data=2 samplers=0
+2026-11-27T02:38:35.511045Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=f5631d02141ccf4a user_data=2 samplers=7
+2026-11-27T02:38:35.511558Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=30f1b267c50d8bd4 user_data=2 samplers=3
+2026-11-27T02:38:35.513676Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex eeb9f36a6926cc69, pixel f5631d02141ccf4a]
+2026-11-27T02:38:35.514361Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=46d1d66992281493 user_data=2 samplers=0
+2026-11-27T02:38:35.515348Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=487e8257a4b63d38 user_data=2 samplers=3
+2026-11-27T02:38:35.515908Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 2abade932d4f9953, pixel 30f1b267c50d8bd4]
+2026-11-27T02:38:35.516397Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=f4c8f6469ba0327d user_data=2 samplers=0
+2026-11-27T02:38:35.517408Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 46d1d66992281493, pixel 487e8257a4b63d38]
+2026-11-27T02:38:35.517855Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=36682d857e338fed user_data=2 samplers=0
+2026-11-27T02:38:35.517972Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=32dafebdbfabac96 user_data=2 samplers=7
+2026-11-27T02:38:35.518859Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=2c42f1061b991556 user_data=2 samplers=7
+2026-11-27T02:38:35.520594Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex f4c8f6469ba0327d, pixel 32dafebdbfabac96]
+2026-11-27T02:38:35.520785Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 36682d857e338fed, pixel 2c42f1061b991556]
+2026-11-27T02:38:35.521210Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=410bf89a9d22f138 user_data=2 samplers=0
+2026-11-27T02:38:35.521211Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=b16218e640eac9a4 user_data=2 samplers=0
+2026-11-27T02:38:35.522585Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=9d3ad0dc3fc2036b user_data=2 samplers=5
+2026-11-27T02:38:35.522792Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=b9e4d3aab6a1b39c user_data=2 samplers=7
+2026-11-27T02:38:35.525279Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex b16218e640eac9a4, pixel 9d3ad0dc3fc2036b]
+2026-11-27T02:38:35.525740Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 410bf89a9d22f138, pixel b9e4d3aab6a1b39c]
+2026-11-27T02:38:35.525963Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=5e5c8ce813945092 user_data=2 samplers=0
+2026-11-27T02:38:35.526243Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=9d77d927e3e62e70 user_data=2 samplers=0
+2026-11-27T02:38:35.526628Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=e252001940259890 user_data=2 samplers=2
+2026-11-27T02:38:35.527070Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=268d3bd5a97bc55a user_data=2 samplers=7
+2026-11-27T02:38:35.528460Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 5e5c8ce813945092, pixel e252001940259890]
+2026-11-27T02:38:35.528974Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=806c036ec0b35243 user_data=2 samplers=0
+2026-11-27T02:38:35.529364Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 9d77d927e3e62e70, pixel 268d3bd5a97bc55a]
+2026-11-27T02:38:35.529632Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=49d848b3cdcea5b8 user_data=2 samplers=3
+2026-11-27T02:38:35.529729Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=ce21e8e9e28ab665 user_data=2 samplers=0
+2026-11-27T02:38:35.530498Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=d6e7374ea9503c78 user_data=2 samplers=3
+2026-11-27T02:38:35.532113Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 806c036ec0b35243, pixel 49d848b3cdcea5b8]
+2026-11-27T02:38:35.532469Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex ce21e8e9e28ab665, pixel d6e7374ea9503c78]
+2026-11-27T02:38:35.532651Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=e82f519cb6c7087e user_data=2 samplers=0
+2026-11-27T02:38:35.532887Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=39a45bb8ad09e8d8 user_data=2 samplers=0
+2026-11-27T02:38:35.533920Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=4c3f209401b1c561 user_data=2 samplers=7
+2026-11-27T02:38:35.534099Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=5d31abc11729b4b8 user_data=2 samplers=7
+2026-11-27T02:38:35.536235Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 39a45bb8ad09e8d8, pixel 4c3f209401b1c561]
+2026-11-27T02:38:35.536399Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex e82f519cb6c7087e, pixel 5d31abc11729b4b8]
+2026-11-27T02:38:35.536803Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=8109516ad7f33d9a user_data=2 samplers=0
+2026-11-27T02:38:35.536815Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=afa451a901c0aa53 user_data=2 samplers=0
+2026-11-27T02:38:35.538349Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=675df4a4ce931e8e user_data=2 samplers=5
+2026-11-27T02:38:35.538431Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=b00e9c5ddc9b19f6 user_data=2 samplers=7
+2026-11-27T02:38:35.541269Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 8109516ad7f33d9a, pixel 675df4a4ce931e8e]
+2026-11-27T02:38:35.541378Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex afa451a901c0aa53, pixel b00e9c5ddc9b19f6]
+2026-11-27T02:38:35.542038Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=82461328423747a6 user_data=2 samplers=0
+2026-11-27T02:38:35.542038Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=9620766a11d3bc13 user_data=2 samplers=0
+2026-11-27T02:38:35.542617Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=9e67b86ced357358 user_data=2 samplers=2
+2026-11-27T02:38:35.543133Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=79ee054eed4ef0f2 user_data=2 samplers=7
+2026-11-27T02:38:35.545145Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 82461328423747a6, pixel 9e67b86ced357358]
+2026-11-27T02:38:35.545393Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 9620766a11d3bc13, pixel 79ee054eed4ef0f2]
+2026-11-27T02:38:35.545841Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=c6a7e6643a363179 user_data=2 samplers=0
+2026-11-27T02:38:35.545840Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=6c0acd36608ada2a user_data=2 samplers=0
+2026-11-27T02:38:35.546523Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=f24c19b193042d14 user_data=2 samplers=3
+2026-11-27T02:38:35.546625Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=38668962b61c8464 user_data=2 samplers=3
+2026-11-27T02:38:35.548933Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 6c0acd36608ada2a, pixel f24c19b193042d14]
+2026-11-27T02:38:35.548933Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex c6a7e6643a363179, pixel 38668962b61c8464]
+2026-11-27T02:38:35.549686Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=0c8470754c5d4e44 user_data=2 samplers=0
+2026-11-27T02:38:35.549685Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=a2907e24f58f7484 user_data=2 samplers=0
+2026-11-27T02:38:35.550962Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a03a5b004229d736 user_data=2 samplers=7
+2026-11-27T02:38:35.551585Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=dd44029cb5188179 user_data=2 samplers=7
+2026-11-27T02:38:35.553845Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 0c8470754c5d4e44, pixel a03a5b004229d736]
+2026-11-27T02:38:35.554121Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex a2907e24f58f7484, pixel dd44029cb5188179]
+2026-11-27T02:38:35.554517Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=b85b3c5df8e6d99f user_data=2 samplers=0
+2026-11-27T02:38:35.554517Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=0cb180e8e0a447f0 user_data=2 samplers=0
+2026-11-27T02:38:35.556139Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=4a35fea1d37ae3f3 user_data=2 samplers=5
+2026-11-27T02:38:35.556533Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=7e790dc9978e728b user_data=2 samplers=7
+2026-11-27T02:38:35.559215Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 0cb180e8e0a447f0, pixel 4a35fea1d37ae3f3]
+2026-11-27T02:38:35.559323Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex b85b3c5df8e6d99f, pixel 7e790dc9978e728b]
+2026-11-27T02:38:35.559920Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=503485199c42e6d1 user_data=2 samplers=0
+2026-11-27T02:38:35.559920Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=78e920c1ec40a35d user_data=2 samplers=0
+2026-11-27T02:38:35.561166Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=0e672d60a143115e user_data=2 samplers=2
+2026-11-27T02:38:35.561420Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=b7eb97debe7f232f user_data=2 samplers=7
+2026-11-27T02:38:35.563727Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 503485199c42e6d1, pixel b7eb97debe7f232f]
+2026-11-27T02:38:35.563748Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 78e920c1ec40a35d, pixel 0e672d60a143115e]
+2026-11-27T02:38:35.564349Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=065dde37ff897943 user_data=2 samplers=0
+2026-11-27T02:38:35.564349Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=35ae5ac539b11bdb user_data=2 samplers=0
+2026-11-27T02:38:35.565716Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=6834678399038256 user_data=2 samplers=3
+2026-11-27T02:38:35.565936Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=ab3e927611ba3404 user_data=2 samplers=3
+2026-11-27T02:38:35.568248Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 065dde37ff897943, pixel 6834678399038256]
+2026-11-27T02:38:35.568311Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 35ae5ac539b11bdb, pixel ab3e927611ba3404]
+2026-11-27T02:38:35.568874Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=228f9647f5fd577c user_data=2 samplers=0
+2026-11-27T02:38:35.568874Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=43aea6111ec27d05 user_data=2 samplers=0
+2026-11-27T02:38:35.570307Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=edef484af6e06ecd user_data=2 samplers=7
+2026-11-27T02:38:35.570781Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=51b6604981878b6e user_data=2 samplers=7
+2026-11-27T02:38:35.573072Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 43aea6111ec27d05, pixel edef484af6e06ecd]
+2026-11-27T02:38:35.573423Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 228f9647f5fd577c, pixel 51b6604981878b6e]
+2026-11-27T02:38:35.573820Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=1836ba8ea00c0b69 user_data=2 samplers=0
+2026-11-27T02:38:35.573821Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=fb9d4f23bdffa23f user_data=2 samplers=0
+2026-11-27T02:38:35.576047Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=6d6a19b6639092bc user_data=2 samplers=5
+2026-11-27T02:38:35.576454Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=276095b0008866b5 user_data=2 samplers=7
+2026-11-27T02:38:35.579433Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex fb9d4f23bdffa23f, pixel 6d6a19b6639092bc]
+2026-11-27T02:38:35.579709Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 1836ba8ea00c0b69, pixel 276095b0008866b5]
+2026-11-27T02:38:35.580269Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=7046d635e0a3ea4b user_data=2 samplers=0
+2026-11-27T02:38:35.580266Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=2b9a4af6f62ae3f1 user_data=2 samplers=0
+2026-11-27T02:38:35.581389Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=d68a4de7a38b1f18 user_data=2 samplers=2
+2026-11-27T02:38:35.581563Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=37849edc52ccf0e0 user_data=2 samplers=7
+2026-11-27T02:38:35.582767Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 2b9a4af6f62ae3f1, pixel d68a4de7a38b1f18]
+2026-11-27T02:38:35.583144Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=b481338feee8954a user_data=2 samplers=0
+2026-11-27T02:38:35.583557Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 7046d635e0a3ea4b, pixel 37849edc52ccf0e0]
+2026-11-27T02:38:35.583757Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=9a02bbc59f5c1b40 user_data=2 samplers=3
+2026-11-27T02:38:35.583868Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=cf2f573a3220ea3d user_data=2 samplers=0
+2026-11-27T02:38:35.584706Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=497486736840023e user_data=2 samplers=3
+2026-11-27T02:38:35.585704Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex b481338feee8954a, pixel 9a02bbc59f5c1b40]
+2026-11-27T02:38:35.586214Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=cadace78b8d98aa8 user_data=2 samplers=0
+2026-11-27T02:38:35.586850Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex cf2f573a3220ea3d, pixel 497486736840023e]
+2026-11-27T02:38:35.587206Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=11e89ff07bfb74f9 user_data=2 samplers=0
+2026-11-27T02:38:35.588077Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=09872d838262a1b2 user_data=2 samplers=7
+2026-11-27T02:38:35.588340Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=cd494288f1a8e1c0 user_data=2 samplers=7
+2026-11-27T02:38:35.590689Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 11e89ff07bfb74f9, pixel cd494288f1a8e1c0]
+2026-11-27T02:38:35.590745Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex cadace78b8d98aa8, pixel 09872d838262a1b2]
+2026-11-27T02:38:35.591388Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=c8957d6f842a487b user_data=2 samplers=0
+2026-11-27T02:38:35.591388Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=2c5d19c27dc889fd user_data=2 samplers=0
+2026-11-27T02:38:35.592818Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=bc3ba6179925a767 user_data=2 samplers=5
+2026-11-27T02:38:35.593028Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=635fb84587970774 user_data=2 samplers=7
+2026-11-27T02:38:35.595631Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 2c5d19c27dc889fd, pixel bc3ba6179925a767]
+2026-11-27T02:38:35.595631Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex c8957d6f842a487b, pixel 635fb84587970774]
+2026-11-27T02:38:35.596547Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=643bfd75255b460a user_data=2 samplers=0
+2026-11-27T02:38:35.596547Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=b33a788ba3adc9bf user_data=2 samplers=0
+2026-11-27T02:38:35.597688Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=f174d9d1fbbec89d user_data=2 samplers=2
+2026-11-27T02:38:35.597800Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=0fc6cbeb2f7104f6 user_data=2 samplers=7
+2026-11-27T02:38:35.600602Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex b33a788ba3adc9bf, pixel 0fc6cbeb2f7104f6]
+2026-11-27T02:38:35.600602Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 643bfd75255b460a, pixel f174d9d1fbbec89d]
+2026-11-27T02:38:35.601307Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=b4c1e8646c9976ff user_data=2 samplers=0
+2026-11-27T02:38:35.601331Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=c6181160bd6502cd user_data=2 samplers=0
+2026-11-27T02:38:35.602488Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=19b016f8eefc8642 user_data=2 samplers=3
+2026-11-27T02:38:35.602500Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=333436115a573c0e user_data=2 samplers=3
+2026-11-27T02:38:35.604780Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex b4c1e8646c9976ff, pixel 19b016f8eefc8642]
+2026-11-27T02:38:35.604847Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex c6181160bd6502cd, pixel 333436115a573c0e]
+2026-11-27T02:38:35.605456Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=75d6e4513dc76347 user_data=2 samplers=0
+2026-11-27T02:38:35.605457Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=12266b887dfbcfe1 user_data=2 samplers=0
+2026-11-27T02:38:35.607090Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=7c7b0727a2a9363b user_data=2 samplers=7
+2026-11-27T02:38:35.607467Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=424d7d00f2d6f528 user_data=2 samplers=7
+2026-11-27T02:38:35.610127Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 75d6e4513dc76347, pixel 7c7b0727a2a9363b]
+2026-11-27T02:38:35.610355Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 12266b887dfbcfe1, pixel 424d7d00f2d6f528]
+2026-11-27T02:38:35.610805Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=81d37a4f438d0a0e user_data=2 samplers=0
+2026-11-27T02:38:35.610805Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=8c6ebfe018c060bc user_data=2 samplers=0
+2026-11-27T02:38:35.612662Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=2896307ec3d5a1fd user_data=2 samplers=7
+2026-11-27T02:38:35.612971Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=6792e08bc9a16050 user_data=2 samplers=5
+2026-11-27T02:38:35.616482Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 8c6ebfe018c060bc, pixel 6792e08bc9a16050]
+2026-11-27T02:38:35.616504Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 81d37a4f438d0a0e, pixel 2896307ec3d5a1fd]
+2026-11-27T02:38:35.616685Z  INFO victory_gpu::pipeline::make: host pipelines all made made=0 loaded=319 started_early=319 shared_requests=43
+2026-11-27T02:38:35.708038Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=021f72334f3cabe7 user_data=2 samplers=0
+2026-11-27T02:38:35.711485Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 021f72334f3cabe7]
+2026-11-27T02:38:35.796965Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=7972997d15fd9e69 user_data=2 samplers=0
+2026-11-27T02:38:35.797081Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=f0c7efd2aceb2aaa user_data=3 samplers=0
+2026-11-27T02:38:35.797219Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=9f14b72117e2abec user_data=1 samplers=0
+2026-11-27T02:38:35.797347Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=7d85c9cab3c80721 user_data=1 samplers=0
+2026-11-27T02:38:35.800128Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 7972997d15fd9e69, pixel 9f14b72117e2abec]
+2026-11-27T02:38:35.801040Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh f0c7efd2aceb2aaa, pixel 7d85c9cab3c80721]
+2026-11-27T02:38:35.801799Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=8a0c5a87aca47fd7 user_data=2 samplers=0
+2026-11-27T02:38:35.802214Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=855740a301f9abc3 user_data=1 samplers=0
+2026-11-27T02:38:35.806875Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 8a0c5a87aca47fd7, pixel 855740a301f9abc3]
+2026-11-27T02:38:35.820613Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=bd8e842330d28b30 user_data=2 samplers=0
+2026-11-27T02:38:35.820982Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=3d7f1d2f27f9eb1f user_data=1 samplers=0
+2026-11-27T02:38:35.821136Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh bd8e842330d28b30, pixel 3d7f1d2f27f9eb1f]
+2026-11-27T02:38:35.824114Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=9630030a53ecd8ce user_data=2 samplers=0
+2026-11-27T02:38:35.824414Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=59650a8ea86dcd52 user_data=1 samplers=0
+2026-11-27T02:38:35.824562Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 9630030a53ecd8ce, pixel 59650a8ea86dcd52]
+2026-11-27T02:38:35.838237Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=673aab3791314b16 user_data=2 samplers=0
+2026-11-27T02:38:35.838638Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=889a373baf008aea user_data=1 samplers=0
+2026-11-27T02:38:35.838768Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 673aab3791314b16, pixel 889a373baf008aea]
+2026-11-27T02:38:35.846562Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=5acf65394841a0fa user_data=2 samplers=0
+2026-11-27T02:38:35.847010Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=6929f1147254b6e7 user_data=1 samplers=0
+2026-11-27T02:38:35.847234Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 5acf65394841a0fa, pixel 6929f1147254b6e7]
+2026-11-27T02:38:35.851060Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=7406a2160e21b422 user_data=3 samplers=0
+2026-11-27T02:38:35.851103Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=143f29b17b9ac644 user_data=3 samplers=0
+2026-11-27T02:38:35.851423Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=da6659c5b8e9ca72 user_data=1 samplers=0
+2026-11-27T02:38:35.851438Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=bf4061097e77171e user_data=1 samplers=0
+2026-11-27T02:38:35.855944Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 143f29b17b9ac644, pixel da6659c5b8e9ca72]
+2026-11-27T02:38:35.855944Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 7406a2160e21b422, pixel bf4061097e77171e]
+2026-11-27T02:38:35.856546Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=7ef27e8985006f0a user_data=2 samplers=0
+2026-11-27T02:38:35.856777Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=6971608c3ade6281 user_data=1 samplers=0
+2026-11-27T02:38:35.856863Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 7ef27e8985006f0a, pixel 6971608c3ade6281]
+2026-11-27T02:38:35.858405Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=2ee026ab4e20bbd5 user_data=3 samplers=0
+2026-11-27T02:38:35.858481Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=bb60bf95f57b0d8b user_data=3 samplers=0
+2026-11-27T02:38:35.858641Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=8b07450f04377f14 user_data=1 samplers=0
+2026-11-27T02:38:35.858716Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=afeefb836b68e6be user_data=1 samplers=0
+2026-11-27T02:38:35.858729Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 2ee026ab4e20bbd5, pixel 8b07450f04377f14]
+2026-11-27T02:38:35.858790Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh bb60bf95f57b0d8b, pixel afeefb836b68e6be]
+2026-11-27T02:38:35.860221Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=5f768f033823d36b user_data=3 samplers=0
+2026-11-27T02:38:35.860500Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=06e5cf7877e5792a user_data=1 samplers=0
+2026-11-27T02:38:35.860626Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=ef62b575adf06883 user_data=2 samplers=0
+2026-11-27T02:38:35.860629Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 5f768f033823d36b, pixel 06e5cf7877e5792a]
+2026-11-27T02:38:35.860839Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=5335f8e820a1576c user_data=1 samplers=0
+2026-11-27T02:38:35.860911Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh ef62b575adf06883, pixel 5335f8e820a1576c]
+2026-11-27T02:38:35.865846Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=36df114c7b568e5f user_data=2 samplers=0
+2026-11-27T02:38:35.866248Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=2bb018e0410c9e36 user_data=1 samplers=0
+2026-11-27T02:38:35.866428Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 36df114c7b568e5f, pixel 2bb018e0410c9e36]
+2026-11-27T02:38:35.872072Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=1da1eb9822214321 user_data=2 samplers=0
+2026-11-27T02:38:35.872546Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=983689ede6631d57 user_data=1 samplers=0
+2026-11-27T02:38:35.872712Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 1da1eb9822214321, pixel 983689ede6631d57]
+2026-11-27T02:38:35.876777Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=89697d8550ea272e user_data=3 samplers=0
+2026-11-27T02:38:35.877241Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=701bf82feb0cd66e user_data=1 samplers=0
+2026-11-27T02:38:35.877378Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 89697d8550ea272e, pixel 701bf82feb0cd66e]
+2026-11-27T02:38:35.886621Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=1e4d3db9636a3a58 user_data=3 samplers=0
+2026-11-27T02:38:35.886881Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=0b70c7cbcbb9d26a user_data=1 samplers=0
+2026-11-27T02:38:35.887020Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 1e4d3db9636a3a58, pixel 0b70c7cbcbb9d26a]
+2026-11-27T02:38:35.887473Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=321d411b20a35ef9 user_data=4 samplers=1
+2026-11-27T02:38:35.887771Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=4e1ca5001eccbd27 user_data=1 samplers=0
+2026-11-27T02:38:35.898565Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=a2fbe18539a04dea user_data=2 samplers=0
+2026-11-27T02:38:35.899026Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=02bbe458a3c40032 user_data=1 samplers=0
+2026-11-27T02:38:35.899180Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh a2fbe18539a04dea, pixel 02bbe458a3c40032]
+2026-11-27T02:38:35.899556Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 321d411b20a35ef9, pixel 4e1ca5001eccbd27]
+2026-11-27T02:38:35.900840Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=4e63f564bc73325f user_data=2 samplers=0
+2026-11-27T02:38:35.901054Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=4f961b1f5069b810 user_data=1 samplers=0
+2026-11-27T02:38:35.903475Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=8c0c0024c3c557dc user_data=3 samplers=0
+2026-11-27T02:38:35.903711Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 4e63f564bc73325f, pixel 4f961b1f5069b810]
+2026-11-27T02:38:35.903805Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=cb4f0bf6d720abbc user_data=1 samplers=0
+2026-11-27T02:38:35.903917Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 8c0c0024c3c557dc, pixel cb4f0bf6d720abbc]
+2026-11-27T02:38:35.904130Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=ae9ee9074f2e971f user_data=3 samplers=0
+2026-11-27T02:38:35.904337Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=54e55d28e6ee4f5c user_data=1 samplers=0
+2026-11-27T02:38:35.904410Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh ae9ee9074f2e971f, pixel 54e55d28e6ee4f5c]
+2026-11-27T02:38:35.927845Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=2d0f576bc68d6e5e user_data=3 samplers=0
+2026-11-27T02:38:35.928197Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=654add6af6ffa00f user_data=1 samplers=0
+2026-11-27T02:38:35.928329Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 2d0f576bc68d6e5e, pixel 654add6af6ffa00f]
+2026-11-27T02:38:35.929330Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=413144fb9d62e37e user_data=2 samplers=0
+2026-11-27T02:38:35.929582Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=f65aa94817852635 user_data=2 samplers=0
+2026-11-27T02:38:35.931651Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 413144fb9d62e37e, pixel f65aa94817852635]
+2026-11-27T02:38:35.934154Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=09c742c58e9acb62 user_data=3 samplers=0
+2026-11-27T02:38:35.934155Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=d9abe24ad7bfe920 user_data=3 samplers=0
+2026-11-27T02:38:35.934479Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=9ee9a1b0ecdf7b74 user_data=1 samplers=0
+2026-11-27T02:38:35.934591Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=264ae8d58e78b62d user_data=1 samplers=0
+2026-11-27T02:38:35.934638Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 09c742c58e9acb62, pixel 9ee9a1b0ecdf7b74]
+2026-11-27T02:38:35.934693Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh d9abe24ad7bfe920, pixel 264ae8d58e78b62d]
+2026-11-27T02:38:36.123673Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=2c3833733876c72c user_data=3 samplers=0
+2026-11-27T02:38:36.123890Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c0c1193022c1634f user_data=3 samplers=0
+2026-11-27T02:38:36.126075Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 2c3833733876c72c, pixel c0c1193022c1634f]
+2026-11-27T02:38:36.128959Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=694a77a5281029ff user_data=3 samplers=0
+2026-11-27T02:38:36.131031Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 9630030a53ecd8ce, pixel 694a77a5281029ff]
+2026-11-27T02:38:36.146230Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=44367a1e10f73bdf user_data=4 samplers=0
+2026-11-27T02:38:36.146430Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=0b07acf29ee4d693 user_data=2 samplers=0
+2026-11-27T02:38:36.148059Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 1da1eb9822214321, pixel 44367a1e10f73bdf]
+2026-11-27T02:38:36.149129Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 0b07acf29ee4d693, pixel 44367a1e10f73bdf]
+2026-11-27T02:38:36.158006Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=0384efa1b7bcd540 user_data=3 samplers=0
+2026-11-27T02:38:36.158275Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=1d96551fdd673db7 user_data=3 samplers=0
+2026-11-27T02:38:36.159109Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=910b4be059bfb28f user_data=4 samplers=1
+2026-11-27T02:38:36.159654Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=bff8660bf8e29c26 user_data=3 samplers=0
+2026-11-27T02:38:36.161281Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 0384efa1b7bcd540, pixel 1d96551fdd673db7]
+2026-11-27T02:38:36.161649Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=68132181890d5b62 user_data=3 samplers=0
+2026-11-27T02:38:36.161727Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 36df114c7b568e5f, pixel 68132181890d5b62]
+2026-11-27T02:38:36.163936Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=ef9b757c9c1e4b26 user_data=3 samplers=0
+2026-11-27T02:38:36.164057Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 1da1eb9822214321, pixel ef9b757c9c1e4b26]
+2026-11-27T02:38:36.165452Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 910b4be059bfb28f, pixel bff8660bf8e29c26]
+2026-11-27T02:38:36.185890Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=1cb9d385ac8987c4 user_data=3 samplers=0
+2026-11-27T02:38:36.185899Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c7f8235118617c43 user_data=3 samplers=0
+2026-11-27T02:38:36.186050Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 8c0c0024c3c557dc, pixel c7f8235118617c43]
+2026-11-27T02:38:36.188816Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh ae9ee9074f2e971f, pixel 1cb9d385ac8987c4]
+2026-11-27T02:38:36.196386Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=e04ae5b1486d5e77 user_data=3 samplers=0
+2026-11-27T02:38:36.196576Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=5d6f6107c4638db6 user_data=3 samplers=0
+2026-11-27T02:38:36.196626Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=18d9739d319d1110 user_data=4 samplers=0
+2026-11-27T02:38:36.196855Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=8e0e6de930426c87 user_data=4 samplers=0
+2026-11-27T02:38:36.198037Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh e04ae5b1486d5e77, pixel 18d9739d319d1110]
+2026-11-27T02:38:36.198516Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 5d6f6107c4638db6, pixel 8e0e6de930426c87]
+2026-11-27T02:38:36.203688Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=633c1f8872ed8c6d user_data=4 samplers=0
+2026-11-27T02:38:36.204892Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 413144fb9d62e37e, pixel 633c1f8872ed8c6d]
+2026-11-27T02:38:36.224820Z  INFO victory_gpu::pipeline: shader translated stage="mesh" hash=32c5e0e62380b489 user_data=3 samplers=0
+2026-11-27T02:38:36.225006Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=4c7bfa5c7bc65187 user_data=2 samplers=1
+2026-11-27T02:38:36.227230Z  INFO victory_gpu::pipeline::host: host mesh pipeline shaders=[mesh 32c5e0e62380b489, pixel 4c7bfa5c7bc65187]
+2026-11-27T02:38:36.341761Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=9ce400572d5af7fa user_data=2 samplers=0
+2026-11-27T02:38:36.342258Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a7a20f06a33260f9 user_data=1 samplers=2
+2026-11-27T02:38:36.343707Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 9ce400572d5af7fa, pixel a7a20f06a33260f9]
+2026-11-27T02:38:36.564622Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=4adcfeaa24ae6450 user_data=1 samplers=0
+2026-11-27T02:38:36.564622Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=88dc833624e2c5ec user_data=0 samplers=0
+2026-11-27T02:38:36.564933Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=9ab96b7a002d6ac8 user_data=1 samplers=0
+2026-11-27T02:38:36.565248Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=a7cfe758751c20aa user_data=2 samplers=5
+2026-11-27T02:38:36.566649Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 4adcfeaa24ae6450, pixel 9ab96b7a002d6ac8]
+2026-11-27T02:38:36.566719Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 88dc833624e2c5ec, pixel a7cfe758751c20aa]
+2026-11-27T02:38:36.567158Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=d91fdb5004fdadf1 user_data=1 samplers=0
+2026-11-27T02:38:36.567183Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=6e750a37b1da6949 user_data=1 samplers=0
+2026-11-27T02:38:36.567453Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=3ae25b11290cadde user_data=2 samplers=1
+2026-11-27T02:38:36.567482Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=d7b97830ede61511 user_data=2 samplers=2
+2026-11-27T02:38:36.568783Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 6e750a37b1da6949, pixel d7b97830ede61511]
+2026-11-27T02:38:36.568783Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex d91fdb5004fdadf1, pixel 3ae25b11290cadde]
+2026-11-27T02:38:36.569283Z  INFO victory_gpu::pipeline: shader translated stage="vertex" hash=022926508d7aa8ba user_data=2 samplers=0
+2026-11-27T02:38:36.569780Z  INFO victory_gpu::pipeline: shader translated stage="pixel" hash=c3f65a5eb6b8cbb3 user_data=2 samplers=0
+2026-11-27T02:38:36.571402Z  INFO victory_gpu::pipeline::host: host pipeline shaders=[vertex 022926508d7aa8ba, pixel c3f65a5eb6b8cbb3]
+2026-11-27T02:38:37.546783Z  INFO victory_gpu::pipeline: first bind pipeline=[address removed] frame=144 stage="vertex" size=1404 hash=571fe570756bc393
+2026-11-27T02:38:37.546899Z  INFO victory_gpu::pipeline: first bind pipeline=[address removed] frame=144 stage="pixel" size=1308 hash=02c6cf86ca283ce1
+2026-11-27T02:38:37.614290Z  INFO victory_gpu::pipeline: first bind pipeline=[address removed] frame=146 stage="vertex" size=1460 hash=d166c341988178de
+2026-11-27T02:38:37.614348Z  INFO victory_gpu::pipeline: first bind pipeline=[address removed] frame=146 stage="pixel" size=1300 hash=e370f602fa0db9b2
+VIctory exited with exit code: 0xffffffff

@@ -564,84 +564,80 @@ pub(crate) fn pipeline(
     Ok(pso)
 }
 
-/// Writes the library and the early list if pipelines were added since the
-/// last save and `SAVE_EVERY` has passed (or `now`).
+/// Checkpoints the early list and any new host pipelines, at most every
+/// 20 seconds during compilation, or on an explicit save.
 pub(crate) fn save(now: bool) {
     static LAST: Mutex<Option<std::time::Instant>> = Mutex::new(None);
     const SAVE_EVERY: std::time::Duration = std::time::Duration::from_secs(20);
-    let (Some(dir), Some(library)) = (DIR.get(), library()) else { return };
-    {
-        let mut last = LAST.lock().unwrap_or_else(|e| e.into_inner());
-        if !now && last.is_some_and(|t| t.elapsed() < SAVE_EVERY) {
+    let Some(dir) = DIR.get() else { return };
+    let mut last = if now {
+        LAST.lock().unwrap_or_else(|e| e.into_inner())
+    } else {
+        let Ok(last) = LAST.try_lock() else { return };
+        if last.is_some_and(|t| t.elapsed() < SAVE_EVERY) {
             return;
         }
-        *last = Some(std::time::Instant::now());
-    }
-    if let Err(e) = std::fs::create_dir_all(dir) {
-        tracing::warn!(error = %e, "host pipeline library not saved");
+        last
+    };
+    let library = library();
+    let added = library.map_or(0, |library| library.added.load(Ordering::Relaxed));
+    if added == 0 && !USED_CHANGED.load(Ordering::Relaxed) {
         return;
     }
-    let tmp = dir.join(LIBRARY_FILE).with_extension("tmp");
-    // The bytes of the library written to `tmp`; 0 when no pipeline was
-    // added: the library on disk is then what it was, and only the early
-    // list is written (a title pipeline first drawn with wrote all 1,352 MB
-    // of the library again: run 60's second save).
-    let bytes = {
-        let _all = one_call();
-        // No store between asking the size and writing; loads go on.
-        let _alone = library.saving.write().unwrap_or_else(|e| e.into_inner());
-        let added = library.added.load(Ordering::Relaxed);
-        if !USED_CHANGED.swap(false, Ordering::Relaxed) && added == 0 {
-            return;
-        }
-        if added == 0 {
-            0
-        } else {
-            // SAFETY: a plain query.
-            let size = unsafe { library.library.GetSerializedSize() };
-            let _call = call("serialise", "the whole library");
-            if let Err(e) = serialise(&library.library, &tmp, size) {
-                tracing::warn!(error = %e, "host pipeline library not serialised");
-                let _ = std::fs::remove_file(&tmp);
-                return;
+    *last = Some(std::time::Instant::now());
+    if let Err(e) = std::fs::create_dir_all(dir) {
+        tracing::warn!(error = %e, "pipeline cache directory could not be created");
+        return;
+    }
+
+    // Preserve requests even if the driver library is absent or its larger
+    // snapshot fails. Changes recorded during this write remain dirty.
+    if USED_CHANGED.swap(false, Ordering::Relaxed) {
+        let mut keys: Vec<String> = used().iter().flatten().cloned().collect();
+        keys.sort_unstable();
+        match write_atomically(&dir.join(EARLY_FILE), keys.join("\n").as_bytes()) {
+            Ok(()) => tracing::info!(early = keys.len(), "pipeline warmup history saved"),
+            Err(e) => {
+                USED_CHANGED.store(true, Ordering::Relaxed);
+                tracing::warn!(error = %e, "pipeline warmup history not saved");
             }
-            library.added.store(0, Ordering::Relaxed);
-            SAVED.store(size as u64, Ordering::Relaxed);
-            size
         }
-    };
-    // With what earlier runs listed: a run that asks for no title pipeline
-    // (`victory warm`) wrote an empty list over theirs, and the next world
-    // began with every pipeline still to be asked for.
-    let used: Vec<String> = used().iter().flatten().cloned().collect();
-    let library_written = if bytes > 0 { replace_library(dir, &tmp) } else { Ok(()) };
-    if bytes > 0 && library_written.is_ok() {
-        // In place unless the system refused and the new one waits beside it.
-        let in_place = !dir.join(NEXT_FILE).exists();
-        if in_place && VIEW[0].load(Ordering::Relaxed) != 0 {
-            REPLACED[1].store(crate::host::now_ms(), Ordering::Relaxed);
-            REPLACED[0].fetch_add(1, Ordering::Relaxed);
-        }
-        crate::host::trail(|| {
-            format!(
-                "pipeline library: saved {bytes} bytes, {}",
-                if in_place { "renamed over the library's file" } else { "left beside the library's file for the next start" }
-            )
-        });
     }
-    let written = library_written
-        .and_then(|()| write_atomically(&dir.join(EARLY_FILE), used.join("\n").as_bytes()));
-    match written {
-        Ok(()) => tracing::info!(
-            bytes,
-            early = used.len(),
-            made = MADE.load(Ordering::Relaxed),
-            loaded = LOADED.load(Ordering::Relaxed),
-            started_early = EARLY.load(Ordering::Relaxed),
-            "host pipeline library saved"
-        ),
-        Err(e) => tracing::warn!(error = %e, "host pipeline library not saved"),
+
+    let Some(library) = library.filter(|_| added != 0) else { return };
+    let tmp = dir.join(LIBRARY_FILE).with_extension("tmp");
+    let _all = one_call();
+    let _alone = library.saving.write().unwrap_or_else(|e| e.into_inner());
+    // SAFETY: a plain query while stores are excluded.
+    let size = unsafe { library.library.GetSerializedSize() };
+    let _call = call("serialise", "the whole library");
+    if let Err(e) = serialise(&library.library, &tmp, size)
+        .and_then(|()| replace_library(dir, &tmp))
+    {
+        tracing::warn!(error = %e, "host pipeline library not saved");
+        let _ = std::fs::remove_file(&tmp);
+        return;
     }
+    library.added.store(0, Ordering::Relaxed);
+    SAVED.store(size as u64, Ordering::Relaxed);
+    let in_place = !dir.join(NEXT_FILE).exists();
+    if in_place && VIEW[0].load(Ordering::Relaxed) != 0 {
+        REPLACED[1].store(crate::host::now_ms(), Ordering::Relaxed);
+        REPLACED[0].fetch_add(1, Ordering::Relaxed);
+    }
+    crate::host::trail(|| {
+        format!(
+            "pipeline library: saved {size} bytes, {}",
+            if in_place { "renamed over the library's file" } else { "left beside the library's file for the next start" }
+        )
+    });
+    tracing::info!(
+        bytes = size,
+        made = MADE.load(Ordering::Relaxed),
+        loaded = LOADED.load(Ordering::Relaxed),
+        started_early = EARLY.load(Ordering::Relaxed),
+        "host pipeline library saved"
+    );
 }
 
 /// Writes the library's `size` serialised bytes to the file `tmp`: through

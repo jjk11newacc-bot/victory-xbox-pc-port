@@ -31,6 +31,10 @@ pub struct Address {
     /// descriptor's address).
     pub offset: u32,
     pub dynamic: Option<Value>,
+    /// The per-lane descriptor index behind a byte offset formed by taking
+    /// a lane value first and then scaling it. Lowering still uses `dynamic`
+    /// for the byte math; this key matches separate waterfall passes.
+    pub lane_index: Option<Value>,
 }
 
 /// [`Address::param`] of the program's own code: a constant table the
@@ -514,7 +518,10 @@ impl<'a> Tracer<'a> {
                 }
                 for inst in &block.insts {
                     for (k, &(_, v)) in inst.writes.iter().enumerate() {
-                        let new = match copy_source(inst, k).or_else(|| self.restored(inst)) {
+                        let new = match copy_source(inst, k)
+                            .or_else(|| self.xor_swap(inst, v, &o))
+                            .or_else(|| self.restored(inst))
+                        {
                             Some(Moved::Const(c)) => Some(Term::Const(c)),
                             Some(Moved::Value(s)) => o[s.0 as usize],
                             None => Some(Term::Value(v)),
@@ -566,6 +573,7 @@ impl<'a> Tracer<'a> {
         match *op {
             Operand::Scalar { code: NULL, .. } => Some(Term::Const(0)),
             Operand::Scalar { code, .. } => Some(self.origin(inst.read(Reg::S(code))?)),
+            Operand::Const(253) => Some(self.origin(inst.read(Reg::Scc)?)),
             Operand::Const(c) => inline(c).map(Term::Const),
             Operand::Literal(x) => Some(Term::Const(x)),
             _ => None,
@@ -881,6 +889,7 @@ impl<'a> Tracer<'a> {
                 param: MEMORY,
                 offset: 0,
                 dynamic: None,
+                lane_index: None,
             })
         } else {
             Err(why)
@@ -945,10 +954,13 @@ impl<'a> Tracer<'a> {
             _ => hi,
         };
         let s = self.sum(lo);
+        // For ordinary guest memory, lowering reads the original address
+        // operands, including the instruction's computed offset. Only
+        // traced table/root addresses need to fit the single-term model.
+        let base = s.base.ok_or_else(|| self.why_no_base(s.dynamic))?;
         if s.dynamic.is_some() && extra.dynamic.is_some() {
             return Err("an address with two computed terms");
         }
-        let base = s.base.ok_or_else(|| self.why_no_base(s.dynamic))?;
         if let Some(pc) = self.getpc(base) {
             // A table in the code: the base is the next instruction's offset.
             let high = pc.writes.get(1).map(|w| w.1);
@@ -963,6 +975,7 @@ impl<'a> Tracer<'a> {
                 param: CODE,
                 offset: first.wrapping_add(s.offset).wrapping_add(extra.offset),
                 dynamic: s.dynamic.or(extra.dynamic),
+                lane_index: self.lane_index(s.dynamic.or(extra.dynamic)),
             });
         }
         let reg = self.inputs[base.0 as usize].ok_or("an address not from a root parameter")?;
@@ -981,7 +994,15 @@ impl<'a> Tracer<'a> {
         // shortcut: with a computed term, a high half that adds anything to the
         // base's is taken as the carry of that term (offsets below 4 GB).
         let dynamic = s.dynamic.or(extra.dynamic);
+        let heap_carry = matches!(self.layout[param].root, RootType::ResourceHeap | RootType::SamplerHeap)
+            && matches!((lo, hi), (Term::Value(lo), Term::Value(hi))
+                if self.sop2(hi, &["s_add_u32"]).is_some_and(|(_, args)| {
+                    let Some((add, _)) = self.sop2(lo, &["s_add_u32"]) else { return false };
+                    let Some(carry) = add.write(Reg::Scc).map(Term::Value) else { return false };
+                    args == [Term::Const(0), carry] || args == [carry, Term::Const(0)]
+                }));
         if !self.high_half(hi, high)
+            && !heap_carry
             && !(dynamic.is_some() && high.is_some_and(|h| self.carried(hi, h)))
         {
             return Err("an address with an untracked high half");
@@ -990,7 +1011,28 @@ impl<'a> Tracer<'a> {
             param,
             offset: s.offset.wrapping_add(extra.offset),
             dynamic: s.dynamic.or(extra.dynamic),
+            lane_index: self.lane_index(s.dynamic.or(extra.dynamic)),
         })
+    }
+
+    /// The vector value whose first-lane read is scaled into a dynamic
+    /// descriptor byte offset. Separate waterfall passes can use different
+    /// scalar SSA values while carrying the same lane index.
+    fn lane_index(&self, dynamic: Option<Value>) -> Option<Value> {
+        let dynamic = dynamic?;
+        let (_, [Term::Value(input), Term::Const(shift)]) =
+            self.sop2(dynamic, &["s_lshl_b32"])?
+        else {
+            return None;
+        };
+        if shift != 5 {
+            return None;
+        }
+        let lane = self.first_lane(input)?;
+        match self.live(self.vorigin(lane)) {
+            Term::Value(value) => Some(value),
+            Term::Const(_) => None,
+        }
     }
 
     /// `hi` is `high` (0 for a table), possibly plus a carry.
@@ -1122,9 +1164,61 @@ impl<'a> Tracer<'a> {
             .map(|k| inst.read(Reg::S(code + k)).map(|v| self.origin(v)))
             .collect::<Option<Vec<_>>>()
             .ok_or("a descriptor not in SGPRs")?;
+        let name = inst.name();
+        let byte_addressed = match inst.fields {
+            Fields::Buffer { idxen: false, format: None, .. } => {
+                name.starts_with("buffer_load_dword")
+                    || name.starts_with("buffer_store_dword")
+                    || name.starts_with("buffer_atomic_")
+            }
+            // The instruction format controls unpacking after the raw byte read.
+            Fields::Buffer { idxen: false, format: Some(_), .. } => {
+                name.starts_with("tbuffer_load_format_")
+            }
+            _ => name.starts_with("s_buffer_load_dword"),
+        };
+        if byte_addressed && let Some(source) = self.byte_address_view(&words) {
+            return Ok(source);
+        }
         // Only the lanes that reach the access read the descriptor.
         let mut known = Vec::from_iter(self.lanes.map(|l| (l.reach[at], true)));
         self.classify(&words, &mut Vec::new(), &mut known)
+    }
+
+    /// A console shader sometimes rewrites a loaded buffer descriptor as a
+    /// raw byte window. The translated byte access already addresses the
+    /// original host buffer by byte and that raw view bounds its byte span.
+    fn byte_address_view(&self, words: &[Term]) -> Option<Source> {
+        let &[lo, Term::Value(hi), Term::Value(length), Term::Value(control)] = words else {
+            return None;
+        };
+        let with_constant = |v, op, value| {
+            let (_, [a, b]) = self.sop2(v, &[op])?;
+            match (a, b) {
+                (x, Term::Const(k)) | (Term::Const(k), x) if k == value => Some(x),
+                _ => None,
+            }
+        };
+        let hi = with_constant(hi, "s_and_b32", 0xc000_ffff)?;
+        let Term::Value(control) = with_constant(control, "s_or_b32", 0x3000_0000)? else {
+            return None;
+        };
+        let control = with_constant(control, "s_and_b32", 0xcfff_ffff)?;
+        let (_, length) = self.sop2(length, &["s_mul_i32"])?;
+        for (records, stride) in [(length[0], length[1]), (length[1], length[0])] {
+            let Term::Value(stride) = stride else { continue };
+            let Some(Term::Value(bits)) = with_constant(stride, "s_max_u32", 1) else {
+                continue;
+            };
+            if self
+                .sop2(bits, &["s_bfe_u32"])
+                .is_some_and(|(_, args)| args == [hi, Term::Const(0x000e_0010)])
+                && let Some(source) = self.loaded(&[lo, hi, records, control])
+            {
+                return Some(source);
+            }
+        }
+        None
     }
 
     /// The source of a descriptor's words; `joins` are the phi blocks
@@ -2082,9 +2176,52 @@ impl<'a> Tracer<'a> {
                 .get(first + k)
                 .is_some_and(|x| *w == Term::Value(x.1))
         });
-        same.then_some(Source::Loaded {
-            load,
-            first: first as u8,
+        if same {
+            return Some(Source::Loaded {
+                load,
+                first: first as u8,
+            });
+        }
+
+        // Some shaders assemble one descriptor from scalar loads of its
+        // individual dwords. Treat them as one loaded descriptor only when
+        // every dword resolves to the same root address at its exact byte
+        // offset; otherwise those words may describe different resources.
+        let at_word = |word: &Term| {
+            let Term::Value(value) = *word else {
+                return None;
+            };
+            let site = self.defs[value.0 as usize]?;
+            let load = self.inst(site);
+            if !load.name().starts_with("s_load_") {
+                return None;
+            }
+            let first = load.writes.iter().position(|w| w.1 == value)?;
+            let Fields::Smem {
+                base,
+                offset,
+                soffset,
+                ..
+            } = &load.fields
+            else {
+                return None;
+            };
+            let mut address = self.smem_address(load, base, *offset, soffset).ok()?;
+            address.offset = address.offset.wrapping_add((first as u32) * 4);
+            Some((site, first, address))
+        };
+        let (first_site, first_word, first_address) = at_word(&words[0])?;
+        words.iter().enumerate().all(|(k, word)| {
+            at_word(word).is_some_and(|(_, _, address)| {
+                address.param == first_address.param
+                    && (address.dynamic == first_address.dynamic
+                        || (first_address.lane_index.is_some()
+                            && address.lane_index == first_address.lane_index))
+                    && address.offset == first_address.offset.wrapping_add((k as u32) * 4)
+            })
+        }).then_some(Source::Loaded {
+            load: first_site,
+            first: first_word as u8,
         })
     }
 
@@ -2252,6 +2389,49 @@ enum Moved {
 }
 
 impl Tracer<'_> {
+    /// Recognize the three-instruction XOR swap used to preserve a scalar
+    /// across `s_and_saveexec`: each `(a^b)^b` recovers `a`. Resolving
+    /// the second write also lets the third write recover `b`.
+    fn xor_swap(&self, inst: &Inst, result: Value, origins: &[Option<Term>]) -> Option<Moved> {
+        let inputs = |i: &Inst, result| -> Option<[Term; 2]> {
+            let width = match i.name() {
+                "s_xor_b32" => 1,
+                "s_xor_b64" => 2,
+                _ => return None,
+            };
+            let Fields::Sop { dst: Some(Operand::Scalar { code: dst, .. }), src, .. } = &i.fields else {
+                return None;
+            };
+            // Find the result dword by register, excluding the SCC write.
+            let half = (0..width).find(|&k| i.write(Reg::S(dst + k)) == Some(result))?;
+            let [Operand::Scalar { code: a, .. }, Operand::Scalar { code: b, .. }] = src[..] else {
+                return None;
+            };
+            let term = |code| {
+                let value = i.read(Reg::S(code + half))?;
+                origins.get(value.0 as usize).copied().flatten()
+            };
+            Some([term(a)?, term(b)?])
+        };
+        let [a, b] = inputs(inst, result)?;
+        for (nested, other) in [(a, b), (b, a)] {
+            let Term::Value(nested) = nested else {
+                continue;
+            };
+            let Some([left, right]) = self.def(nested).and_then(|i| inputs(i, nested)) else {
+                continue;
+            };
+            let original = if left == other { right } else if right == other { left } else {
+                continue;
+            };
+            return Some(match original {
+                Term::Const(value) => Moved::Const(value),
+                Term::Value(value) => Moved::Value(value),
+            });
+        }
+        None
+    }
+
     /// For `v_readlane_b32` of a constant lane: the SGPR spilled to that
     /// lane, found by following the VGPR's `v_writelane_b32` writes.
     fn restored(&self, inst: &Inst) -> Option<Moved> {
@@ -2331,6 +2511,15 @@ fn copy_source(inst: &Inst, k: usize) -> Option<Moved> {
     if inst.name() == "s_movk_i32" {
         return Some(Moved::Const(i32::from((*imm)? as i16) as u32));
     }
+    // The FSPX compiler builds immediate sampler words with a bit-field mask.
+    if matches!(inst.name(), "s_bfm_b32" | "s_bfm_b64") {
+        let [width, offset] = src.as_slice() else { return None };
+        let operand_mask = if inst.name() == "s_bfm_b64" { 63 } else { 31 };
+        let width = lane_of(*width)? & operand_mask;
+        let offset = lane_of(*offset)? & operand_mask;
+        let mask = ((1u64 << width) - 1) << offset;
+        return Some(Moved::Const((mask >> (k * 32)) as u32));
+    }
     let src = src.first()?;
     match (inst.name(), *src) {
         ("s_mov_b32" | "s_mov_b64", Operand::Scalar { code, .. }) if code != NULL => {
@@ -2338,6 +2527,8 @@ fn copy_source(inst: &Inst, k: usize) -> Option<Moved> {
         }
         ("s_mov_b32" | "s_mov_b64", Operand::Scalar { .. }) => Some(Moved::Const(0)),
         ("s_mov_b32", Operand::Literal(x)) => Some(Moved::Const(x)),
+        // Match the translator's literal source: the second dword is zero.
+        ("s_mov_b64", Operand::Literal(x)) => Some(Moved::Const(if k == 0 { x } else { 0 })),
         ("s_mov_b32", Operand::Const(c)) => inline(c).map(Moved::Const),
         // shortcut: only the one-operand ways the compiler makes a constant
         // that has no inline form; fold more if descriptors need it.
@@ -2409,6 +2600,7 @@ pub(crate) mod tests {
             param,
             offset,
             dynamic: None,
+            lane_index: None,
         }
     }
 
@@ -2482,6 +2674,24 @@ pub(crate) mod tests {
             r.params.iter().map(|p| (p.1, p.2)).collect::<Vec<_>>(),
             [(0, 0), (0, 1)]
         );
+    }
+
+    #[test]
+    fn a_resource_heap_accepts_the_carry_of_its_own_address_addition() {
+        let resources = track_words(
+            &[
+                0x8016_140a, // s_add_u32 s22, s10, s20
+                0x8017_fd80, // s_add_u32 s23, 0, src_scc
+                0xf408_060b,
+                0xfa00_0000, // s_load_dwordx4 s[24:27], s[22:23], null
+                S_ENDPGM,
+            ],
+            &[param(ResourceHeap, 10, 1)],
+            HwStage::Cs,
+        );
+        assert_eq!(resources.scalar.len(), 1);
+        assert_eq!(resources.scalar[0].1.param, 0);
+        assert!(resources.scalar[0].1.dynamic.is_some());
     }
 
     #[test]

@@ -29,6 +29,21 @@ static REUSE: AtomicU64 = AtomicU64::new(0);
 static PRESSURE: AtomicBool = AtomicBool::new(false);
 static CREATED: AtomicU64 = AtomicU64::new(0);
 
+/// In the low-memory profile, try local GPU upload storage when Windows
+/// is under RAM pressure. The host allocator checks the adapter budget
+/// and falls back to a regular upload heap when local storage is unavailable.
+fn staging_buffer(host: &Host, bytes: u64) -> Option<(ID3D12Resource, *mut u8)> {
+    static LOW_MEMORY: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    let low_memory = *LOW_MEMORY.get_or_init(|| {
+        std::env::var_os("VICTORY_LOW_MEMORY").is_some_and(|v| v == "1")
+    });
+    if low_memory && crate::budget::ram_pressure(crate::host::available_physical_ram()) != 0 {
+        host.shader_input_buffer(bytes)
+    } else {
+        host.upload_buffer(bytes)
+    }
+}
+
 /// The lifetime of a staging allocation, including every command list that
 /// still holds its `Staging`. Its bytes cannot be recycled until that ends.
 pub(super) struct Upload {
@@ -58,7 +73,7 @@ impl Upload {
                 return Some(upload);
             }
         }
-        let (buffer, data) = host.upload_buffer(bytes)?;
+        let (buffer, data) = staging_buffer(host, bytes)?;
         Some(Self {
             chunk: Arc::new(Chunk {
                 buffer,
@@ -106,7 +121,7 @@ impl Upload {
         if std::env::var_os("VICTORY_LOW_MEMORY").is_some_and(|v| v == "1") {
             trim_idle_under_pressure(crate::host::available_physical_ram());
         }
-        let (buffer, data) = host.upload_buffer(CHUNK_BYTES)?;
+        let (buffer, data) = staging_buffer(host, CHUNK_BYTES)?;
         crate::host::name(&buffer, || "texture staging pool".into());
         let page = Slots {
             chunk: Arc::new(Chunk {

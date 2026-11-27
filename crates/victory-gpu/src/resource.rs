@@ -1450,7 +1450,7 @@ pub(crate) fn host_made<'a>(
 /// limit on those copies' bytes instead). Past the budget the system moves
 /// the card's memory into the PC's, which ended runs 20 and 24.
 #[cfg(windows)]
-pub(crate) fn room() -> bool {
+pub(crate) fn room(resuming: bool) -> bool {
     use std::sync::atomic::Ordering::Relaxed;
     const WITHOUT_BUDGET: u64 = 4 << 30;
     static LIMIT: std::sync::OnceLock<Option<u64>> = std::sync::OnceLock::new();
@@ -1465,8 +1465,15 @@ pub(crate) fn room() -> bool {
     // An explicit texture cap must not bypass the adapter-wide budget.
     match crate::host::host().and_then(|h| h.video_memory()) {
         Some([budget, used, ..]) if budget != 0 => {
-            let cap = if crate::budget::enabled() { crate::budget::ceiling(budget, room_percent()) } else { budget / 100 * room_percent() };
-            used < cap
+            // Reopen the queue only after enough room returns for a batch.
+            // This avoids waking every deferred texture on tiny budget swings.
+            let ceiling = texture_budget_ceiling(budget);
+            let margin = if resuming && crate::budget::enabled() {
+                (128 << 20).min(ceiling / 16)
+            } else {
+                0
+            };
+            used < ceiling.saturating_sub(margin)
         },
         _ => filled < limit.unwrap_or(WITHOUT_BUDGET).min(WITHOUT_BUDGET),
     }
@@ -1488,6 +1495,17 @@ fn room_percent() -> u64 {
             .and_then(|v| v.trim().parse::<u64>().ok())
             .map_or(90, |percent| percent.clamp(50, 97))
     })
+}
+
+/// Apply one adapter-wide admission ceiling to committed textures and
+/// sparse backing so the two allocators reserve the same GPU headroom.
+#[cfg(windows)]
+pub(crate) fn texture_budget_ceiling(budget: u64) -> u64 {
+    if crate::budget::enabled() {
+        crate::budget::ceiling(budget, room_percent())
+    } else {
+        budget / 100 * room_percent()
+    }
 }
 
 /// Finds an existing placed texture using the same key as `texture_at`.

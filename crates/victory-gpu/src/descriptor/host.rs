@@ -973,7 +973,12 @@ fn view_stride(view: &View) -> Option<u32> {
     } else if raw {
         1
     } else {
-        crate::resource::element(format.0 as u32).map_or(0, |(bytes, _)| bytes as u32)
+        let stride = crate::resource::element(format.0 as u32).map_or(0, |(bytes, _)| bytes as u32);
+        if unordered && format == DXGI_FORMAT_R32_UINT {
+            stride | victory_shader::emit::SLOT_STRIDE_R32_UINT
+        } else {
+            stride
+        }
     })
 }
 
@@ -1000,29 +1005,47 @@ pub(crate) fn near_heaps(va: u64) -> String {
     text
 }
 
-/// The host's limit for shader-visible view heaps on resource binding
-/// tiers 1 and 2; tier 3 hardware may take more.
+/// A conservative shader-visible heap size accepted across D3D12 binding
+/// tiers; adapters with a higher limit are measured at startup.
 const PORTABLE_VIEWS: u32 = 1_000_000;
 
-/// The size of every host view heap on a host that takes more than
-/// [`PORTABLE_VIEWS`] (AMD): the title's heap (a little over 1,000,000
-/// views in the retail game) plus [`DYNAMIC`] fits with room to spare, and
-/// the last slot is the null slot every view index at or past it reads.
+/// Largest host view heap size probed at startup. The last slot is reserved
+/// as the null slot every view index at or past it reads.
 const UNCAPPED_VIEWS: u32 = 1 << 21;
 
-/// Picks, once, the null slot at the end of every host view heap and tells
-/// the translator now (`set_view_heap_limit`) instead of when the title's
-/// heap is made: a shader keeps the limit it was translated with, and the
-/// title makes 25 pipelines (their shaders translated at once) before it
-/// makes its view heap. Called before a shader is translated and before a
-/// view heap is made.
+fn largest_fitting_heap(
+    mut fits: impl FnMut(u32) -> bool,
+    portable: u32,
+    ceiling: u32,
+) -> u32 {
+    if fits(ceiling) {
+        return ceiling;
+    }
+    if !fits(portable) {
+        return portable;
+    }
+    let (mut accepted, mut rejected) = (portable, ceiling);
+    while rejected - accepted > 1 {
+        let middle = accepted + (rejected - accepted) / 2;
+        if fits(middle) {
+            accepted = middle;
+        } else {
+            rejected = middle;
+        }
+    }
+    accepted
+}
+
+/// Finds the largest shader-visible view heap the driver accepts and tells
+/// the translator its last slot before the title makes pipelines. A title
+/// heap can exceed one million entries, so testing only a two-million heap
+/// and otherwise falling to one million needlessly loses intermediate
+/// capacities on some PC drivers.
 ///
-/// Every host clamps. A host that caps view heaps at [`PORTABLE_VIEWS`]
-/// (NVIDIA) hung on a view index past the heap; one that does not (AMD
-/// RDNA3, RX 7900 XT) took a page fault and removed the device on entering
-/// the world: a compute program read view slot 16,777,088 (0xffff80) of a
-/// heap of 1,507,328, past its end. Unclamped, that index is undefined on
-/// any host.
+/// Every host clamps. A prior run on a host with a view heap capped at
+/// [`PORTABLE_VIEWS`] hung when the title used a higher index; on another
+/// host an out-of-range view caused device removal in the world. Unclamped,
+/// such an index is undefined on any host.
 pub(crate) fn probe_view_limit() {
     static ONCE: std::sync::Once = std::sync::Once::new();
     ONCE.call_once(|| {
@@ -1040,11 +1063,7 @@ pub(crate) fn probe_view_limit() {
             };
             made.is_ok()
         };
-        let views = if fits(UNCAPPED_VIEWS) {
-            UNCAPPED_VIEWS
-        } else {
-            PORTABLE_VIEWS
-        };
+        let views = largest_fitting_heap(fits, PORTABLE_VIEWS, UNCAPPED_VIEWS);
         tracing::info!(
             views,
             "host view heaps hold {views} views; view indices are clamped to the null slot at the end from the first shader on"
@@ -1057,14 +1076,9 @@ pub(crate) fn probe_view_limit() {
 /// afresh (constant buffers copied per draw). A list holds the slots it
 /// took until it is reset (its submissions have run) or released.
 /// 2^16 ran out in the world ("no free dynamic descriptor slots", run 11;
-/// upstream PR #336 takes 2^18). On a host heap capped at 1,000,000 views
-/// (NVIDIA) these come out of the title's slots, whose highest seen is
-/// about 720,000: 2^17 left 868,000 of them, and ran out in the opening
-/// cutscene (a frame asks for up to 16,000 tables while the frame before
-/// still holds its own; a draw refused its table read slots never made
-/// for it, and the card stopped within frames). 2^18 leaves 737,000; a
-/// table past them is made afresh in these slots like any other.
-pub(crate) const DYNAMIC: u32 = 1 << 18;
+/// upstream PR #336 takes 2^18). The capacity is reduced automatically if
+/// the title and null slots leave less room on the current adapter.
+pub(crate) const DYNAMIC: u32 = victory_shader::emit::DYNAMIC_VIEW_SLOTS;
 const NULL_BLOCK: u32 = 1 << 16;
 
 impl HostHeap {
@@ -1109,14 +1123,15 @@ impl HostHeap {
             }
         } else {
             let size = null + 1;
-            let fitted = if count <= null - extra {
-                count
-            } else {
-                // shortcut: descriptors past the host's limit are left out; a title that reaches
-                // them needs remapping. They read the null slot instead.
-                tracing::warn!(count, "host view heap capped at {size}; views past it read a null slot");
-                null - extra
-            };
+            let fitted = count.min(victory_shader::emit::guest_view_limit());
+            if fitted < count {
+                tracing::warn!(
+                    count,
+                    direct_slots = fitted,
+                    runtime_slots = null - fitted,
+                    "Xbox view heap exceeds the direct host range; reserving space for runtime descriptor tables"
+                );
+            }
             match make(size) {
                 Ok(heap) => (heap, fitted, size),
                 Err(e) => {
@@ -1135,8 +1150,12 @@ impl HostHeap {
         tracing::debug!(count, sampler, "host descriptor heap");
         // The null slot every index past the heap reads is the heap's last,
         // past the dynamic slots (`probe_view_limit`): all of them are free.
-        let dynamic = if null == 0 { extra } else { null - count };
-        let taken = vec![false; extra as usize];
+        let dynamic = if null == 0 {
+            extra
+        } else {
+            null.saturating_sub(count).min(extra)
+        };
+        let taken = vec![false; dynamic as usize];
         // SAFETY: a live shader-visible heap.
         let gpu = unsafe { heap.GetGPUDescriptorHandleForHeapStart().ptr };
         GPU_RANGES.lock().unwrap_or_else(|e| e.into_inner()).push((
@@ -1168,10 +1187,10 @@ impl HostHeap {
             dynamic,
             sampler,
             made: Mutex::new(vec![0; count as usize]),
-            kept: Mutex::new(vec![None; (count + extra) as usize]),
+            kept: Mutex::new(vec![None; (count + dynamic) as usize]),
             sparse_slots: Default::default(),
             next: Mutex::new((0, taken)),
-            free: std::sync::atomic::AtomicU32::new(extra),
+            free: std::sync::atomic::AtomicU32::new(dynamic),
             too_long: std::sync::atomic::AtomicU32::new(u32::MAX),
             strides,
             addresses: std::sync::OnceLock::new(),
@@ -1415,7 +1434,7 @@ impl HostHeap {
         let _made = self.made.lock().unwrap_or_else(|e| e.into_inner());
         if self.addresses.get().is_none() {
             let bytes = (u64::from(self.count) + 2) * 8;
-            let (buffer, data) = host()?.upload_buffer(bytes)?;
+            let (buffer, data) = host()?.shader_input_buffer(bytes)?;
             // SAFETY: the mapped upload buffer has room for the complete table.
             unsafe {
                 std::ptr::write_bytes(data, 0, bytes as usize);
@@ -2217,6 +2236,10 @@ impl HostHeap {
                 .insert(index);
         }
         stale
+    }
+
+    pub(crate) fn texture_under_pressure(&self) -> bool {
+        self.texture_pressure.load(std::sync::atomic::Ordering::Relaxed)
     }
 
     pub(crate) fn set_texture_pressure(&self, full: bool) {
@@ -3385,7 +3408,51 @@ fn buffer_uav(
 /// family takes the texture's format.
 /// shortcut: such a view (sRGB of UNORM, say) reads without its
 /// conversion; cast with castable formats if colors come out wrong.
-fn fits(texture: &ID3D12Resource, mut format: Option<&mut DXGI_FORMAT>, unordered: bool) -> bool {
+fn typed_store(format: u32) -> bool {
+    static KNOWN: Mutex<Vec<(u32, bool)>> = Mutex::new(Vec::new());
+    let mut known = KNOWN.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(&(_, ok)) = known.iter().find(|(f, _)| *f == format) {
+        return ok;
+    }
+    let mut support = D3D12_FEATURE_DATA_FORMAT_SUPPORT {
+        Format: DXGI_FORMAT(format as i32),
+        ..Default::default()
+    };
+    let ok = host().is_some_and(|h| {
+        // SAFETY: a plain query into a struct of its size.
+        unsafe {
+            h.device.CheckFeatureSupport(
+                D3D12_FEATURE_FORMAT_SUPPORT,
+                (&raw mut support).cast(),
+                std::mem::size_of_val(&support) as u32,
+            )
+        }
+        .is_ok()
+            && support.Support1.0 & D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW.0 != 0
+    });
+    known.push((format, ok));
+    ok
+}
+
+/// The default concrete formats for texture views of a typeless backing.
+/// Depth/stencil families have one view format per plane.
+fn concrete_texture_view(format: u32, plane: u32) -> Option<u32> {
+    match (format, plane) {
+        (19, 0) => Some(21),
+        (19, 1) => Some(22),
+        (44, 0) => Some(46),
+        (44, 1) => Some(47),
+        (1 | 5 | 9 | 15 | 23 | 27 | 33 | 39 | 48 | 60 | 70 | 73 | 76 | 79 | 82 | 94 | 97, 0) => {
+            Some(format + 1)
+        }
+        (53, 0) => Some(56),
+        (90, 0) => Some(87),
+        (92, 0) => Some(88),
+        _ => None,
+    }
+}
+
+fn fits(texture: &ID3D12Resource, mut format: Option<&mut DXGI_FORMAT>, unordered: bool, plane: u32) -> bool {
     use crate::resource::{DEPTH_FORMATS, family};
     // SAFETY: a live resource.
     let d = unsafe { texture.GetDesc() };
@@ -3407,8 +3474,19 @@ fn fits(texture: &ID3D12Resource, mut format: Option<&mut DXGI_FORMAT>, unordere
         );
         return false;
     }
-    // Every family has more than one format, its typeless one first.
-    let typeless = family(own) == own && family(own + 1) == own;
+    let typeless = concrete_texture_view(own, 0).is_some();
+    // The console accepts explicit UNKNOWN and typeless texture views.
+    // Windows needs a typed format and, for typeless resources, an explicit
+    // descriptor. Leave buffer and raw views on their separate paths.
+    if let Some(format) = format.as_deref_mut()
+        && typeless
+        && (format.0 == 0 || format.0 as u32 == own)
+    {
+        let Some(typed) = concrete_texture_view(own, plane) else {
+            return false;
+        };
+        format.0 = typed as i32;
+    }
     if let Some(format) = format.as_deref_mut()
         && unordered
         && let Some(&(_, linear)) = crate::resource::SRGB
@@ -3418,6 +3496,10 @@ fn fits(texture: &ID3D12Resource, mut format: Option<&mut DXGI_FORMAT>, unordere
         format.0 = linear as i32;
     }
     let view = format.as_ref().map_or(0, |f| f.0 as u32);
+    let effective = if typeless && view != 0 { view } else { own };
+    if unordered && !typed_store(effective) {
+        return false;
+    }
     if view == 0 {
         return !typeless;
     }
@@ -3568,7 +3650,13 @@ fn make(
                     }
                 }
                 let mut desc = desc.as_ref().map(srv_desc);
-                if !fits(texture, desc.as_mut().map(|d| &mut d.Format), false) {
+                let plane = desc.as_ref().map_or(0, |d| match d.ViewDimension {
+                    // SAFETY: the dimension selects the initialized union member.
+                    D3D12_SRV_DIMENSION_TEXTURE2D => unsafe { d.Anonymous.Texture2D.PlaneSlice },
+                    D3D12_SRV_DIMENSION_TEXTURE2DARRAY => unsafe { d.Anonymous.Texture2DArray.PlaneSlice },
+                    _ => 0,
+                });
+                if !fits(texture, desc.as_mut().map(|d| &mut d.Format), false, plane) {
                     return None;
                 }
                 if ahead::enabled()
@@ -3685,7 +3773,7 @@ fn make(
                 }
                 None => texture,
             };
-            if !fits(texture, desc.as_mut().map(|d| &mut d.Format), true) {
+            if !fits(texture, desc.as_mut().map(|d| &mut d.Format), true, 0) {
                 return None;
             }
             // SAFETY: a live texture and a slot of our heap.

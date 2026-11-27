@@ -136,6 +136,69 @@ fn lowered_for_dispatch(native: &NativeProgram, p: &ir::Program, wide: &HashSet<
 }
 
 #[test]
+fn wave64_divergent_lds_can_read_and_write_disjoint_dwords_on_wave32() {
+    let mut native = native(&[
+        0x3402_0082, // v_lshlrev_b32 v1, 2, v0
+        0x7E04_0280, // v_mov_b32 v2, 0
+        0xD834_0000, 0x0000_0001, // ds_write_b32 v1, v0
+        0xBF8A_0000, // s_barrier
+        0x7D88_0081, // v_cmp_gt_u32 vcc, 1, v0
+        0xBE8C_246A, // s_and_saveexec_b64 s[12:13], vcc
+        0xBF88_0004, // s_cbranch_execz to the restore
+        0xD8D8_0004, 0x0300_0002, // ds_read_b32 v3, v2 offset:4
+        0xD834_0000, 0x0000_0302, // ds_write_b32 v2, v3
+        0xBEFE_040C, // s_mov_b64 exec, s[12:13]
+        0xD8D8_0000, 0x0400_0002, // ds_read_b32 v4, v2
+        0xE070_1000, 0x8002_0401, // buffer_store_dword v4, v1, s[8:11], 0 offen
+    ]);
+    let StageIo::Cs(ref mut cs) = native.io else { unreachable!() };
+    cs.rsrc2 |= 1 << 15;
+    let p = ir::build(&native.code, native.wave64, native.vgprs).unwrap();
+    let shader = lowered(&native, &p, &HashSet::new()).unwrap();
+    let mut validator = validator::Validator::load(validator::Validator::default_path().as_deref()).unwrap();
+    validator.validate(&mut shader.dxil.clone()).unwrap();
+    let _one = super::valu_tests::ONE_AT_A_TIME.lock().unwrap_or_else(|e| e.into_inner());
+    let Ok(host) = Host::new(false) else { return };
+    let (root, pso) = host.compute_pipeline(&shader).unwrap();
+    let result = host.dispatch(&root, &pso, &Dispatch {
+        roots: vec![(0, Root::Constants(vec![0; shader.user_data_dwords() as usize]))],
+        views: &[View::RawUav(64)],
+        samplers: &[],
+        groups: [1, 1, 1],
+    }).unwrap();
+    assert_eq!(result[0], vec![1; 64]);
+}
+
+#[test]
+fn wave64_lds_append_shares_one_counter_on_wave32() {
+    let mut native = native(&[
+        0x3402_0082, // v_lshlrev_b32 v1, 2, v0
+        0x7E04_0280, // v_mov_b32 v2, 0
+        0xD834_0000, 0x0000_0201, // ds_write_b32 v1, v2
+        0xBF8A_0000, // s_barrier
+        0xD8F8_0000, 0x0200_0000, // ds_append v2 offset:0
+        0xD8F8_0000, 0x0300_0000, // ds_append v3 offset:0
+        0xE070_1000, 0x8002_0301, // buffer_store_dword v3, v1, s[8:11], 0 offen
+    ]);
+    let StageIo::Cs(ref mut cs) = native.io else { unreachable!() };
+    cs.rsrc2 |= 1 << 15; // 512 bytes of LDS
+    let p = ir::build(&native.code, native.wave64, native.vgprs).unwrap();
+    let shader = lowered(&native, &p, &HashSet::new()).unwrap();
+    let mut validator = validator::Validator::load(validator::Validator::default_path().as_deref()).unwrap();
+    validator.validate(&mut shader.dxil.clone()).unwrap();
+    let _one = super::valu_tests::ONE_AT_A_TIME.lock().unwrap_or_else(|e| e.into_inner());
+    let Ok(host) = Host::new(false) else { return };
+    let (root, pso) = host.compute_pipeline(&shader).unwrap();
+    let result = host.dispatch(&root, &pso, &Dispatch {
+        roots: vec![(0, Root::Constants(vec![0; shader.user_data_dwords() as usize]))],
+        views: &[View::RawUav(64)],
+        samplers: &[],
+        groups: [1, 1, 1],
+    }).unwrap();
+    assert_eq!(result[0], vec![64; 64]);
+}
+
+#[test]
 fn partial_thread_dispatch_masks_the_final_groups_memory_writes() {
     // Each active thread increments counter[local X]. With two groups the
     // tail's first N lanes report two increments, the others only one.

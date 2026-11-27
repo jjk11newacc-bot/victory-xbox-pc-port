@@ -15,6 +15,17 @@ use windows::core::Interface;
 const TILE_BYTES: u64 = 64 * 1024;
 const HEAP_TILES: u32 = 1024;
 
+fn heap_tiles() -> u32 {
+    static TARGET: OnceLock<u32> = OnceLock::new();
+    *TARGET.get_or_init(|| {
+        if std::env::var_os("VICTORY_LOW_MEMORY").is_some_and(|value| value == "1") {
+            512 // 32 MiB chunks reduce unused residency late in a level.
+        } else {
+            HEAP_TILES
+        }
+    })
+}
+
 /// This path copies into reserved textures and needs defined reads and writes
 /// on unmapped tiles. The committed path remains the default.
 pub(crate) fn supported(device: &ID3D12Device) -> bool {
@@ -113,7 +124,7 @@ impl Pool {
         if available < u64::from(tiles) {
             return None;
         }
-        let capacity = u64::from(tiles.max(HEAP_TILES)).min(available) as u32;
+        let capacity = u64::from(tiles.max(heap_tiles())).min(available) as u32;
         let size = u64::from(capacity) * TILE_BYTES;
         let desc = D3D12_HEAP_DESC {
             SizeInBytes: size,

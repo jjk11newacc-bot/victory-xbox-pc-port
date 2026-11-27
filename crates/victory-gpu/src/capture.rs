@@ -12,7 +12,16 @@ use windows::Win32::Graphics::Dxgi::Common::*;
 pub(crate) fn folder() -> Option<&'static PathBuf> {
     static FOLDER: std::sync::OnceLock<Option<PathBuf>> = std::sync::OnceLock::new();
     FOLDER
-        .get_or_init(|| std::env::var_os("VICTORY_CAPTURE").map(PathBuf::from))
+        .get_or_init(|| {
+            let path = PathBuf::from(std::env::var_os("VICTORY_CAPTURE")?);
+            match std::fs::create_dir_all(&path) {
+                Ok(()) => Some(path),
+                Err(error) => {
+                    tracing::warn!(%error, path = %path.display(), "could not create frame capture directory");
+                    None
+                }
+            }
+        })
         .as_ref()
 }
 

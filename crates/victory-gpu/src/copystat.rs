@@ -294,6 +294,10 @@ pub(crate) fn range(src: usize, len: usize, us: u64, kind: u32) {
 /// ours. Bigger blocks are allocations of their own in the map.
 static OWN: [AtomicU64; 8] = [const { AtomicU64::new(0) }; 8];
 
+pub(crate) fn live_heap_bytes() -> u64 {
+    OWN[..4].iter().map(|value| value.load(Relaxed)).sum()
+}
+
 /// The class of [`OWN`] a block of `size` bytes counts in.
 fn block_class(size: usize) -> usize {
     match size {

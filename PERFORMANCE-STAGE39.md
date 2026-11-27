@@ -25,7 +25,6 @@ Base: VIctory_stage38.zip. Target RTX 3060 Ti 8 GiB, 16 GiB RAM, native 1080p, R
 | Command-list wait splitting | Existing implementation retained, not verified on GPU. |
 
 ## Validation evidence
-- Exact source diff against Stage 38: STAGE39-SOURCE-DIFF.patch.
 - Stages 30–37 independent model scripts completed successfully in this run. Stage 38 rerun hit tool time limit. New model: 48,000 synthetic volume-address/plane checks and 20,000 synthetic graphics binding events passed. These are not executing the Rust source. See STAGE39-MODEL-RESULTS.txt.
 - Required cargo check exited 127; NVIDIA profile checker exited 1 because cargo does not exist in this environment. See STAGE39-BUILD-RESULTS.txt.
 - tools/Validate-Stage39.ps1 runs the required Windows build check, profile check and new regression tests; must be run on Windows with pinned toolchain. A hardware test that skips because no adapter exists is not hardware validation. Use WARP and a real NVIDIA adapter, monitor D3D12 debug messages and parity, then run actual game tests separately. Script not executed here.

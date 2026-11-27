@@ -1,0 +1,154 @@
+Runtime [local path removed]
+Game [local path removed]
+VICTORY_FILL_WORKERS: 2
+VICTORY_PIPELINE_WORKERS: 2
+VICTORY_JOIN_COPIES: 1
+VICTORY_WIDE_REFRESH: 0
+VICTORY_TEXTURE_NO_WAIT: 0
+VICTORY_PARALLEL_PRELUDES: 0
+VICTORY_PARALLEL_DETILE: 0
+VICTORY_WIDE_MERGE: 0
+VICTORY_CARD_WINDOWS_MB: 256
+VICTORY_TEXTURE_ROOM_PERCENT: 80
+VICTORY_STRICT_ADMISSION: 1
+VICTORY_ADAPTIVE_BUDGET: 1
+VICTORY_TEXTURE_CATCHUP: 0
+VICTORY_TEXTURE_STAGE_MS: 24
+VICTORY_TEXTURE_STAGE_MB: 96
+VICTORY_EARLY_TEXTURES_MS: 3
+VICTORY_BAKE_TEXTURES_MS: 8
+VICTORY_LOCAL_GPU_INPUTS: 1
+VICTORY_RANGE_UNION: 1
+NVIDIA performance profile; compare against baseline fallback if needed
+VICTORY_INDEXED_WATCH: 1
+VICTORY_WATCH_CLEAN_FAST: 1
+VICTORY_INDEXED_PENDING: 1
+VICTORY_INDEX_WRITE_GROUPS: 1
+VICTORY_BATCH_HAZARD_QUERY: 1
+VICTORY_BATCH_RAW_WORK: 1
+VICTORY_BATCH_PAGE_RANGES: 1
+VICTORY_SPARSE_MERGE: 1
+VICTORY_SETTLED_BLOCK_MERGE: 1
+VICTORY_SPARSE_REFRESH: 1
+VICTORY_SHARED_COMPARE_RUNS: 1
+VICTORY_PACK_SYNC_READBACK: 1
+VICTORY_REUSE_ROOT_DATA: 1
+VICTORY_REUSE_GRAPHICS_BINDINGS: 1
+VICTORY_COMPACT_MIP_UPLOAD: 1
+VICTORY_STICKY_RAM_PRESSURE: 1
+VICTORY_TRIM_READBACKS: 1
+VICTORY_STREAMING_FULL_BUDGET: 1
+VICTORY_STREAMING_SLOW_RECOVERY: 1
+VICTORY_MATERIAL_TEXTURE_DEMAND: 1
+VICTORY_TEXTURE_NO_WAIT: 0
+NVIDIA low-memory profile; RT off; native display patch: true
+Ray tracing requested: off
+Expected scene rendering 1920x1080, output 1920x1080
+Texture copy queue requested: off
+Sparse texture mips requested
+build          unknown (b99f876b74d4a77f03af5f878223b27bd647b5c35a79d5decd9f716504239e93)
+2026-11-27T00:14:37.472475Z  INFO victory::run::native_1440p: Series X SDR mode with built-in temporal scaling output_width=1920 output_height=1080 expected_render_width=1920 expected_render_height=1080 pool_size=18874368
+2026-11-27T00:14:37.676233Z  INFO victory_loader::tls: static TLS redirected index=10 patched=53246
+2026-11-27T00:14:37.676259Z  INFO victory_loader::windows: image mapped base=[address removed] preferred=[address removed] path=[local path removed]
+mapped at      [address removed] (preferred [address removed])
+title          7952987A, storage [local path removed]
+2026-11-27T00:14:37.698120Z  INFO victory_hle::modules::files: virtual drive drive=G root=[local path removed]
+2026-11-27T00:14:37.698525Z  INFO victory_hle::modules::files: virtual drive drive=T root=[local path removed]
+console        Xbox Series X
+2026-11-27T00:14:37.701648Z  INFO victory_loader::windows: image mapped base=[address removed] preferred=[address removed] path=[local path removed]
+2026-11-27T00:14:37.702611Z  INFO victory_loader::windows: image mapped base=[address removed] preferred=[address removed] path=[local path removed]
+2026-11-27T00:14:37.704904Z  INFO victory_loader::windows: image mapped base=[address removed] preferred=[address removed] path=[local path removed]
+2026-11-27T00:14:37.706203Z  INFO victory_loader::windows: image mapped base=[address removed] preferred=[address removed] path=[local path removed]
+title dll      xboxbvhbuilder.dll at [address removed]
+title dll      amd_fidelityfx_loader_xbox.dll at [address removed]
+title dll      libhttpclient.gdk.dll at [address removed]
+title dll      bink2scarlett.dll at [address removed]
+2026-11-27T00:14:37.707472Z  INFO victory_loader::windows: imports bound hle=9 host=48 missing=0
+bound          xboxbvhbuilder.dll: 9 hle, 48 host, 0 title, 0 missing
+2026-11-27T00:14:37.707605Z  INFO victory_loader::windows: imports bound hle=4 host=18 missing=0
+bound          amd_fidelityfx_loader_xbox.dll: 4 hle, 18 host, 0 title, 0 missing
+2026-11-27T00:14:37.709446Z  INFO victory_loader::windows: imports bound hle=27 host=171 missing=0
+bound          libhttpclient.gdk.dll: 27 hle, 171 host, 0 title, 0 missing
+2026-11-27T00:14:37.710795Z  INFO victory_loader::windows: imports bound hle=6 host=54 missing=0
+bound          bink2scarlett.dll: 6 hle, 54 host, 0 title, 0 missing
+2026-11-27T00:14:37.714763Z  INFO victory_loader::windows: imports bound hle=88 host=427 missing=0
+bound          game_scarlett_master.exe: 88 hle, 427 host, 72 title, 0 missing
+2026-11-27T00:14:37.715284Z  INFO victory_gpu::device: graphics virtual memory flags=0 page_table_pages=4 preserved_bytes=0
+2026-11-27T00:14:37.769978Z  INFO victory_hle::modules::kernel: loaded as a pseudo module dll="xgameruntime.dll"
+2026-11-27T00:14:37.770020Z  INFO victory_hle::modules::xgameruntime: InitializeApiImplEx2 version=109083579393810 build=112098646433501 flags=2 options=0x0
+2026-11-27T00:14:37.772363Z  WARN victory_hle::modules::kernel: a host DLL outside the host policy: refused dll="rpcrt4.dll"
+2026-11-27T00:14:37.789403Z  INFO victory_hle::modules::gameinput: GameInputCreate
+2026-11-27T00:14:37.808459Z  INFO victory_hle::modules::gameinput: input device device=4 connected=true
+2026-11-27T00:14:37.808493Z  INFO victory_hle::modules::gameinput: input device device=5 connected=true
+2026-11-27T00:14:37.808611Z  INFO victory_hle::modules::gameinput: input device callback kind=0x40000 enumeration=2 devices=1
+2026-11-27T00:14:37.808675Z  INFO victory_hle::modules::dstorage: dstorage: staging buffer size size=33554432
+2026-11-27T00:14:37.809279Z  INFO victory_hle::modules::dstorage: dstorage: workers workers=12
+2026-11-27T00:14:37.809528Z  INFO victory_hle::modules::dstorage: dstorage: file opened path="[local path removed]" iid="[identifier removed]"
+2026-11-27T00:14:37.812133Z  INFO victory_hle::modules::dstorage: dstorage: file opened path="[local path removed]" iid="[identifier removed]"
+2026-11-27T00:14:37.813062Z  INFO victory_hle::modules::dstorage: dstorage: file opened path="[local path removed]" iid="[identifier removed]"
+2026-11-27T00:14:37.813778Z  INFO victory_hle::modules::dstorage: dstorage: file opened path="[local path removed]" iid="[identifier removed]"
+2026-11-27T00:14:37.816020Z  INFO victory_hle::modules::dstorage: dstorage: file opened path="[local path removed]" iid="[identifier removed]"
+2026-11-27T00:14:37.817932Z  INFO victory_hle::modules::dstorage: dstorage: file opened path="[local path removed]" iid="[identifier removed]"
+2026-11-27T00:14:37.819881Z  INFO victory_hle::modules::dstorage: dstorage: file opened path="[local path removed]" iid="[identifier removed]"
+2026-11-27T00:14:37.822785Z  INFO victory_hle::modules::dstorage: dstorage: file opened path="[local path removed]" iid="[identifier removed]"
+2026-11-27T00:14:37.823143Z  INFO victory_hle::modules::dstorage: dstorage: file opened path="[local path removed]" iid="[identifier removed]"
+2026-11-27T00:14:37.823766Z  INFO victory_hle::modules::dstorage: dstorage: file opened path="[local path removed]" iid="[identifier removed]"
+2026-11-27T00:14:37.824089Z  INFO victory_hle::modules::dstorage: dstorage: file opened path="[local path removed]" iid="[identifier removed]"
+2026-11-27T00:14:37.824530Z  INFO victory_hle::modules::dstorage: dstorage: file opened path="[local path removed]" iid="[identifier removed]"
+2026-11-27T00:14:37.824982Z  INFO victory_hle::modules::files: virtual drive drive=Z root=[local path removed]
+2026-11-27T00:14:37.906985Z  INFO victory_hle::modules::display: HDR mode: disabled (SDR presentation) preference=0
+2026-11-27T00:14:37.911662Z  INFO victory_hle::modules::lifecycle: title window fitted to the screen width=2560 height=1440 to=(1834, 1032)
+2026-11-27T00:14:37.932684Z  INFO victory_gpu::device: D3D12.X device version=0x20004
+2026-11-27T00:14:38.157985Z  INFO victory_gpu::host: selected NVIDIA adapter adapter=NVIDIA GeForce RTX 3060 Ti dedicated_mib=8024
+2026-11-27T00:14:38.158114Z  INFO victory_gpu::host: host wave lanes min=32 max=32
+2026-11-27T00:14:38.194701Z  INFO victory_gpu::host: CPU-written GPU input buffers requested in local video memory supported=true local=true
+2026-11-27T00:14:38.194718Z  INFO victory_gpu::host: host D3D12 device ready
+2026-11-27T00:14:38.393062Z  INFO victory_hle::modules::display: HDR mode: disabled (SDR presentation) preference=0
+2026-11-27T00:14:38.393097Z  INFO victory_gpu::dxgi: display mode reported to the title width=1920 height=1080
+2026-11-27T00:14:38.393104Z  INFO victory_gpu::frame: frame interval interval=33.333ms
+2026-11-27T00:14:38.398783Z  INFO victory_hle::modules::xmem: xmem allocation hooks found=true
+VIctory: first-chance exception 0x80000003 at victory-image-b99f876b74d4a77f.dll+0x56a2afd on thread 15128 ""
+  rax [address removed] rbx 0x940 rcx [address removed] rdx [address removed] rsi 0x30808000 rdi 0xf00000 rsp [address removed] rbp [address removed]
+  r8 [address removed] r9 [address removed] r10 [address removed] r11 [address removed] r12 [address removed] r13 0x0 r14 [address removed] r15 0x80070057
+  #0  victory-image-b99f876b74d4a77f.dll+0x56a2afd
+  #1  victory-image-b99f876b74d4a77f.dll+0x4deb4ef
+  #2  victory.exe+0x45526f
+  #3  victory.exe+0x3dca91
+  #4  victory.exe+0x3dd665
+  #5  victory-image-b99f876b74d4a77f.dll+0x193e1ba
+  #6  victory-image-b99f876b74d4a77f.dll+0x34c001
+  #7  victory-image-b99f876b74d4a77f.dll+0xcc27e9
+  #8  victory-image-b99f876b74d4a77f.dll+0x247aeb6
+  #9  victory-image-b99f876b74d4a77f.dll+0x2479430
+  #10 victory-image-b99f876b74d4a77f.dll+0x19f4f54
+  #11 victory-image-b99f876b74d4a77f.dll+0x580437e
+  #12 victory-image-b99f876b74d4a77f.dll+0x43a4911
+  #13 victory-image-b99f876b74d4a77f.dll+0x224070b
+  #14 victory-image-b99f876b74d4a77f.dll+0x23cf00a
+  #15 victory-image-b99f876b74d4a77f.dll+0x2215eca
+  #16 KERNEL32.DLL+0x2dda7
+  #17 ntdll.dll+0xc9c6c
+VIctory: unhandled exception 0x80000003 at victory-image-b99f876b74d4a77f.dll+0x56a2afd on thread 15128 ""
+  rax [address removed] rbx 0x940 rcx [address removed] rdx [address removed] rsi 0x30808000 rdi 0xf00000 rsp [address removed] rbp [address removed]
+  r8 [address removed] r9 [address removed] r10 [address removed] r11 [address removed] r12 [address removed] r13 0x0 r14 [address removed] r15 0x80070057
+  #0  victory-image-b99f876b74d4a77f.dll+0x56a2afd
+  #1  victory-image-b99f876b74d4a77f.dll+0x4deb4ef
+  #2  victory.exe+0x45526f
+  #3  victory.exe+0x3dca91
+  #4  victory.exe+0x3dd665
+  #5  victory-image-b99f876b74d4a77f.dll+0x193e1ba
+  #6  victory-image-b99f876b74d4a77f.dll+0x34c001
+  #7  victory-image-b99f876b74d4a77f.dll+0xcc27e9
+  #8  victory-image-b99f876b74d4a77f.dll+0x247aeb6
+  #9  victory-image-b99f876b74d4a77f.dll+0x2479430
+  #10 victory-image-b99f876b74d4a77f.dll+0x19f4f54
+  #11 victory-image-b99f876b74d4a77f.dll+0x580437e
+  #12 victory-image-b99f876b74d4a77f.dll+0x43a4911
+  #13 victory-image-b99f876b74d4a77f.dll+0x224070b
+  #14 victory-image-b99f876b74d4a77f.dll+0x23cf00a
+  #15 victory-image-b99f876b74d4a77f.dll+0x2215eca
+  #16 KERNEL32.DLL+0x2dda7
+  #17 ntdll.dll+0xc9c6c
+VIctory exited with exit code: 0x80000003
+
+[Lines omitted: 1. Empty source: False.]

@@ -2,11 +2,12 @@ use anyhow::{Context, bail};
 use std::ffi::c_void;
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
+use std::os::windows::io::AsRawHandle;
 use std::os::windows::fs::OpenOptionsExt;
 use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitStatus, Stdio};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::process::{Child, Command, ExitStatus, Stdio};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 #[path = "fsr_preset.rs"]
 mod fsr_preset;
@@ -445,7 +446,7 @@ pub(super) fn run(warm: bool) -> anyhow::Result<()> {
     let status = if warm {
         preload(&mut child, &game, &cache, &path, &mut log)?
     } else {
-        let status = child
+        let mut game_process = child
             .arg("run")
             .arg(&game)
             .args([
@@ -456,8 +457,16 @@ pub(super) fn run(warm: bool) -> anyhow::Result<()> {
                 "trap",
             ])
             .stdout(log.try_clone()?)
-            .status()
+            .spawn()
             .with_context(|| format!("Could not start {}", runtime.display()))?;
+        let status = if std::env::var_os("VICTORY_MEMORY_GUARD").as_deref() == Some(std::ffi::OsStr::new("1")) {
+            let Some(status) = wait_with_memory_guard(&mut game_process, &mut log)? else {
+                return Ok(());
+            };
+            status
+        } else {
+            game_process.wait()?
+        };
         writeln!(log, "VIctory exited with {status}")?;
         status
     };
@@ -468,6 +477,120 @@ pub(super) fn run(warm: bool) -> anyhow::Result<()> {
         );
     }
     Ok(())
+}
+
+/// Keep a test run from exhausting physical RAM and locking up the desktop.
+/// This is deliberately opt-in because it can stop a title during loading.
+/// Leave room to react before the hard stop without paging out the game
+/// while Windows still has ample physical RAM.
+fn working_set_trim_range(min_free_mib: u64) -> std::ops::Range<u64> {
+    const TRIM_HEADROOM_MIB: u64 = 768;
+    min_free_mib.saturating_sub(128)..min_free_mib + TRIM_HEADROOM_MIB
+}
+
+fn wait_with_memory_guard(child: &mut Child, log: &mut File) -> anyhow::Result<Option<ExitStatus>> {
+    use windows_sys::Win32::System::ProcessStatus::{
+        K32EmptyWorkingSet, K32GetPerformanceInfo, K32GetProcessMemoryInfo, PERFORMANCE_INFORMATION,
+        PROCESS_MEMORY_COUNTERS,
+    };
+    use windows_sys::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
+    const TRIM_COOLDOWN: Duration = Duration::from_secs(8);
+    const CRITICAL_TRIM_COOLDOWN: Duration = Duration::from_millis(750);
+    let min_free_mib = std::env::var("VICTORY_MEMORY_GUARD_MIB")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .filter(|&value| (1024..=4096).contains(&value))
+        .unwrap_or(2048);
+    let trim_range = working_set_trim_range(min_free_mib);
+    writeln!(log, "Memory guard threshold: {min_free_mib} MiB available")?;
+    writeln!(log, "Working set trim threshold: {} MiB physical RAM available", trim_range.end)?;
+    let process = child.as_raw_handle();
+    let mut last_trim: Option<Instant> = None;
+    loop {
+        if let Some(status) = child.try_wait()? {
+            return Ok(Some(status));
+        }
+        // SAFETY: Windows fills this correctly sized plain data structure.
+        let mut memory: MEMORYSTATUSEX = unsafe { std::mem::zeroed() };
+        memory.dwLength = std::mem::size_of::<MEMORYSTATUSEX>() as u32;
+        // SAFETY: `memory` is writable and has its size set above.
+        let mut measured = unsafe { GlobalMemoryStatusEx(&mut memory) } != 0;
+        let mut free_mib = (memory.ullAvailPhys >> 20) as u64;
+        let mut perf = PERFORMANCE_INFORMATION {
+            cb: size_of::<PERFORMANCE_INFORMATION>() as u32,
+            ..Default::default()
+        };
+        // Commit headroom can be exhausted while physical pages remain
+        // available (notably on machines with a small page file). Trimming a
+        // working set does not release committed memory, so guard both pools.
+        let mut commit_free_mib = (unsafe { K32GetPerformanceInfo(&mut perf, perf.cb) } != 0)
+            .then(|| ((perf.CommitLimit.saturating_sub(perf.CommitTotal) * perf.PageSize) >> 20) as u64);
+        let mut effective_free_mib = commit_free_mib.map_or(free_mib, |commit| free_mib.min(commit));
+        let trim_cooldown = if free_mib < min_free_mib + 256 {
+            CRITICAL_TRIM_COOLDOWN
+        } else {
+            TRIM_COOLDOWN
+        };
+        if measured
+            && trim_range.contains(&free_mib)
+            && last_trim.is_none_or(|at| at.elapsed() >= trim_cooldown)
+        {
+            last_trim = Some(Instant::now());
+            let mut counters = PROCESS_MEMORY_COUNTERS {
+                cb: size_of::<PROCESS_MEMORY_COUNTERS>() as u32,
+                ..Default::default()
+            };
+            // SAFETY: the child owns the process handle and both outputs are sized.
+            let sampled = unsafe { K32GetProcessMemoryInfo(process, &mut counters, counters.cb) } != 0;
+            // Give Windows a chance to reclaim resident pages before the guard trips.
+            // This preserves the guest mappings and leaves the hard stop in place.
+            // SAFETY: the process handle remains owned by the child.
+            let trimmed = unsafe { K32EmptyWorkingSet(process) } != 0;
+            let before_trim = free_mib;
+            let before_commit = commit_free_mib;
+            // SAFETY: reuse the same correctly sized writable output.
+            measured = unsafe { GlobalMemoryStatusEx(&mut memory) } != 0;
+            free_mib = (memory.ullAvailPhys >> 20) as u64;
+            // SAFETY: the output buffer is writable and stores the supplied size.
+            commit_free_mib = (unsafe { K32GetPerformanceInfo(&mut perf, perf.cb) } != 0)
+                .then(|| ((perf.CommitLimit.saturating_sub(perf.CommitTotal) * perf.PageSize) >> 20) as u64);
+            effective_free_mib = commit_free_mib.map_or(free_mib, |commit| free_mib.min(commit));
+            // Keep guarding the live process even if the log becomes unwritable.
+            let _ = writeln!(
+                log,
+                "Working set trim: success={trimmed}, physical available={before_trim} MiB, after={:?} MiB, commit headroom before={before_commit:?} MiB after={commit_free_mib:?} MiB, resident={:?} MiB, process commit={:?} MiB",
+                measured.then_some(free_mib),
+                sampled.then_some(counters.WorkingSetSize >> 20),
+                sampled.then_some(counters.PagefileUsage >> 20)
+            );
+        }
+        let physical_low = measured && memory.ullAvailPhys < (min_free_mib << 20);
+        let commit_low = commit_free_mib.is_some_and(|free| free < min_free_mib);
+        if !measured || physical_low || commit_low {
+            let reason = if !measured {
+                "Stopped the game because available RAM could not be measured".to_owned()
+            } else if commit_low {
+                format!("Stopped the game before Windows exhausted commit ({:?} MiB headroom, {free_mib} MiB physical RAM free)", commit_free_mib)
+            } else {
+                format!("Stopped the game before Windows ran out of RAM ({free_mib} MiB free)")
+            };
+            // Stop the child first. A logging error must not leave it running.
+            if let Err(error) = child.kill() {
+                if let Some(status) = child.try_wait()? {
+                    return Ok(Some(status));
+                }
+                return Err(error).context("Could not stop the game after the memory guard triggered");
+            }
+            child.wait()?;
+            writeln!(log, "{reason}")?;
+            if !measured {
+                anyhow::bail!("{reason}");
+            }
+            return Ok(None);
+        }
+        let poll_ms = if effective_free_mib < min_free_mib + 1536 { 100 } else { 250 };
+        std::thread::sleep(Duration::from_millis(poll_ms));
+    }
 }
 
 fn preload(
@@ -555,7 +678,16 @@ pub(super) fn show_error(text: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::{check_warm_summary, launcher_options};
+    use super::{check_warm_summary, launcher_options, working_set_trim_range};
+
+    #[test]
+    fn a_one_gib_guard_trims_only_near_the_physical_limit() {
+        let trim = working_set_trim_range(1024);
+        assert!(!trim.contains(&3007));
+        assert!(trim.contains(&1500));
+        assert!(trim.contains(&1024));
+        assert!(!trim.contains(&800));
+    }
 
     #[test]
     fn explicit_off_wins_in_either_order_and_keeps_the_game_path() {

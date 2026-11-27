@@ -1,0 +1,66 @@
+Runtime [local path removed]
+Game [local path removed]
+VICTORY_FILL_WORKERS: 4
+VICTORY_JOIN_COPIES: 1
+VICTORY_WIDE_REFRESH: 1
+VICTORY_TEXTURE_NO_WAIT: 1
+VICTORY_PARALLEL_PRELUDES: 1
+VICTORY_PARALLEL_DETILE: 1
+VICTORY_WIDE_MERGE: 1
+VICTORY_CARD_WINDOWS_MB: 256
+VICTORY_TEXTURE_ROOM_PERCENT: 80
+VICTORY_STRICT_ADMISSION: 1
+VICTORY_ADAPTIVE_BUDGET: 1
+VICTORY_TEXTURE_CATCHUP: 0
+VICTORY_TEXTURE_STAGE_MS: 8
+VICTORY_TEXTURE_STAGE_MB: 32
+VICTORY_EARLY_TEXTURES_MS: 3
+VICTORY_BAKE_TEXTURES_MS: 8
+VICTORY_LOCAL_GPU_INPUTS: 1
+VICTORY_RANGE_UNION: 1
+NVIDIA low-memory profile; RT off; native display patch: false
+Ray tracing requested: off
+Quiet NVIDIA run; use --nvidia-profile-log for diagnostic counters
+Texture copy queue requested: off
+Sparse texture mips requested
+Inherited VICTORY_AMBIENT_FALLBACK=1
+Inherited VICTORY_MEMORY_GUARD=1
+Memory guard threshold: 2048 MiB available
+build          unknown (b99f876b74d4a77f03af5f878223b27bd647b5c35a79d5decd9f716504239e93)
+mapped at      [address removed] (preferred [address removed])
+title          7952987A, storage [local path removed]
+console        Xbox Series S
+title dll      xboxbvhbuilder.dll at [address removed]
+title dll      amd_fidelityfx_loader_xbox.dll at [address removed]
+title dll      libhttpclient.gdk.dll at [address removed]
+title dll      bink2scarlett.dll at [address removed]
+bound          xboxbvhbuilder.dll: 9 hle, 48 host, 0 title, 0 missing
+bound          amd_fidelityfx_loader_xbox.dll: 4 hle, 18 host, 0 title, 0 missing
+bound          libhttpclient.gdk.dll: 27 hle, 171 host, 0 title, 0 missing
+bound          bink2scarlett.dll: 6 hle, 54 host, 0 title, 0 missing
+bound          game_scarlett_master.exe: 88 hle, 427 host, 72 title, 0 missing
+2026-11-27T03:39:08.740175Z  WARN victory_hle::modules::kernel: a host DLL outside the host policy: refused dll="rpcrt4.dll"
+2026-11-27T03:39:10.015709Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=1 description=Some([2724c07c060, 904b18594, 184, 904b18718, bc, 948a27300, 200, 904b187d4, d0, 948a27500, 200, 904b188a4, b0, 0, 0, 0]) first_points_at=Some([7ff7bbece6a0, 300000000, 530, 2724c16a8e0, 530, 88000dff67614516, 7ff7bbece6a0, 300000000, 44, 2724c126ee0, 44, 80000eff67644515, 7ffb29de9738, ffffff0100000000, 44, 2724c126cb0])
+2026-11-27T03:39:10.015750Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=3 description=Some([2724c07c090, 9055887fc, 17c, 905588978, bc, 0, 0, 0, 0, 94f3dfa00, 140, 905588a34, 30, 0, 0, 0]) first_points_at=Some([7ff7bbece6a0, 300000000, 44, 2724c126ee0, 44, 80000eff67644515, 7ffb29de9738, ffffff0100000000, 44, 2724c126cb0, ffffffffffffffff, 88000fff677b4510, 7ff7bbece6a0, 300000000, 500, 2719134cc50])
+2026-11-27T03:39:10.015757Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=4 description=Some([2724c07bf10, 904d342c8, 184, 904d3444c, bc, 948ab3800, 300, 904d34508, d0, 948ab3b00, 140, 904d345d8, 2f0, 0, 0, 0]) first_points_at=Some([7ff7bbece6a0, 4600000000, 70, 2724c169e60, 70, 800006ff675c42ed, 2724c1641c0, ffffff0100000000, ffffffff00000018, 2724c07be20, ffffffffffffffff, 800007ff675342e8, 2724c168460, ffffff01000000a8, ffffffff000018b8, 2724c07bfa0])
+2026-11-27T03:39:10.015764Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=8 description=Some([2724c07bf10, 9053a5d4c, 184, 9053a5ed0, bc, 948aafc00, 180, 904d30808, 70, 948aafe00, 140, 904d30878, 30, 0, 0, 0]) first_points_at=Some([7ff7bbece6a0, 4800000000, 70, 2724c169e60, 70, 800006ff675c42ed, 2724c1641c0, ffffff0100000000, ffffffff00000018, 2724c07be20, ffffffffffffffff, 800007ff675342e8, 2724c168460, ffffff01000000a8, ffffffff000018b8, 2724c07bfa0])
+2026-11-27T03:39:10.015759Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=2 description=Some([2724c07bf10, 904d33cc8, 184, 904d33e4c, bc, 948ab3400, 1c0, 904d33f08, d0, 948ab3600, 180, 904d33fd8, 2f0, 0, 0, 0]) first_points_at=Some([7ff7bbece6a0, 4200000000, 70, 2724c169e60, 70, 800006ff675c42ed, 2724c1641c0, ffffff0100000000, ffffffff00000018, 2724c07be20, ffffffffffffffff, 800007ff675342e8, 2724c168460, ffffff01000000a8, ffffffff000018b8, 2724c07bfa0])
+2026-11-27T03:39:10.015771Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=16 description=Some([2724c07bf10, 90531998c, 184, 905319b10, bc, 94e5f1200, 140, 905319bcc, 90, 94e5f1400, 140, 905319c5c, 2f0, 0, 0, 0]) first_points_at=Some([7ff7bbece6a0, 4c00000000, 70, 2724c169e60, 70, 800006ff675c42ed, 2724c1641c0, ffffff0100000000, ffffffff00000018, 2724c07be20, ffffffffffffffff, 800007ff675342e8, 2724c168460, ffffff01000000a8, ffffffff000018b8, 2724c07bfa0])
+2026-11-27T03:39:10.016193Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=32 description=Some([2724c07bf10, 904d31668, 184, 904d317ec, bc, 948ab1000, 380, 904d318a8, 190, 948ab1400, 240, 904d31a38, f0, 0, 0, 0]) first_points_at=Some([7ff7bbece6a0, a500000000, 70, 2724c169e60, 70, 880006ff675c42ed, 7ff7bbece6a0, 300000000, 560, 2724c16b230, 560, 800007ff675342e8, 2724c16b230, ffffff0100000478, ffffffff0000005c, 0])
+2026-11-27T03:39:10.016295Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=64 description=Some([2724c07bf70, 904c1c238, 184, 904c1c3bc, 78, 948a28300, 180, 904b1999c, b0, 948a27900, 1c0, 904b18c00, 70, 0, 0, 0]) first_points_at=Some([7ff7bbece6a0, 500000000, a0, 2724c168a90, a0, 800008ff675642e7, 7ffb29de9738, ffffff0100000000, 530, 2724c16a3a0, ffffffffffffffff, 800009ff675542e2, 7ffb29de9738, ffffff0000000000, a0, 2724c1683b0])
+2026-11-27T03:39:10.016307Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=128 description=Some([2724c07bf70, 904baf078, 184, 904baf1fc, 78, 948a28500, 1c0, 904b19e44, f0, 948a28100, 1c0, 904b19730, 70, 0, 0, 0]) first_points_at=Some([7ff7bbece6a0, 900000000, a0, 2724c168a90, a0, 800008ff675642e7, 7ffb29de9738, ffffff0100000000, 530, 2724c16a3a0, ffffffffffffffff, 800009ff675542e2, 7ffb29de9738, ffffff0000000000, a0, 2724c1683b0])
+2026-11-27T03:39:10.016350Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=256 description=Some([2724c07bf70, 904c8ae34, 18c, 904cc446c, 78, 948a2a500, 1c0, 904b1cb7c, b0, 948a29900, 200, 904b1bb24, 70, 0, 0, 0]) first_points_at=Some([7ff7bbece6a0, 1400000000, a0, 2724c168a90, a0, 800008ff675642e7, 7ffb29de9738, ffffff0100000000, 530, 2724c16a3a0, ffffffffffffffff, 800009ff675542e2, 7ffb29de9738, ffffff0000000000, a0, 2724c1683b0])
+2026-11-27T03:39:10.016409Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=512 description=Some([2724c07bf70, 904cf97b8, 18c, 904cfb028, 98, 948a2d100, 1c0, 904b1f694, b0, 948a2ca00, 200, 904b1f1ec, 70, 0, 0, 0]) first_points_at=Some([7ff7bbece6a0, 2900000000, a0, 2724c168a90, a0, 800008ff675642e7, 7ffb29de9738, ffffff0100000000, 530, 2724c16a3a0, ffffffffffffffff, 800009ff675542e2, 7ffb29de9738, ffffff0000000000, a0, 2724c1683b0])
+2026-11-27T03:39:10.016528Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=1024 description=Some([2724c07bf70, 904c1d8a0, 184, 904c5c9e0, 98, 948a32700, 1c0, 904b241e0, f0, 948a32100, 200, 904b23cb4, 70, 0, 0, 0]) first_points_at=Some([7ff7bbece6a0, 5300000000, a0, 2724c168a90, a0, 800008ff675642e7, 7ffb29de9738, ffffff0100000000, 530, 2724c16a3a0, ffffffffffffffff, 800009ff675542e2, 7ffb29de9738, ffffff0000000000, a0, 2724c1683b0])
+2026-11-27T03:39:10.017106Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=2048 description=Some([2724c07bf70, 904c2ab84, 18c, 904c63184, 98, 948a3fc00, 200, 904b2ed64, f0, 948a3f700, 2c0, 904b2e858, 70, 0, 0, 0]) first_points_at=Some([7ff7bbece6a0, 12100000000, a0, 2724c168a90, a0, 800008ff675642e7, 7ffb29de9738, ffffff0100000000, 530, 2724c16a3a0, ffffffffffffffff, 800009ff675542e2, 7ffb29de9738, ffffff0000000000, a0, 2724c1683b0])
+2026-11-27T03:39:10.018569Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=4096 description=Some([2724c07bf70, 904c2672c, 18c, 904c44fb4, bc, 948a7a600, 200, 904b58f24, b0, 948a79e00, 240, 904b58a64, 70, 0, 0, 0]) first_points_at=Some([7ff7bbece6a0, 36500000000, a0, 2724c168a90, a0, 800008ff675642e7, 7ffb29de9738, ffffff0100000000, 530, 2724c16a3a0, ffffffffffffffff, 800009ff675542e2, 7ffb29de9738, ffffff0000000000, a0, 2724c1683b0])
+2026-11-27T03:39:10.020080Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=8192 description=Some([2724c07bf70, 904bbcfb4, 18c, 904c13374, 98, 948a93700, 400, 904b68ddc, 1b0, 948a86200, 2c0, 904b603b0, 70, 0, 0, 0]) first_points_at=Some([7ff7bbece6a0, 4ef00000000, a0, 2724c168a90, a0, 800008ff675642e7, 7ffb29de9738, ffffff0100000000, 530, 2724c16a3a0, ffffffffffffffff, 800009ff675542e2, 7ffb29de9738, ffffff0000000000, a0, 2724c1683b0])
+2026-11-27T03:39:10.021289Z  WARN victory_loader::console_insn: a console CPU instruction this CPU lacks: emulated (logged once) instruction=ClzeroLoop { end_reg: 10 } at=[address removed]
+2026-11-27T03:39:10.376400Z  WARN victory_gpu::descriptor::host: host view heap capped at 1000000; views past it read a null slot count=1245184
+2026-11-27T03:39:10.968748Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=16384 description=Some([27254337cb0, 90646d760, 200, 90646d960, 50, 955040500, 4a40, 9063b2ba4, 5b0, 0, 0, 0, 0, 955045000, d80, 9063b3154]) first_points_at=Some([7ff7bbece6a0, 1daf00000000, 165c, 27190ae0620, 165c, 8804b30068ee0ed3, 7ff7bbece6a0, 3300000000, 169c, 27281ea6e40, 169c, 9004b40068e30ece, 3931633336333338, 3231383431613533, 6436336230643330, 3838313230643835])
+2026-11-27T03:39:11.539728Z  WARN victory_loader::console_insn: a console CPU instruction this CPU lacks: emulated (logged once) instruction=Monitorx at=[address removed]
+2026-11-27T03:39:11.706195Z  WARN victory_loader::console_insn: a console CPU instruction this CPU lacks: emulated (logged once) instruction=Mwaitx at=[address removed]
+2026-11-27T03:39:12.202184Z  WARN victory_hle::modules::kernel: a host DLL outside the host policy: refused dll="amd_fidelityfx_upscaler_xbox.dll"
+title dll      amd_fidelityfx_upscaler_xbox.dll at [address removed] (loaded by the title)
+bound          amd_fidelityfx_upscaler_xbox.dll: 7 hle, 79 host, 0 title, 0 missing
+VIctory exited with exit code: 0

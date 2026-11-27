@@ -116,7 +116,7 @@ struct List {
     /// calls record into (decision 0007), and the draw state the title set.
     uploads: std::sync::Mutex<Vec<Vec<u8>>>,
     #[cfg(windows)]
-    host: Option<crate::host::HostList>,
+    host: std::sync::OnceLock<Option<crate::host::HostList>>,
     #[cfg(windows)]
     state: std::sync::Mutex<crate::draw::State>,
     /// The parts of the recording before `host`, in order, each closed: the
@@ -143,7 +143,7 @@ const _: () = assert!(offset_of!(List, pipeline_shadow) + 32 == 0x560);
 /// is a host GPU.
 #[cfg(windows)]
 pub(crate) fn with_state(this: This, f: impl FnOnce(&crate::host::HostList, &mut crate::draw::State)) {
-    let Some(list) = host_list(this) else { return };
+    let Some(list) = recording_host_list(this) else { return };
     #[cfg(feature = "diagnostics")]
     let started = std::time::Instant::now();
     // SAFETY: the title passes one of our lists.
@@ -177,7 +177,37 @@ pub(crate) fn host_list<'a>(this: This) -> Option<&'a crate::host::HostList> {
         return None;
     }
     // SAFETY: the title passes one of our lists.
-    unsafe { (*this.cast::<List>()).host.as_ref() }
+    unsafe { (*this.cast::<List>()).host.get().and_then(Option::as_ref) }
+}
+
+/// The host list for a recording operation. An empty list can be closed,
+/// reset, or submitted without allocating one.
+#[cfg(windows)]
+pub(crate) fn recording_host_list<'a>(this: This) -> Option<&'a crate::host::HostList> {
+    if this.is_null() {
+        return None;
+    }
+    // SAFETY: the title passes one of our lists and serializes operations on it.
+    let list = unsafe { &*this.cast::<List>() };
+    list.host.get_or_init(fresh_list).as_ref()
+}
+
+#[cfg(windows)]
+fn lazy_host_lists() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("VICTORY_LOW_MEMORY").is_some_and(|v| v == "1"))
+}
+
+#[cfg(windows)]
+fn take_submitted_host(list: &mut List) -> Option<crate::host::HostList> {
+    list.host.get()?.as_ref()?;
+    if lazy_host_lists() {
+        return list.host.take().flatten();
+    }
+    // The title's next call is a reset, which expects a closed list.
+    let replacement = fresh_list()?;
+    replacement.close();
+    list.host.get_mut()?.replace(replacement)
 }
 
 /// The host side of a submitted list, taken from it: a queue that waits
@@ -229,6 +259,43 @@ static IDLE: std::sync::Mutex<(Vec<Idle>, u64)> = std::sync::Mutex::new((Vec::ne
 #[cfg(windows)]
 const IDLE_MOST: (usize, u64) = (128, 256 << 20);
 
+#[cfg(windows)]
+static IDLE_PRESSURE: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+
+#[cfg(windows)]
+fn idle_limits(pressure: u8) -> (usize, u64) {
+    match pressure {
+        2 => (8, 8 << 20),
+        1 => (32, 64 << 20),
+        _ => IDLE_MOST,
+    }
+}
+
+/// Drop only completed, detached lists. Releasing driver allocations can
+/// block, so leave the pool lock before dropping each entry.
+#[cfg(windows)]
+pub(crate) fn trim_idle_lists(available: Option<u64>) {
+    use std::sync::atomic::Ordering::Relaxed;
+    let pressure = crate::budget::ram_pressure(available);
+    IDLE_PRESSURE.store(pressure, Relaxed);
+    if pressure == 0 {
+        return;
+    }
+    let (count, bytes) = idle_limits(pressure);
+    loop {
+        let retired = {
+            let mut idle = IDLE.lock().unwrap_or_else(|e| e.into_inner());
+            if idle.0.len() <= count && idle.1 <= bytes {
+                break;
+            }
+            let Some(entry) = idle.0.pop() else { break };
+            idle.1 -= entry.1;
+            entry
+        };
+        drop(retired);
+    }
+}
+
 /// Whether host lists that have run are used again (on by default;
 /// `VICTORY_LIST_POOL=0`: each is made new and thrown away, as before).
 #[cfg(windows)]
@@ -264,11 +331,12 @@ pub(crate) fn recycle(lists: Vec<Detached>, ran: &[usize]) {
     if !pools() {
         return;
     }
+    let (max_count, max_bytes) = idle_limits(IDLE_PRESSURE.load(std::sync::atomic::Ordering::Relaxed));
     for (i, Detached { host, _uploads, _state }) in lists.into_iter().enumerate() {
         // The descriptor slots and the upload memory its commands named.
         drop(_state);
         drop(_uploads);
-        if !ran.contains(&i) || IDLE.lock().unwrap_or_else(|e| e.into_inner()).0.len() >= IDLE_MOST.0 {
+        if !ran.contains(&i) || IDLE.lock().unwrap_or_else(|e| e.into_inner()).0.len() >= max_count {
             continue;
         }
         // As the title's reset does: what the list kept for its commands
@@ -276,7 +344,7 @@ pub(crate) fn recycle(lists: Vec<Detached>, ran: &[usize]) {
         host.reset();
         let bytes = host.scratch_kept();
         let mut idle = IDLE.lock().unwrap_or_else(|e| e.into_inner());
-        if idle.0.len() < IDLE_MOST.0 && idle.1 + bytes <= IDLE_MOST.1 {
+        if idle.0.len() < max_count && idle.1 + bytes <= max_bytes {
             idle.0.push(Idle(host, bytes));
             idle.1 += bytes;
         }
@@ -302,13 +370,16 @@ pub(crate) fn recycle(lists: Vec<Detached>, ran: &[usize]) {
 /// part has no wait after its first work).
 #[cfg(windows)]
 fn cut(this: This, wait: ValueWait) {
-    if this.is_null() {
+    if recording_host_list(this).is_none() {
         return;
     }
     // SAFETY: the title passes one of our lists; a list is recorded by one
     // thread at a time and is not submitted while it records.
     let list = unsafe { &mut *this.cast_mut().cast::<List>() };
-    let Some(current) = list.host.as_ref() else {
+    let Some(host) = list.host.get_mut() else {
+        return;
+    };
+    let Some(current) = host.as_ref() else {
         return;
     };
     if current.untouched() {
@@ -328,12 +399,12 @@ fn cut(this: This, wait: ValueWait) {
     if CUTS.fetch_add(1, std::sync::atomic::Ordering::Relaxed) < 4 {
         tracing::info!(parts = list.earlier.len() + 2, "a list is cut at a wait for a memory value");
     }
-    if let Some(done) = list.host.replace(fresh) {
+    if let Some(done) = host.replace(fresh) {
         let waits = std::mem::replace(&mut list.gate, vec![wait]);
         list.earlier.push(Part { waits, host: done });
     }
     // What the title set so far, on the new host list.
-    if let Some(host) = list.host.as_ref() {
+    if let Some(host) = host.as_ref() {
         list.state
             .lock()
             .unwrap_or_else(|e| e.into_inner())
@@ -361,8 +432,8 @@ pub(crate) fn cut_list(this: This) -> bool {
 pub(crate) type Parts = Vec<(Vec<ValueWait>, Vec<Detached>, Vec<usize>)>;
 
 /// Takes the host sides of the submitted `lists`, part by part ([`cut`]),
-/// and leaves each list a new, closed host list for its next reset, as
-/// [`detach`] does. What comes back is in the order the queue runs it: a
+/// and prepares each list for reuse, as [`detach`] does.
+/// What comes back is in the order the queue runs it: a
 /// new entry starts at every part that has waits; host lists without
 /// waits join the entry before them. The list's upload memory and draw
 /// state (its dynamic descriptor slots) go with its last part, which runs
@@ -392,16 +463,10 @@ pub(crate) fn detach_parts(lists: &[This]) -> Parts {
             }
             continue;
         }
-        let Some(fresh) = fresh_list() else {
-            continue;
-        };
-        // A new host list is open; the title's next call on its list is a
-        // reset, which wants it closed.
-        fresh.close();
         // SAFETY: one of our lists, closed and submitted: nothing records
         // into it until the title resets it.
         let list = unsafe { &mut *this.cast_mut().cast::<List>() };
-        let Some(host) = list.host.replace(fresh) else {
+        let Some(host) = take_submitted_host(list) else {
             continue;
         };
         let earlier = std::mem::take(&mut list.earlier);
@@ -450,8 +515,8 @@ pub(crate) fn detach_parts(lists: &[This]) -> Parts {
 }
 
 /// Takes the host sides of submitted lists (each once, however often the
-/// submission names it) and leaves each list a new, closed host list for
-/// its next reset: what was taken, and which of them run in what order.
+/// submission names it) and prepares each list for reuse. Returns what
+/// was taken and which of them run in what order.
 #[cfg(windows)]
 pub(crate) fn detach(lists: &[This]) -> (Vec<Detached>, Vec<usize>) {
     let mut taken: Vec<(This, Detached)> = Vec::new();
@@ -464,17 +529,11 @@ pub(crate) fn detach(lists: &[This]) -> (Vec<Detached>, Vec<usize>) {
             order.push(i);
             continue;
         }
-        let Some(fresh) = fresh_list() else {
-            continue;
-        };
-        // A new host list is open; the title's next call on its list is a
-        // reset, which wants it closed.
-        fresh.close();
         let list = this.cast_mut().cast::<List>();
         // SAFETY: one of our lists, closed and submitted: nothing records
         // into it until the title resets it.
         let (host, uploads, state) = unsafe {
-            let Some(host) = (*list).host.replace(fresh) else {
+            let Some(host) = take_submitted_host(&mut *list) else {
                 continue;
             };
             let uploads =
@@ -577,13 +636,17 @@ fn new_list(
         newer: [0; 256],
         uploads: Default::default(),
         #[cfg(windows)]
-        host: crate::host::host().and_then(|h| match h.new_list() {
-            Ok(list) => Some(list),
-            Err(e) => {
-                tracing::warn!(error = %e, "no host command list");
-                None
-            }
-        }),
+        host: if lazy_host_lists() {
+            std::sync::OnceLock::new()
+        } else {
+            std::sync::OnceLock::from(crate::host::host().and_then(|h| match h.new_list() {
+                Ok(list) => Some(list),
+                Err(e) => {
+                    tracing::warn!(error = %e, "no host command list");
+                    None
+                }
+            }))
+        },
         #[cfg(windows)]
         state: {
             let mut state = crate::draw::State::default();
@@ -651,12 +714,14 @@ extern "system" fn reset(this: This, allocator: This, pipeline: This) -> HRESULT
         let list = unsafe { &mut *this.cast_mut().cast::<List>() };
         list.earlier.clear();
         list.gate.clear();
+        if let Some(Some(host)) = list.host.get() {
+            host.reset();
+        } else if lazy_host_lists() {
+            // Retry a failed host allocation when recording the next list.
+            list.host.take();
+        }
+        list.state.get_mut().unwrap_or_else(|e| e.into_inner()).reset(pipeline);
     }
-    #[cfg(windows)]
-    with_state(this, |host, state| {
-        host.reset();
-        state.reset(pipeline);
-    });
     #[cfg(not(windows))]
     let _ = (this, pipeline);
     S_OK
@@ -744,7 +809,7 @@ const UAV_BARRIER: Barrier = Barrier {
 /// Returns the console's barrier "actions" (none).
 extern "system" fn barrier(this: This, count: u32, barriers: *const Barrier) -> u32 {
     #[cfg(windows)]
-    if let Some(list) = host_list(this)
+    if let Some(list) = recording_host_list(this)
         && !barriers.is_null()
     {
         // SAFETY: the title passes `count` barriers.
@@ -820,7 +885,7 @@ extern "system" fn copy_buffer_region(
     len: u64,
 ) {
     #[cfg(windows)]
-    if let Some(list) = host_list(this)
+    if let Some(list) = recording_host_list(this)
         && let Some(to) = buffer_range(dst, dst_offset, len)
         && let Some(from) = buffer_range(src, src_offset, len)
     {
@@ -848,7 +913,7 @@ fn unlike(dst: This, src: This) -> bool {
 extern "system" fn copy_resource(this: This, dst: This, src: This) {
     #[cfg(windows)]
     {
-        let Some(list) = host_list(this) else {
+        let Some(list) = recording_host_list(this) else {
             return;
         };
         if let (Some(to), Some(from)) = (
@@ -917,7 +982,7 @@ extern "system" fn copy_texture_region(
         const FOOTPRINT: u32 = 1;
         // SAFETY: the title passes both locations (null is tolerated).
         let (Some(list), Some(&dst), Some(&src)) =
-            (host_list(this), unsafe { dst.as_ref() }, unsafe {
+            (recording_host_list(this), unsafe { dst.as_ref() }, unsafe {
                 src.as_ref()
             })
         else {
@@ -1132,7 +1197,7 @@ extern "system" fn resolve(
     format: u32,
 ) {
     #[cfg(windows)]
-    if let Some(list) = host_list(this)
+    if let Some(list) = recording_host_list(this)
         && let (Some(to), Some(from)) = (
             crate::resource::host_resource(dst),
             crate::resource::host_resource(src),
@@ -1207,7 +1272,7 @@ extern "system" fn clear_rtv(
 ) {
     #[cfg(windows)]
     {
-        let (Some(list), Some(record)) = (host_list(this), crate::descriptor::rtv_record(handle))
+        let (Some(list), Some(record)) = (recording_host_list(this), crate::descriptor::rtv_record(handle))
         else {
             return;
         };
@@ -1258,7 +1323,7 @@ extern "system" fn clear_dsv(
     #[cfg(windows)]
     {
         use windows::Win32::Graphics::Direct3D12::D3D12_CLEAR_FLAGS;
-        let (Some(list), Some(record)) = (host_list(this), crate::descriptor::dsv_record(handle))
+        let (Some(list), Some(record)) = (recording_host_list(this), crate::descriptor::dsv_record(handle))
         else {
             return;
         };
@@ -1295,7 +1360,7 @@ extern "system" fn clear_dsv(
 /// are title memory, copied at submission like buffer copies (if mapped).
 extern "system" fn copy_memory(this: This, dst: u64, src: u64, len: u64, _flags: u32) {
     #[cfg(windows)]
-    if let Some(list) = host_list(this)
+    if let Some(list) = recording_host_list(this)
         && dst != 0
         && src != 0
     {
@@ -1949,7 +2014,7 @@ extern "system" fn barrier_groups(this: This, count: u32, _groups: *const u8) {
     }
     #[cfg(windows)]
     if count > 0
-        && let Some(list) = host_list(this)
+        && let Some(list) = recording_host_list(this)
     {
         use windows::Win32::Graphics::Direct3D12::D3D12_RESOURCE_BARRIER;
         // SAFETY: the same layout; no resource named.
@@ -2014,20 +2079,23 @@ fn value_written(this: This, address: u64, value: u64) {
         // SAFETY: the title passes one of our lists; a list is recorded by
         // one thread at a time and is not submitted while it records.
         let list = unsafe { &mut *this.cast_mut().cast::<List>() };
-        let Some(current) = list.host.as_ref() else {
+        let Some(host) = list.host.get_mut() else {
+            return;
+        };
+        let Some(current) = host.as_ref() else {
             return;
         };
         let Some(fresh) = fresh_list() else {
             return;
         };
         current.close();
-        if let Some(done) = list.host.replace(fresh) {
+        if let Some(done) = host.replace(fresh) {
             // The part so far keeps its waits; nothing stands before the
             // next one but this part itself.
             let waits = std::mem::take(&mut list.gate);
             list.earlier.push(Part { waits, host: done });
         }
-        if let Some(host) = list.host.as_ref() {
+        if let Some(host) = host.as_ref() {
             list.state
                 .lock()
                 .unwrap_or_else(|e| e.into_inner())
@@ -2043,7 +2111,7 @@ fn defer_write(this: This, address: u64, what: Written, bytes: usize) {
         return;
     }
     #[cfg(windows)]
-    if let Some(list) = host_list(this) {
+    if let Some(list) = recording_host_list(this) {
         list.defer_write(address as *mut u8, what, bytes);
         return;
     }
@@ -2188,6 +2256,11 @@ mod tests {
         let mut list = null;
         let hr = create_list(null, 0, 0, allocator, null, &LIST_IIDS[1], &mut list);
         assert_eq!(hr, S_OK);
+        #[cfg(windows)]
+        if lazy_host_lists() {
+            // SAFETY: the list is ours.
+            assert!(unsafe { &(*list.cast::<List>()).host }.get().is_none());
+        }
         // What the title's inline draw checks: put < draw limit.
         // SAFETY: the list is 0x560 bytes.
         let (put, draw_limit, api_limit) = unsafe {
@@ -2212,6 +2285,15 @@ mod tests {
         unsafe { p.write_bytes(0xab, 40) };
         assert!(allocate_upload(list, 8, 0x30).is_null(), "not a power of two");
         assert_eq!(reset(list, allocator, null), S_OK);
+        #[cfg(windows)]
+        if lazy_host_lists() {
+            // SAFETY: the list is ours. Closing and resetting it is still lazy.
+            assert!(unsafe { &(*list.cast::<List>()).host }.get().is_none());
+            if let Some(host) = recording_host_list(list) {
+                assert!(std::ptr::eq(host, host_list(list).unwrap()));
+                assert_eq!(close(list), S_OK);
+            }
+        }
         // SAFETY: the list is ours.
         assert!(unsafe { &(*list.cast::<List>()).uploads }.lock().unwrap().is_empty());
         let release = |o: This| slot::<extern "system" fn(This) -> u32>(o, 0x10)(o);

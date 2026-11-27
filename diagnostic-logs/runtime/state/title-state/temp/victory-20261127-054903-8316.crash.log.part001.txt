@@ -1,0 +1,105 @@
+
+###### DEBUG INFO ######
+
+========= SYSTEM INFO =========
+Game Running Time: 0h:0m:0s
+Game Timestamp: [T:7626559]
+Game State: System Init [T:7625804]
+Frame: 0
+Paused: No
+Streaming Requests: 0
+TileHeap: used (0Mb) - total (0Mb)
+
+========= MEMORYINFO =========
+Game Virtual: 0/0
+Resource Virtual: 0/0
+Game Physical: 0/0
+Resource Physical: 0/0
+Unused: 0/0
+Pool: 0/0
+OS: 0/0
+Game External: 0/0
+OS External: 0/0
+
+========= MISC INFO =========
+SharedId: e81e338b7e0411dd9a04591184f42c44
+Game Environment: unknown
+Game Locale: US
+Game SKU: ROW
+TitleID: 7952987a
+Conole Type: Anaconda
+Sandbox: RETAIL
+Version: 930.048.020-vb_sub_story
+Camera Position: <262144.000000, 262144.000000, 21600.000000>
+Camera Front: <0.000000, 1.000000, 0.000000>
+Game Time: (0:0)
+System Language: English
+
+========= MISSION =========
+Current Mission Name: 0x00000000 [F:0]
+Current Mission Stage: 0x00000000 [F:0]
+Last Mission Name: 0x00000000
+Current SRL Name:  [T:0]
+Current SRL State:  [T:0]
+
+========= ANIMSCENE =========
+Current AnimScene: 0x0 [T:0]
+
+========= SCRIPT =========
+Current script program: 0x0 [T:0]
+Currently running script threads: 0
+
+========= PLAYER =========
+Position: <0.000000, 0.000000, 0.000000> [T:0]
+Wanted Level: 0 [T:0]
+Arrest State: None [T:0]
+Player Health: 0.00/0.00 [T:0]
+Health State: Healthy [T:0]
+Current Vehicle:  [T:0]
+
+========= POOLS =========
+ - NOTHING: 0/0
+ - BUILDING: 0/0
+ - VEHICLE: 0/0
+ - PED: 0/0
+ - OBJECT: 0/0
+ - PORTAL: 0/0
+ - MLO: 0/0
+ - NOTINPOOLS: 0/0
+ - PARTICLESYSTEM: 0/0
+ - LIGHT: 0/0
+ - LIGHTEMITTER: 0/0
+ - COMPOSITE: 0/0
+ - INSTANCE_LIST: 0/0
+ - GRASS_INSTANCE_LIST: 0/0
+ - VEHICLEGLASSCOMPONENT: 0/0
+
+========= PEDS =========
+Peds: 0/0 (real: 0, dummy: 0)
+ - mission: 0
+ - scenario: 0
+ - wander: 0
+ - perschar: 0
+ - other: 0
+
+========= VEHICLES =========
+Cars: 0/0 (real: 0(0 traffic), dummy: 0, superdummy: 0) - clones: 0
+ - ambient: 0
+ - mission: 0
+ - parked: 0
+ - reusePool: 0
+ - scriptExtensions: 0
+ - scriptHandlers: 0
+
+========= NETWORK =========
+Telemetry PlSesId: 0
+
+========= ANIMMISC =========
+Misc Pool Usages:
+ - CObjects: 0
+ - CMoveObjects: 0
+ - CObjectAnimationComponents: 0
+ - CWeapons: 0
+ - CPedEquippedWeapons: 0
+
+###### END OF DEBUG INFO ######

@@ -135,6 +135,20 @@ impl Host {
         }
     }
 
+    /// The largest wave size exposed by this D3D12 adapter.
+    pub fn max_wave_lanes(&self) -> Result<u32, String> {
+        let mut options = D3D12_FEATURE_DATA_D3D12_OPTIONS1::default();
+        unsafe {
+            self.device.CheckFeatureSupport(
+                D3D12_FEATURE_D3D12_OPTIONS1,
+                (&raw mut options).cast(),
+                size_of_val(&options) as u32,
+            )
+        }
+        .map_err(err)?;
+        Ok(options.WaveLaneCountMax)
+    }
+
     /// Whether the device is on the software adapter: asked of the device itself, the one a test runs on.
     pub fn is_software(&self) -> bool {
         software(&self.device)

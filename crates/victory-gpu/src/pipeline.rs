@@ -177,6 +177,9 @@ pub fn warm(stage: &'static str, container: &[u8], compute: bool) -> (bool, Opti
 /// translation. Callers reporting refusals can count omitted shaders separately.
 #[cfg(windows)]
 pub fn warm_selected(stage: &'static str, container: &[u8], compute: bool) -> Option<(bool, Option<bool>)> {
+    // Detect the adapter before translating: wave width and descriptor limits
+    // are part of both the translation and its disk cache key.
+    let _ = crate::host::host();
     let full = blake3::hash(container);
     // Warmup does not populate the runtime table.
     let shader = Arc::new(Shader {
@@ -217,7 +220,7 @@ impl Shader {
                 let done = translate(&self.container);
                 // `VICTORY_SHADER_SAVE=<dir>`: each shader as the title gave it (`.cdxil`) and as
                 // translated (`.dxil`), by the hash crash reports name it with
-                if let Some(dir) = std::env::var_os("VICTORY_SHADER_SAVE") {
+                if let Some(dir) = shader_dump_directory(&self.hash) {
                     let dir = std::path::PathBuf::from(dir);
                     let _ = std::fs::create_dir_all(&dir);
                     let stem = format!("{}.{}", self.hash, self.stage);
@@ -257,7 +260,7 @@ fn translate(container: &[u8]) -> Result<Translated, String> {
     // The translation depends on it (a view index past a capped heap).
     crate::descriptor::host::probe_view_limit();
     let c = Container::parse(container).map_err(|e| e.to_string())?;
-    let programs = match c.part(FourCC::DXIL) {
+    let programs = match c.part(FourCC::DXIL).or_else(|| c.part(FourCC::ACCC)) {
         Some(part) => victory_shader::native_programs(part.data).map_err(|e| e.to_string())?,
         None => Vec::new(),
     };
@@ -512,7 +515,6 @@ pub(crate) fn compile_counts() -> (u64, u64) {
 static DROPS: Mutex<Option<HashMap<String, u64>>> = Mutex::new(None);
 
 /// Shader hashes as printed in the pipeline diagnostics.
-#[cfg(all(windows, feature = "diagnostics"))]
 fn parse_shader_hashes(value: &str, setting: &str) -> Vec<String> {
     value
         .split(',')
@@ -611,15 +613,44 @@ pub(crate) fn take_drops() -> Vec<(String, u64)> {
     drops
 }
 
+/// Limit a diagnostic capture to the shaders under investigation when requested.
+fn shader_dump_directory(hash: &str) -> Option<std::ffi::OsString> {
+    static DUMP: OnceLock<Option<(std::ffi::OsString, Vec<String>)>> = OnceLock::new();
+    let (directory, hashes) = DUMP.get_or_init(|| {
+        let directory = std::env::var_os("VICTORY_SHADER_SAVE")?;
+        let filter = std::env::var("VICTORY_SHADER_SAVE_HASHES").unwrap_or_default();
+        Some((directory, parse_shader_hashes(&filter, "VICTORY_SHADER_SAVE_HASHES")))
+    }).as_ref()?;
+    (hashes.is_empty() || hashes.iter().any(|wanted| wanted == hash)).then(|| directory.clone())
+}
+
 /// The stage's container, if it has one.
 fn copy(stage: &'static str, code: &Bytecode) -> Option<Arc<Shader>> {
     if code.code.is_null() || code.size == 0 {
         return None;
     }
     // SAFETY: the title passes `size` bytes of shader code.
-    Some(shader(stage, unsafe {
-        std::slice::from_raw_parts(code.code, code.size)
-    }))
+    let bytes = unsafe { std::slice::from_raw_parts(code.code, code.size) };
+    // Save even stages the host cannot translate yet. `Shader::translated`
+    // runs too late for those: graphics pipeline validation rejects them
+    // before asking for a translation.
+    if std::env::var_os("VICTORY_SHADER_SAVE").is_some() {
+        let digest = blake3::hash(bytes).to_hex();
+        if let Some(directory) = shader_dump_directory(&digest.as_str()[..16]) {
+            let directory = std::path::PathBuf::from(directory);
+            if std::fs::create_dir_all(&directory).is_ok() {
+                let path = directory.join(format!("{stage}.{digest}.cdxil"));
+                if let Ok(mut file) = std::fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(path)
+                {
+                    let _ = std::io::Write::write_all(&mut file, bytes);
+                }
+            }
+        }
+    }
+    Some(shader(stage, bytes))
 }
 
 fn hand_out(
@@ -714,6 +745,78 @@ pub(crate) extern "system" fn create_compute_x(
     out: *mut This,
 ) -> HRESULT {
     create_compute(this, desc, iid, out)
+}
+
+/// The section pointers supplied to Xbox `DeserializeComputePipelineStateX`.
+#[repr(C)]
+pub(crate) struct DeserializeComputeHead {
+    _root: This,
+    kind0: *const u8,
+    kind0_size: usize,
+    kind1: *const u8,
+    kind1_size: usize,
+    kind6: *const u8,
+    kind6_size: usize,
+    kind7: *const u8,
+    kind7_size: usize,
+}
+
+/// Rebuild the FSPX container from the caller's section pointers so the
+/// existing GFX10 shader translator can compile it for the host GPU.
+pub(crate) extern "system" fn deserialize_compute_x(
+    _: This,
+    desc: *const DeserializeComputeHead,
+    iid: *const Iid,
+    out: *mut This,
+) -> HRESULT {
+    let Some(desc) = (unsafe { desc.as_ref() }) else {
+        return E_INVALIDARG;
+    };
+    let part = |ptr: *const u8, size: usize| -> Option<&[u8]> {
+        if ptr.is_null() || size == 0 {
+            return None;
+        }
+        Some(unsafe { std::slice::from_raw_parts(ptr, size) })
+    };
+    let Some(kind0) = part(desc.kind0, desc.kind0_size) else {
+        return E_INVALIDARG;
+    };
+    let Some(kind6) = part(desc.kind6, desc.kind6_size) else {
+        return E_INVALIDARG;
+    };
+    let Some(kind7) = part(desc.kind7, desc.kind7_size) else {
+        return E_INVALIDARG;
+    };
+    let kind1 = part(desc.kind1, desc.kind1_size).unwrap_or(&[]);
+    let sections = [(0u32, kind0), (1, kind1), (6, kind6), (7, kind7)];
+    let mut fspx = vec![0u8; 16 + sections.len() * 16];
+    for (index, (kind, bytes)) in sections.iter().enumerate() {
+        let at = fspx.len().next_multiple_of(16);
+        fspx.resize(at, 0);
+        let entry = 16 + index * 16;
+        fspx[entry..entry + 4].copy_from_slice(&kind.to_le_bytes());
+        fspx[entry + 4..entry + 8].copy_from_slice(&(at as u32).to_le_bytes());
+        fspx[entry + 8..entry + 12].copy_from_slice(&(bytes.len() as u32).to_le_bytes());
+        fspx.extend_from_slice(bytes);
+    }
+    let header = [
+        u32::from_le_bytes(*b"FSPX"),
+        1,
+        sections.len() as u32,
+        fspx.len() as u32,
+    ];
+    for (i, word) in header.into_iter().enumerate() {
+        fspx[i * 4..i * 4 + 4].copy_from_slice(&word.to_le_bytes());
+    }
+    let container = victory_shader::dxbc::build(&[(victory_shader::FourCC::ACCC, &fspx)]);
+    tracing::debug!(code_bytes = kind6.len(), "Xbox compute pipeline deserialized from FSPX");
+    hand_out(
+        vec![shader("compute", &container)],
+        #[cfg(windows)]
+        None,
+        iid,
+        out,
+    )
 }
 
 /// A pipeline described as a stream: its size and the subobjects, each a

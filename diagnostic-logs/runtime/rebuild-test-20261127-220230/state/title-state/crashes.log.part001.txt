@@ -1,0 +1,10 @@
+unix time 1795797382, process 18936
+VIctory: unhandled exception 0xc0000005 at victory-image-b99f876b74d4a77f.dll+0x23cf683 (write 0x0: nothing mapped there) on thread 15424 ""
+  rax 0x0 rbx 0x0 rcx [address removed] rdx 0x1 rsi [address removed] rdi [address removed] rsp [address removed] rbp 0x0
+  r8 [address removed] r9 [address removed] r10 [address removed] r11 [address removed] r12 [address removed] r13 [address removed] r14 [address removed] r15 [address removed]
+  #0  victory-image-b99f876b74d4a77f.dll+0x23cf683
+  #1  victory-image-b99f876b74d4a77f.dll+0x2215c35
+  #2  victory-image-b99f876b74d4a77f.dll+0x2215eca
+  #3  KERNEL32.DLL+0x2dda7
+  #4  ntdll.dll+0xc9c6c
+

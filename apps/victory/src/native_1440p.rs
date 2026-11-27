@@ -24,21 +24,24 @@ pub(super) fn prepare(image: &mut PreparedImage, render_1080p: bool, output_1080
     mode[..4].copy_from_slice(&width.to_le_bytes());
     mode[4..8].copy_from_slice(&height.to_le_bytes());
 
-    // Two 64 KiB-aligned, tiled RGBA8 scanout buffers. The reservation is
-    // rounded to 2 MiB, matching the title's allocation check.
-    let texture = Texture::new(&TextureDesc {
-        dimension: Dimension::Tex2d,
-        width,
-        height,
-        depth_or_array: 1,
-        mips: 1,
-        format: 28,
-        samples: 1,
-        swizzle: Swizzle::SW_64KB_D_X,
-    })
-    .map_err(|error| anyhow::anyhow!("Native SDR layout: {error:?}"))?;
-    let pool_size =
-        u32::try_from((texture.size.next_multiple_of(64 * 1024) * 2).next_multiple_of(2 << 20))?;
+    // This build's 1080p swap-chain setup uses two 15 MiB allocations.
+    // Its post-allocation check requires less than 2 MiB left in the pool.
+    let pool_size = if output_1080p {
+        30u32 << 20
+    } else {
+        let texture = Texture::new(&TextureDesc {
+            dimension: Dimension::Tex2d,
+            width,
+            height,
+            depth_or_array: 1,
+            mips: 1,
+            format: 28,
+            samples: 1,
+            swizzle: Swizzle::SW_64KB_D_X,
+        })
+        .map_err(|error| anyhow::anyhow!("Native SDR layout: {error:?}"))?;
+        u32::try_from((texture.size.next_multiple_of(64 * 1024) * 2).next_multiple_of(2 << 20))?
+    };
     let reservation = field::<5>(image, 0x0247_ad4a)?;
     ensure!(
         *reservation == [0xb9, 0, 0, 0, 4],
@@ -187,9 +190,13 @@ mod tests {
             assert_eq!(*field::<4>(&mut image, SDR_MODE).unwrap(), width.to_le_bytes());
             assert_eq!(*field::<4>(&mut image, SDR_MODE + 4).unwrap(), height.to_le_bytes());
             assert_eq!(*field::<4>(&mut image, 0x028f_1e7e).unwrap(), scale.to_le_bytes());
-            let texture = Texture::new(&TextureDesc { dimension: Dimension::Tex2d, width, height,
-                depth_or_array: 1, mips: 1, format: 28, samples: 1, swizzle: Swizzle::SW_64KB_D_X }).unwrap();
-            let bytes = (texture.size.next_multiple_of(64 * 1024) * 2).next_multiple_of(2 << 20) as u32;
+            let bytes = if output1080 {
+                30u32 << 20
+            } else {
+                let texture = Texture::new(&TextureDesc { dimension: Dimension::Tex2d, width, height,
+                    depth_or_array: 1, mips: 1, format: 28, samples: 1, swizzle: Swizzle::SW_64KB_D_X }).unwrap();
+                (texture.size.next_multiple_of(64 * 1024) * 2).next_multiple_of(2 << 20) as u32
+            };
             assert_eq!(*field::<4>(&mut image, 0x0247_ad4b).unwrap(), bytes.to_le_bytes());
             let disp = i32::from_le_bytes(*field::<4>(&mut image, 0x0580_48d8).unwrap());
             assert_eq!(0x0580_48dc_u32.wrapping_add_signed(disp), SDR_MODE);

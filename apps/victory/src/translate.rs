@@ -160,11 +160,10 @@ pub fn run(
     jobs: Option<usize>,
 ) -> Result<()> {
     let paths = crate::default_paths(paths)?;
-    // `VICTORY_HOST_MAX_WAVE=32`: translate as for a host whose waves have
-    // at most 32 lanes (as the runtime does on such a card).
-    if let Some(n) = std::env::var("VICTORY_HOST_MAX_WAVE").ok().and_then(|v| v.parse().ok()) {
-        victory_shader::emit::set_host_max_wave(n);
-    }
+    // Keep the explicit override for translating for another adapter.
+    let mut max_wave = std::env::var("VICTORY_HOST_MAX_WAVE")
+        .ok()
+        .and_then(|value| value.parse().ok());
     let dll = validate.then(Validator::default_path).flatten();
     if validate {
         Validator::load(dll.as_deref()).map_err(anyhow::Error::msg)?;
@@ -175,7 +174,14 @@ pub fn run(
         );
     }
     if pipelines {
-        Host::new(false).map_err(anyhow::Error::msg)?;
+        let host = Host::new(false).map_err(anyhow::Error::msg)?;
+        if max_wave.is_none() {
+            max_wave = Some(host.max_wave_lanes().map_err(anyhow::Error::msg)?);
+        }
+    }
+    if let Some(lanes) = max_wave {
+        emit::set_host_max_wave(lanes);
+        println!("target wave  {lanes} lanes maximum");
     }
     let pairs: Vec<(String, String)> = std::env::var("VICTORY_PAIRS")
         .unwrap_or_default()
@@ -312,7 +318,14 @@ pub fn warm(paths: Vec<PathBuf>, jobs: Option<usize>, pipelines: bool, rays: cra
     let cfg = victory_core::Config::load()?;
     rays.apply(&cfg);
     victory_hle::modules::d3d12x::use_shader_cache(cfg.cache_subdir("shaders")?);
-    let threads = jobs.unwrap_or_else(|| std::thread::available_parallelism().map_or(4, |n| n.get()));
+    let threads = jobs
+        .or_else(|| {
+            std::env::var("VICTORY_PIPELINE_WORKERS")
+                .ok()
+                .and_then(|value| value.trim().parse().ok())
+        })
+        .unwrap_or_else(|| std::thread::available_parallelism().map_or(4, |n| n.get()))
+        .max(1);
     let seen = Mutex::new(HashSet::new());
     let [done, refused, made, unmade, omitted] = [const { AtomicUsize::new(0) }; 5];
     let started = std::time::Instant::now();
@@ -336,11 +349,13 @@ pub fn warm(paths: Vec<PathBuf>, jobs: Option<usize>, pipelines: bool, rays: cra
                             let Some(total) = bytes.get(0x18..0x1c).and_then(|b| b.try_into().ok()) else { continue };
                             let total = u32::from_le_bytes(total) as usize;
                             let bytes = &bytes[..total.min(bytes.len())];
-                            let Some(dxil) = container.part(FourCC::DXIL).map(|p| p.data) else { continue };
+                            let Some(native) = container.part(FourCC::DXIL)
+                                .or_else(|| container.part(FourCC::ACCC))
+                            else { continue };
                             if !lock(&seen).insert(blake3::hash(bytes)) {
                                 continue;
                             }
-                            let Ok(programs) = native_programs(dxil) else { continue };
+                            let Ok(programs) = native_programs(native.data) else { continue };
                             let stage = programs.iter().find_map(|p| match p.stage {
                                 HwStage::Vs => Some("vertex"),
                                 HwStage::Ps => Some("pixel"),
@@ -416,7 +431,8 @@ fn translate(
     let Ok(container) = Container::parse(&bytes) else {
         return t.fail("no DXIL part (SM5 or older)".into(), example);
     };
-    let Some(dxil) = container.part(FourCC::DXIL).map(|p| p.data) else {
+    let Some(dxil) = container.part(FourCC::DXIL)
+        .or_else(|| container.part(FourCC::ACCC)).map(|p| p.data) else {
         return t.fail("no DXIL part (SM5 or older)".into(), example);
     };
     // `~`: the hash of the code alone; containers that differ only around
@@ -534,17 +550,23 @@ fn translate_programs(container: &Container, programs: Vec<NativeProgram>, examp
                 if let (Some(r), Some(i), Some(s)) = (res, raised, structured) {
                     let label = || format!("{} {:?}", example(), p.stage);
                     *counter(t, p.stage, 0) += 1;
-                    match emit::emit(container, &p, &program, &s, &i, &r) {
-                        Ok(shader) => {
+                    // Isolate a translator invariant failure to the current
+                    // shader so an audit can continue and report its label.
+                    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        emit::emit(container, &p, &program, &s, &i, &r)
+                    }));
+                    match result {
+                        Err(_) => t.fail("emit: translator panicked".into(), label),
+                        Ok(Ok(shader)) => {
                             census_line(&label(), &p, &program, &shader);
                             *counter(t, p.stage, 1) += 1;
                             check(shader, t, checks, label);
                         }
-                        Err(ShaderError::Unsupported { offset, what }) => t
+                        Ok(Err(ShaderError::Unsupported { offset, what })) => t
                             .fail(format!("emit: {what}"), || {
                                 format!("{} at {offset:#x}", label())
                             }),
-                        Err(e) => t.fail(format!("emit: {e}"), label),
+                        Ok(Err(e)) => t.fail(format!("emit: {e}"), label),
                     }
                 }
             }
@@ -766,6 +788,7 @@ fn tally_resources(p: &NativeProgram, r: &resource::Resources, t: &mut Tally) {
         // tables are no root parameter.
         if let Some(a) = a
             && a.param != resource::CODE
+            && a.param != resource::MEMORY
             && !matches!(
                 p.layout[a.param].root,
                 RootType::ResourceHeap | RootType::SamplerHeap
@@ -839,7 +862,7 @@ fn tally_structured(program: &ir::Program, s: &structure::Structured, t: &mut Ta
         for &g in guards.iter().flatten() {
             t.guarded += 1;
             let support = s.bools.support(g);
-            t.opaque += usize::from(support.iter().any(|a| matches!(a, Atom::Opaque(_))));
+            t.opaque += usize::from(support.iter().any(|a| matches!(a, Atom::Opaque(..))));
         }
     }
     for exit in &s.exits {

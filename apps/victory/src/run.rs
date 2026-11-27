@@ -27,6 +27,9 @@ pub fn run(
     // A title that relaunched itself: the old process must be gone first.
     victory_hle::modules::lifecycle::wait_for_previous();
     let cfg = victory_core::Config::load()?;
+    if let Some(directory) = std::env::var_os("VICTORY_PAGE_BACKING_DIR").filter(|dir| !dir.is_empty()) {
+        victory_core::policy::ensure_outside_repo(Path::new(&directory))?;
+    }
     rays.apply(&cfg);
     use fsr_preset::FsrPreset;
     let fsr = match std::env::var("VICTORY_FSR_4K").as_deref() {
@@ -38,6 +41,22 @@ pub fn run(
     let original = std::fs::read(exe).with_context(|| format!("reading {}", exe.display()))?;
     let mut prepared = victory_loader::prepare(&original)?;
     let hash = prepared.original_hash.to_hex();
+    let ps5_story_save = std::env::var("VICTORY_PS5_STORY_SAVE").as_deref() == Ok("1");
+    if ps5_story_save {
+        const RVA: u32 = 0x028d0d60;
+        const EXPECTED: [u8; 12] = [0xff, 0xc9, 0xf7, 0xc1, 0xf7, 0xff, 0xff, 0xff, 0x0f, 0x94, 0xc0, 0xc3];
+        anyhow::ensure!(
+            hash.as_str() == "b99f876b74d4a77f03af5f878223b27bd647b5c35a79d5decd9f716504239e93",
+            "PS5 story-save compatibility requires the verified game build"
+        );
+        let offset = prepared.info.rva_to_file_offset(RVA)
+            .context("PS5 story-save compatibility function is missing")? as usize;
+        let bytes = prepared.bytes.get_mut(offset..offset + EXPECTED.len())
+            .context("PS5 story-save compatibility function is outside the image")?;
+        anyhow::ensure!(bytes == EXPECTED, "PS5 story-save compatibility bytes differ");
+        bytes[..3].copy_from_slice(&[0x31, 0xc0, 0xc3]);
+        println!("PS5 story-save compatibility enabled");
+    }
     match victory_game::identify(&hash) {
         Some(build) => println!("build          {} ({hash})", build.label),
         None => println!("build          unknown ({hash})"),
@@ -47,6 +66,13 @@ pub fn run(
     victory_hle::modules::d3d12x::use_shader_cache(cfg.cache_subdir("shaders")?);
     let output_1080p = std::env::var("VICTORY_NATIVE_1080P").as_deref() == Ok("1");
     let render_1080p = std::env::var("VICTORY_RENDER_1080P").as_deref() == Ok("1");
+    if ps5_story_save {
+        anyhow::ensure!(
+            fsr.is_none() && !output_1080p && !render_1080p
+                && std::env::var("VICTORY_NATIVE_1440P").as_deref() != Ok("1"),
+            "PS5 story-save compatibility requires stock display mode"
+        );
+    }
     let image = if let Some(preset) = fsr {
         anyhow::ensure!(matches!(console, Console::SeriesX), "FSR at 4K requires Series X mode");
         native_1440p::prepare_fsr_4k(&mut prepared, preset)?;
@@ -82,6 +108,8 @@ pub fn run(
             "images/native-1440p-sdr"
         };
         victory_loader::load(&prepared, &cfg.cache_subdir(image_cache)?)?
+    } else if ps5_story_save {
+        victory_loader::load(&prepared, &cfg.cache_subdir("images/ps5-story-save")?)?
     } else {
         victory_loader::load(&prepared, &images)?
     };

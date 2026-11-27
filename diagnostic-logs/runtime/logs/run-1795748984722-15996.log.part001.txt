@@ -1,0 +1,136 @@
+Runtime [local path removed]
+Game [local path removed]
+VICTORY_FILL_WORKERS: 2
+VICTORY_PIPELINE_WORKERS: 2
+VICTORY_JOIN_COPIES: 1
+VICTORY_WIDE_REFRESH: 0
+VICTORY_TEXTURE_NO_WAIT: 0
+VICTORY_PARALLEL_PRELUDES: 0
+VICTORY_PARALLEL_DETILE: 0
+VICTORY_WIDE_MERGE: 0
+VICTORY_CARD_WINDOWS_MB: 128
+VICTORY_TEXTURE_ROOM_PERCENT: 80
+VICTORY_STRICT_ADMISSION: 1
+VICTORY_ADAPTIVE_BUDGET: 1
+VICTORY_TEXTURE_CATCHUP: 0
+VICTORY_TEXTURE_STAGE_MS: 24
+VICTORY_TEXTURE_STAGE_MB: 96
+VICTORY_EARLY_TEXTURES_MS: 3
+VICTORY_BAKE_TEXTURES_MS: 8
+VICTORY_LOCAL_GPU_INPUTS: 1
+VICTORY_RANGE_UNION: 1
+NVIDIA performance profile; compare against baseline fallback if needed
+VICTORY_INDEXED_WATCH: 1
+VICTORY_WATCH_CLEAN_FAST: 1
+VICTORY_INDEXED_PENDING: 1
+VICTORY_INDEX_WRITE_GROUPS: 1
+VICTORY_BATCH_HAZARD_QUERY: 1
+VICTORY_BATCH_RAW_WORK: 1
+VICTORY_BATCH_PAGE_RANGES: 1
+VICTORY_SPARSE_MERGE: 1
+VICTORY_SETTLED_BLOCK_MERGE: 1
+VICTORY_SPARSE_REFRESH: 1
+VICTORY_SHARED_COMPARE_RUNS: 1
+VICTORY_PACK_SYNC_READBACK: 1
+VICTORY_REUSE_ROOT_DATA: 1
+VICTORY_REUSE_GRAPHICS_BINDINGS: 1
+VICTORY_COMPACT_MIP_UPLOAD: 1
+VICTORY_STICKY_RAM_PRESSURE: 1
+VICTORY_TRIM_READBACKS: 1
+VICTORY_STREAMING_FULL_BUDGET: 1
+VICTORY_STREAMING_SLOW_RECOVERY: 1
+VICTORY_MATERIAL_TEXTURE_DEMAND: 1
+VICTORY_TEXTURE_NO_WAIT: 0
+NVIDIA low-memory profile; RT off; native display patch: true
+Ray tracing requested: off
+Expected scene rendering 1920x1080, output 1920x1080
+Texture copy queue requested: off
+Sparse texture mips requested
+Inherited VICTORY_CARD_WINDOWS_MB=128
+Inherited VICTORY_MEMORY_GUARD=1
+Inherited VICTORY_MEMORY_GUARD_MIB=2800
+Inherited VICTORY_TEXTURE_BUDGET_MB=3072
+Inherited VICTORY_TRACE_PRESENT_PLANES=1
+Memory guard threshold: 2800 MiB available
+build          unknown (b99f876b74d4a77f03af5f878223b27bd647b5c35a79d5decd9f716504239e93)
+mapped at      [address removed] (preferred [address removed])
+title          7952987A, storage [local path removed]
+console        Xbox Series X
+title dll      xboxbvhbuilder.dll at [address removed]
+title dll      amd_fidelityfx_loader_xbox.dll at [address removed]
+title dll      libhttpclient.gdk.dll at [address removed]
+title dll      bink2scarlett.dll at [address removed]
+bound          xboxbvhbuilder.dll: 9 hle, 48 host, 0 title, 0 missing
+bound          amd_fidelityfx_loader_xbox.dll: 4 hle, 18 host, 0 title, 0 missing
+bound          libhttpclient.gdk.dll: 27 hle, 171 host, 0 title, 0 missing
+bound          bink2scarlett.dll: 6 hle, 54 host, 0 title, 0 missing
+bound          game_scarlett_master.exe: 88 hle, 427 host, 72 title, 0 missing
+2026-11-27T03:09:49.681161Z  WARN victory_hle::modules::kernel: a host DLL outside the host policy: refused dll="rpcrt4.dll"
+2026-11-27T03:09:50.822058Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=1 description=Some([20441219400, d04d4e614, 184, d04d4e798, bc, d49427300, 200, d04d4e854, d0, d49427500, 200, d04d4e924, b0, 0, 0, 0]) first_points_at=Some([7ff72176be50, 300000000, 530, 204e1e2ed40, 530, 88005d00bca88d49, 7ff721740b68, 7ff721740c18, e, 1, 4, 8f005e00bc958d4e, 0, 20441219460, 0, 0])
+2026-11-27T03:09:50.822097Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=3 description=Some([20441219190, d057be87c, 17c, d057be9f8, bc, 0, 0, 0, 0, d4fddfa00, 140, d057beab4, 30, 0, 0, 0]) first_points_at=Some([7ff72176be50, 300000000, 44, 2043bbe6a90, 44, 80005000bd438d10, 51a3d0000, e36bd0000, 0, 0, 0, 90005100bd4c8d15, 6361623739643363, 3662303739666363, 6436346139656231, 3831313562643332])
+2026-11-27T03:09:50.822104Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=4 description=Some([20441219610, d04f6a348, 184, d04f6a4cc, bc, d494b3800, 300, d04f6a588, d0, d494b3b00, 140, d04f6a658, 2f0, 0, 0, 0]) first_points_at=Some([7ff72176be50, 4800000000, 70, 204e1d92680, 70, 90006800bc8b8d68, 204da8a7f80, 204e1af4170, 0, 0, 0, 90006900bcf48d6d, 3436306430373165, 3065633065336265, 6533333235633961, 3138366233626336])
+2026-11-27T03:09:50.822139Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=8 description=Some([20441219610, d055dbdcc, 184, d055dbf50, bc, d494afc00, 180, d04f66888, 70, d494afe00, 140, d04f668f8, 30, 0, 0, 0]) first_points_at=Some([7ff72176be50, 4e00000000, 70, 204e1d92680, 70, 90006800bc8b8d68, 204da8a7f80, 204e1af4170, 0, 0, 0, 90006900bcf48d6d, 3436306430373165, 3065633065336265, 6533333235633961, 3138366233626336])
+2026-11-27T03:09:50.822101Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=2 description=Some([20441219610, d04f69d48, 184, d04f69ecc, bc, d494b3400, 1c0, d04f69f88, d0, d494b3600, 180, d04f6a058, 2f0, 0, 0, 0]) first_points_at=Some([7ff72176be50, 4400000000, 70, 204e1d92680, 70, 90006800bc8b8d68, 204da8a7f80, 204e1af4170, 0, 0, 0, 90006900bcf48d6d, 3436306430373165, 3065633065336265, 6533333235633961, 3138366233626336])
+2026-11-27T03:09:50.822154Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=16 description=Some([20441219610, d0554fa0c, 184, d0554ffcc, bc, d4eff1600, 140, d05550088, 90, d4eff1400, 140, d0554fcdc, 2f0, 0, 0, 0]) first_points_at=Some([7ff72176be50, 4e00000000, 70, 204e1d92680, 70, 90006800bc8b8d68, 204da8a7f80, 204e1af4170, 0, 0, 0, 90006900bcf48d6d, 3436306430373165, 3065633065336265, 6533333235633961, 3138366233626336])
+2026-11-27T03:09:50.822529Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=32 description=Some([20441219610, d04f676e8, 184, d04f6786c, bc, d494b1000, 380, d04f67928, 190, d494b1400, 240, d04f67ab8, f0, 0, 0, 0]) first_points_at=Some([7ff72176be50, a400000000, 70, 204e1d92680, 70, 90006800bc8b8d68, 204da8a7f80, 204e1af4170, 0, 0, 0, 90006900bcf48d6d, 3436306430373165, 3065633065336265, 6533333235633961, 3138366233626336])
+2026-11-27T03:09:50.822616Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=64 description=Some([20441219340, d04e522b8, 184, d04e5243c, 78, d49428300, 180, d04d4fa1c, b0, d49427900, 1c0, d04d4ec80, 70, 0, 0, 0]) first_points_at=Some([7ff72176be50, 500000000, a0, 204e1f663b0, a0, 88005900bca48d3d, 7ff721740b68, 7ff721740c18, e, 1, 5, 94005a00bca18d32, 0, 204412193a0, 0, 80000000])
+2026-11-27T03:09:50.822625Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=128 description=Some([20441219340, d04de50f8, 184, d04de527c, 78, d49428500, 1c0, d04d4fec4, f0, d49428100, 1c0, d04d4f7b0, 70, 0, 0, 0]) first_points_at=Some([7ff72176be50, 900000000, a0, 204e1f663b0, a0, 88005900bca48d3d, 7ff721740b68, 7ff721740c18, e, 1, 5, 94005a00bca18d32, 0, 204412193a0, 0, 80000000])
+2026-11-27T03:09:50.822654Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=256 description=Some([20441219340, d04ec0eb4, 18c, d04efa4ec, 78, d4942a500, 1c0, d04d52bfc, b0, d49429900, 200, d04d51ba4, 70, 0, 0, 0]) first_points_at=Some([7ff72176be50, 1400000000, a0, 204e1f663b0, a0, 88005900bca48d3d, 7ff721740b68, 7ff721740c18, e, 1, 5, 94005a00bca18d32, 0, 204412193a0, 0, 80000000])
+2026-11-27T03:09:50.822708Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=512 description=Some([20441219340, d04f2f838, 18c, d04f310a8, 98, d4942d100, 1c0, d04d55714, b0, d4942ca00, 200, d04d5526c, 70, 0, 0, 0]) first_points_at=Some([7ff72176be50, 2900000000, a0, 204e1f663b0, a0, 88005900bca48d3d, 7ff721740b68, 7ff721740c18, e, 1, 5, 94005a00bca18d32, 0, 204412193a0, 0, 80000000])
+2026-11-27T03:09:50.822820Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=1024 description=Some([20441219340, d04e53920, 184, d04e92a60, 98, d49432700, 1c0, d04d5a260, f0, d49432100, 200, d04d59d34, 70, 0, 0, 0]) first_points_at=Some([7ff72176be50, 5300000000, a0, 204e1f663b0, a0, 88005900bca48d3d, 7ff721740b68, 7ff721740c18, e, 1, 5, 94005a00bca18d32, 0, 204412193a0, 0, 80000000])
+2026-11-27T03:09:50.823362Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=2048 description=Some([20441219340, d04e60c04, 18c, d04e99204, 98, d4943fc00, 200, d04d64de4, f0, d4943f700, 2c0, d04d648d8, 70, 0, 0, 0]) first_points_at=Some([7ff72176be50, 12100000000, a0, 204e1f663b0, a0, 88005900bca48d3d, 7ff721740b68, 7ff721740c18, e, 1, 5, 94005a00bca18d32, 0, 204412193a0, 0, 80000000])
+2026-11-27T03:09:50.824762Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=4096 description=Some([20441219340, d04e5c7ac, 18c, d04e7b034, bc, d4947a600, 200, d04d8efa4, b0, d49479e00, 240, d04d8eae4, 70, 0, 0, 0]) first_points_at=Some([7ff72176be50, 36500000000, a0, 204e1f663b0, a0, 88005900bca48d3d, 7ff721740b68, 7ff721740c18, e, 1, 5, 94005a00bca18d32, 0, 204412193a0, 0, 80000000])
+2026-11-27T03:09:50.826217Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=8192 description=Some([20441219340, d04df3034, 18c, d04e493f4, 98, d49493700, 400, d04d9ee5c, 1b0, d49486200, 2c0, d04d96430, 70, 0, 0, 0]) first_points_at=Some([7ff72176be50, 4ff00000000, a0, 204e1f663b0, a0, 88005900bca48d3d, 7ff721740b68, 7ff721740c18, e, 1, 5, 94005a00bca18d32, 0, 204412193a0, 0, 80000000])
+2026-11-27T03:09:50.827252Z  WARN victory_loader::console_insn: a console CPU instruction this CPU lacks: emulated (logged once) instruction=ClzeroLoop { end_reg: 10 } at=[address removed]
+2026-11-27T03:09:50.835131Z  INFO victory_gpu::queue: a submission is given to its queue part by part (its lists wait for memory values) kind=0 lists=1 run_at_once=0 parts=2 waits=1
+2026-11-27T03:09:50.837707Z  INFO victory_gpu::queue: PresentX plane header trace frame=1 planes=1 first_count=1 first_resources=[address removed] words=["0x1", "0x1", "[address removed]"]
+2026-11-27T03:09:50.837754Z  INFO victory_gpu::queue: frame presented (since the last line: draws and dispatches, and those run on the host) frame=1 draws=0 drawn=0 dispatches=0 dispatched=0
+2026-11-27T03:09:50.853962Z  WARN victory_gpu::queue: a black frame after a frame that was not frame=1 resource=[address removed] state=0x4 draws=0 copied=true black_frames=1 levels=[0]
+2026-11-27T03:09:51.188540Z  WARN victory_gpu::descriptor::host: host view heap capped at 1000000; views past it read a null slot count=1245184
+2026-11-27T03:09:51.239601Z  INFO victory_gpu::queue: a submission is given to its queue part by part (its lists wait for memory values) kind=0 lists=2 run_at_once=0 parts=2 waits=1
+2026-11-27T03:09:51.313501Z  INFO victory_gpu::queue: PresentX plane header trace frame=2 planes=1 first_count=1 first_resources=[address removed] words=["0x2", "0x1", "[address removed]"]
+2026-11-27T03:09:51.313588Z  INFO victory_gpu::queue: frame presented (since the last line: draws and dispatches, and those run on the host) frame=2 draws=4 drawn=4 dispatches=0 dispatched=0
+2026-11-27T03:09:51.329695Z  INFO victory_gpu::queue: a submission is given to its queue part by part (its lists wait for memory values) kind=0 lists=2 run_at_once=0 parts=2 waits=1
+2026-11-27T03:09:51.348162Z  INFO victory_gpu::queue: a submission is given to its queue part by part (its lists wait for memory values) kind=0 lists=2 run_at_once=0 parts=2 waits=1
+2026-11-27T03:09:51.380647Z  INFO victory_gpu::queue: PresentX plane header trace frame=4 planes=1 first_count=1 first_resources=[address removed] words=["0x4", "0x1", "[address removed]"]
+2026-11-27T03:09:51.380690Z  INFO victory_gpu::queue: frame presented (since the last line: draws and dispatches, and those run on the host) frame=4 draws=6 drawn=6 dispatches=0 dispatched=0
+2026-11-27T03:09:51.389607Z  WARN victory_gpu::queue: a black frame after a frame that was not frame=4 resource=[address removed] state=0x4 draws=3 copied=true black_frames=2 levels=[0, 0, 0]
+2026-11-27T03:09:51.389738Z  INFO victory_gpu::queue: a submission is given to its queue part by part (its lists wait for memory values) kind=0 lists=2 run_at_once=0 parts=2 waits=1
+2026-11-27T03:09:51.414557Z  INFO victory_gpu::queue: a submission is given to its queue part by part (its lists wait for memory values) kind=0 lists=2 run_at_once=0 parts=2 waits=1
+2026-11-27T03:09:51.449244Z  INFO victory_gpu::queue: a submission is given to its queue part by part (its lists wait for memory values) kind=0 lists=2 run_at_once=0 parts=2 waits=1
+2026-11-27T03:09:51.481825Z  INFO victory_gpu::queue: a submission is given to its queue part by part (its lists wait for memory values) kind=0 lists=2 run_at_once=0 parts=2 waits=1
+2026-11-27T03:09:51.513845Z  INFO victory_gpu::queue: PresentX plane header trace frame=8 planes=1 first_count=1 first_resources=[address removed] words=["0x8", "0x1", "[address removed]"]
+2026-11-27T03:09:51.513923Z  INFO victory_gpu::queue: frame presented (since the last line: draws and dispatches, and those run on the host) frame=8 draws=12 drawn=12 dispatches=0 dispatched=0
+2026-11-27T03:09:51.527009Z  WARN victory_gpu::queue: a black frame after a frame that was not frame=8 resource=[address removed] state=0x4 draws=3 copied=true black_frames=3 levels=[0, 0, 0, 0]
+2026-11-27T03:09:51.714509Z  WARN victory_gpu::queue: levels after the black frame frame=14 levels=[0, 0, 0, 0]
+2026-11-27T03:09:51.780619Z  INFO victory_gpu::queue: PresentX plane header trace frame=16 planes=1 first_count=1 first_resources=[address removed] words=["0x10", "0x1", "[address removed]"]
+2026-11-27T03:09:51.780657Z  INFO victory_gpu::queue: frame presented (since the last line: draws and dispatches, and those run on the host) frame=16 draws=24 drawn=24 dispatches=0 dispatched=0
+2026-11-27T03:09:51.789267Z  WARN victory_gpu::queue: a black frame after a frame that was not frame=16 resource=[address removed] state=0x4 draws=3 copied=true black_frames=4 levels=[0, 0, 0, 0, 0]
+2026-11-27T03:09:51.810116Z  WARN victory_gpu::device: a pipeline creation method that is not implemented: the title goes without this pipeline slot=0x1c8 calls=16384 description=Some([204ecd38d00, d066a37e0, 200, d066a39e0, 50, d55a40500, 4a40, d065e8c24, 5b0, 0, 0, 0, 0, d55a45000, d80, d065e91d4]) first_points_at=Some([7ff72176be50, 1daf00000000, 165c, 204343c1b20, 165c, 80024000b1a5acd9, 204ec532770, 100000008, 7c0, 204ecd397e0, 0, 88024100b1b8acde, 7ff72176be50, 8500000000, 6c0, 204303e1b70])
+2026-11-27T03:09:51.981030Z  WARN victory_gpu::queue: levels after the black frame frame=22 levels=[0, 0, 0, 0, 0]
+2026-11-27T03:09:52.082319Z  WARN victory_loader::console_insn: a console CPU instruction this CPU lacks: emulated (logged once) instruction=Monitorx at=[address removed]
+2026-11-27T03:09:52.313597Z  INFO victory_gpu::queue: PresentX plane header trace frame=32 planes=1 first_count=1 first_resources=[address removed] words=["0x20", "0x1", "[address removed]"]
+2026-11-27T03:09:52.313648Z  INFO victory_gpu::queue: frame presented (since the last line: draws and dispatches, and those run on the host) frame=32 draws=48 drawn=48 dispatches=0 dispatched=0
+2026-11-27T03:09:52.325251Z  WARN victory_gpu::queue: a black frame after a frame that was not frame=32 resource=[address removed] state=0x4 draws=3 copied=true black_frames=5 levels=[0, 0, 0, 0, 0, 0]
+2026-11-27T03:09:52.514218Z  WARN victory_gpu::queue: levels after the black frame frame=38 levels=[0, 0, 0, 0, 0, 0]
+2026-11-27T03:09:52.586401Z  WARN victory_loader::console_insn: a console CPU instruction this CPU lacks: emulated (logged once) instruction=Mwaitx at=[address removed]
+2026-11-27T03:09:53.518938Z  INFO victory_gpu::queue: PresentX plane header trace frame=64 planes=1 first_count=1 first_resources=[address removed] words=["0x40", "0x1", "[address removed]"]
+2026-11-27T03:09:53.518966Z  INFO victory_gpu::queue: frame presented (since the last line: draws and dispatches, and those run on the host) frame=64 draws=96 drawn=96 dispatches=12 dispatched=12
+2026-11-27T03:09:53.530699Z  WARN victory_gpu::queue: a black frame after a frame that was not frame=64 resource=[address removed] state=0x4 draws=3 copied=true black_frames=6 levels=[0, 0, 0, 0, 0, 0, 0]
+2026-11-27T03:09:53.719259Z  WARN victory_gpu::queue: levels after the black frame frame=70 levels=[0, 0, 0, 0, 0, 0, 0]
+2026-11-27T03:09:56.652541Z  INFO victory_gpu::queue: PresentX plane header trace frame=128 planes=1 first_count=1 first_resources=[address removed] words=["0x80", "0x1", "[address removed]"]
+2026-11-27T03:09:56.652582Z  INFO victory_gpu::queue: frame presented (since the last line: draws and dispatches, and those run on the host) frame=128 draws=192 drawn=192 dispatches=64 dispatched=64
+2026-11-27T03:09:56.668331Z  WARN victory_gpu::queue: a black frame after a frame that was not frame=128 resource=[address removed] state=0x4 draws=3 copied=true black_frames=7 levels=[0, 0, 0, 0, 0, 0, 0, 0]
+2026-11-27T03:09:56.853197Z  WARN victory_gpu::queue: levels after the black frame frame=134 levels=[0, 0, 0, 0, 0, 0, 0, 0]
+2026-11-27T03:10:00.919072Z  INFO victory_gpu::queue: PresentX plane header trace frame=256 planes=1 first_count=1 first_resources=[address removed] words=["0x100", "0x1", "[address removed]"]
+2026-11-27T03:10:00.919098Z  INFO victory_gpu::queue: frame presented (since the last line: draws and dispatches, and those run on the host) frame=256 draws=1506 drawn=1506 dispatches=128 dispatched=128
+2026-11-27T03:10:00.919104Z  INFO victory_gpu::queue: shaders from the cache and translated so far hits=0 misses=520
+2026-11-27T03:10:09.452230Z  INFO victory_gpu::queue: PresentX plane header trace frame=512 planes=1 first_count=1 first_resources=[address removed] words=["0x200", "0x1", "[address removed]"]
+2026-11-27T03:10:09.452278Z  INFO victory_gpu::queue: frame presented (since the last line: draws and dispatches, and those run on the host) frame=512 draws=3328 drawn=3328 dispatches=256 dispatched=256
+2026-11-27T03:10:09.452290Z  INFO victory_gpu::queue: shaders from the cache and translated so far hits=0 misses=520
+2026-11-27T03:10:26.518458Z  INFO victory_gpu::queue: PresentX plane header trace frame=1024 planes=1 first_count=1 first_resources=[address removed] words=["0x400", "0x1", "[address removed]"]
+2026-11-27T03:10:26.518509Z  INFO victory_gpu::queue: frame presented (since the last line: draws and dispatches, and those run on the host) frame=1024 draws=6656 drawn=6656 dispatches=512 dispatched=512
+2026-11-27T03:10:26.518521Z  INFO victory_gpu::queue: shaders from the cache and translated so far hits=0 misses=520
+VIctory exited with exit code: 0xffffffff
+
+[Lines omitted: 14. Empty source: False.]

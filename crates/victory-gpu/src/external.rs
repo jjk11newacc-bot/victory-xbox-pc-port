@@ -24,7 +24,7 @@ pub fn host_texture(
     resource: *const Object,
     state: u32,
 ) -> Option<(ID3D12Resource, u32)> {
-    let host = crate::list::host_list(list)?;
+    let host = crate::list::recording_host_list(list)?;
     let texture = crate::resource::host_resource(resource)?.clone();
     crate::list::ensure_state(host, resource, state);
     let state = crate::host::legal_state(&texture, state);
@@ -34,7 +34,7 @@ pub fn host_texture(
 /// Prepare title-authored inputs using the same alias, mip upload and depth
 /// twin rules as a compute shader-resource view in the renderer.
 pub fn prepare_input(list: *const Object, resource: *const Object) -> Option<()> {
-    let list = crate::list::host_list(list)?;
+    let list = crate::list::recording_host_list(list)?;
     let texture = crate::resource::host_resource(resource)?;
     let aliased = crate::resource::alias_of(resource)
         .is_some_and(|source| crate::texture::alias(list, resource, source));

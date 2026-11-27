@@ -1,0 +1,111 @@
+
+###### DEBUG INFO ######
+
+========= SYSTEM INFO =========
+Game Running Time: 0h:3m:9s
+Game Timestamp: [T:11872040]
+Game State: Game Running [T:11658231]
+Frame: 3080
+Paused: Yes
+Streaming Requests: 2567
+TileHeap: used (3592Mb) - total (6236Mb)
+
+========= MEMORYINFO =========
+Game Virtual: 954650400/1228931056
+Resource Virtual: 0/0
+Game Physical: 2182601296/2305818624
+Resource Physical: 0/0
+Unused: 0/590348272
+Pool: 591978256/624951280
+OS: 0/0
+Game External: 0/0
+OS External: 0/0
+
+========= MISC INFO =========
+SharedId: ed22ec8e7e8c11dd9db26f3d366538ef
+Game Environment: prod
+Game Locale: US
+Game SKU: ROW
+TitleID: 7952987a
+Conole Type: Anaconda
+Sandbox: RETAIL
+Version: 930.048.020-vb_sub_story
+Camera Position: <-1782.299927, -1914.139160, 5.562039>
+Camera Front: <-0.000000, 0.990272, -0.139147>
+Game Time: (3:0)
+System Language: English
+GFX Queue: 944fa9d9
+
+========= MISSION =========
+Current Mission Name: 0x98c85f2a [F:3073]
+Current Mission Stage: 0x98c85f2a [F:3073]
+Last Mission Name: 0x98c85f2a
+Current SRL Name: fbk_stry000_FBK_STRY000_INTRO [T:11759456]
+Current SRL State: Prestream [T:11760745]
+
+========= ANIMSCENE =========
+Current AnimScene: 0xe9f5cf99 [T:11764369]
+
+========= SCRIPT =========
+Current script program: 0x0 [T:11840855]
+Currently running script threads: 5
+   - (2) 0x5b5eeffe [T:11725851]
+   - (25) 0x2f44071a [T:11727823]
+   - (26) 0xf024c932 [T:11727893]
+   - (27) 0xcbc14f15 [T:11727928]
+   - (28) 0x889f3695 [T:11727941]
+
+========= PLAYER =========
+Position: <-1782.699951, -1913.000000, 5.028011> [T:11727713]
+Wanted Level: 0 [T:0]
+Arrest State: None [T:0]
+Player Health: 130.00/130.00 [T:11725947]
+Health State: Healthy [T:0]
+Current Vehicle:  [T:11840894]
+
+========= POOLS =========
+ - NOTHING: 0/0
+ - BUILDING: 8788/22500
+ - VEHICLE: 236/700
+ - PED: 78/600
+ - OBJECT: 7991/27500
+ - PORTAL: 22/700
+ - MLO: 6/120
+ - NOTINPOOLS: 0/0
+ - PARTICLESYSTEM: 41/512
+ - LIGHT: 725/8000
+ - LIGHTEMITTER: 221/3000
+ - COMPOSITE: 0/0
+ - INSTANCE_LIST: 21210/45000
+ - GRASS_INSTANCE_LIST: 2537/9000
+ - VEHICLEGLASSCOMPONENT: 0/128
+
+========= PEDS =========
+Peds: 78/600 (real: 56, dummy: 22)
+ - mission: 25
+ - scenario: 0
+ - wander: 38
+ - perschar: 4
+ - other: 0
+
+========= VEHICLES =========
+Cars: 236/700 (real: 3(0 traffic), dummy: 1, superdummy: 143) - clones: 0
+ - ambient: 191
+ - mission: 35
+ - parked: 10
+ - reusePool: 0
+ - scriptExtensions: 31
+ - scriptHandlers: 31
+
+========= NETWORK =========
+Telemetry PlSesId: 1795797164970
+
+========= ANIMMISC =========
+Misc Pool Usages:
+ - CObjects: 7991
+ - CMoveObjects: 91
+ - CObjectAnimationComponents: 175
+ - CWeapons: 52
+ - CPedEquippedWeapons: 22
+
+###### END OF DEBUG INFO ######

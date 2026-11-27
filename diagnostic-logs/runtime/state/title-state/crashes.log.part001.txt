@@ -1,0 +1,137 @@
+unix time 1795738360, process 15548
+VIctory: unhandled exception 0x80000003 at victory-image-b99f876b74d4a77f.dll+0x56a2afd on thread 18524 ""
+  rax [address removed] rbx 0x95c rcx [address removed] rdx [address removed] rsi 0x30808000 rdi 0xf00000 rsp [address removed] rbp [address removed]
+  r8 [address removed] r9 [address removed] r10 [address removed] r11 [address removed] r12 [address removed] r13 0x0 r14 [address removed] r15 0x80070057
+  #0  victory-image-b99f876b74d4a77f.dll+0x56a2afd
+  #1  victory-image-b99f876b74d4a77f.dll+0x4deb4ef
+  #2  victory.exe+0x45526f
+  #3  victory.exe+0x3dca91
+  #4  victory.exe+0x3dd665
+  #5  victory-image-b99f876b74d4a77f.dll+0x193e1ba
+  #6  victory-image-b99f876b74d4a77f.dll+0x34c001
+  #7  victory-image-b99f876b74d4a77f.dll+0xcc27e9
+  #8  victory-image-b99f876b74d4a77f.dll+0x247aeb6
+  #9  victory-image-b99f876b74d4a77f.dll+0x2479430
+  #10 victory-image-b99f876b74d4a77f.dll+0x19f4f54
+  #11 victory-image-b99f876b74d4a77f.dll+0x580437e
+  #12 victory-image-b99f876b74d4a77f.dll+0x43a4911
+  #13 victory-image-b99f876b74d4a77f.dll+0x224070b
+  #14 victory-image-b99f876b74d4a77f.dll+0x23cf00a
+  #15 victory-image-b99f876b74d4a77f.dll+0x2215eca
+  #16 KERNEL32.DLL+0x2dda7
+  #17 ntdll.dll+0xc9c6c
+
+unix time 1795738391, process 15800
+VIctory: unhandled exception 0x80000003 at victory-image-b99f876b74d4a77f.dll+0x56a2afd on thread 10084 ""
+  rax [address removed] rbx 0x940 rcx [address removed] rdx [address removed] rsi 0x30808000 rdi 0xf00000 rsp [address removed] rbp [address removed]
+  r8 [address removed] r9 [address removed] r10 [address removed] r11 [address removed] r12 [address removed] r13 0x0 r14 [address removed] r15 0x80070057
+  #0  victory-image-b99f876b74d4a77f.dll+0x56a2afd
+  #1  victory-image-b99f876b74d4a77f.dll+0x4deb4ef
+  #2  victory.exe+0x45526f
+  #3  victory.exe+0x3dca91
+  #4  victory.exe+0x3dd665
+  #5  victory-image-b99f876b74d4a77f.dll+0x193e1ba
+  #6  victory-image-b99f876b74d4a77f.dll+0x34c001
+  #7  victory-image-b99f876b74d4a77f.dll+0xcc27e9
+  #8  victory-image-b99f876b74d4a77f.dll+0x247aeb6
+  #9  victory-image-b99f876b74d4a77f.dll+0x2479430
+  #10 victory-image-b99f876b74d4a77f.dll+0x19f4f54
+  #11 victory-image-b99f876b74d4a77f.dll+0x580437e
+  #12 victory-image-b99f876b74d4a77f.dll+0x43a4911
+  #13 victory-image-b99f876b74d4a77f.dll+0x224070b
+  #14 victory-image-b99f876b74d4a77f.dll+0x23cf00a
+  #15 victory-image-b99f876b74d4a77f.dll+0x2215eca
+  #16 KERNEL32.DLL+0x2dda7
+  #17 ntdll.dll+0xc9c6c
+
+unix time 1795738478, process 19076
+VIctory: unhandled exception 0x80000003 at victory-image-b99f876b74d4a77f.dll+0x56a2afd on thread 15128 ""
+  rax [address removed] rbx 0x940 rcx [address removed] rdx [address removed] rsi 0x30808000 rdi 0xf00000 rsp [address removed] rbp [address removed]
+  r8 [address removed] r9 [address removed] r10 [address removed] r11 [address removed] r12 [address removed] r13 0x0 r14 [address removed] r15 0x80070057
+  #0  victory-image-b99f876b74d4a77f.dll+0x56a2afd
+  #1  victory-image-b99f876b74d4a77f.dll+0x4deb4ef
+  #2  victory.exe+0x45526f
+  #3  victory.exe+0x3dca91
+  #4  victory.exe+0x3dd665
+  #5  victory-image-b99f876b74d4a77f.dll+0x193e1ba
+  #6  victory-image-b99f876b74d4a77f.dll+0x34c001
+  #7  victory-image-b99f876b74d4a77f.dll+0xcc27e9
+  #8  victory-image-b99f876b74d4a77f.dll+0x247aeb6
+  #9  victory-image-b99f876b74d4a77f.dll+0x2479430
+  #10 victory-image-b99f876b74d4a77f.dll+0x19f4f54
+  #11 victory-image-b99f876b74d4a77f.dll+0x580437e
+  #12 victory-image-b99f876b74d4a77f.dll+0x43a4911
+  #13 victory-image-b99f876b74d4a77f.dll+0x224070b
+  #14 victory-image-b99f876b74d4a77f.dll+0x23cf00a
+  #15 victory-image-b99f876b74d4a77f.dll+0x2215eca
+  #16 KERNEL32.DLL+0x2dda7
+  #17 ntdll.dll+0xc9c6c
+
+unix time 1795738743, process 8316
+VIctory: unhandled exception 0x80000003 at victory-image-b99f876b74d4a77f.dll+0x247af2d on thread 18968 ""
+  rax 0x1200000 rbx [address removed] rcx [address removed] rdx 0x0 rsi 0x940 rdi [address removed] rsp [address removed] rbp 0x80
+  r8 [address removed] r9 0x33fc0300 r10 [address removed] r11 [address removed] r12 0x2 r13 0xb r14 [address removed] r15 0x0
+  #0  victory-image-b99f876b74d4a77f.dll+0x247af2d
+  #1  victory-image-b99f876b74d4a77f.dll+0x2479430
+  #2  victory-image-b99f876b74d4a77f.dll+0x19f4f54
+  #3  victory-image-b99f876b74d4a77f.dll+0x580437e
+  #4  victory-image-b99f876b74d4a77f.dll+0x43a4911
+  #5  victory-image-b99f876b74d4a77f.dll+0x224070b
+  #6  victory-image-b99f876b74d4a77f.dll+0x23cf00a
+  #7  victory-image-b99f876b74d4a77f.dll+0x2215eca
+  #8  KERNEL32.DLL+0x2dda7
+  #9  ntdll.dll+0xc9c6c
+
+unix time 1795738774, process 12892
+VIctory: unhandled exception 0x80000003 at victory-image-b99f876b74d4a77f.dll+0x247af2d on thread 18836 ""
+  rax 0x4000000 rbx [address removed] rcx [address removed] rdx 0x0 rsi 0x940 rdi [address removed] rsp [address removed] rbp 0x80
+  r8 [address removed] r9 0x8e00300 r10 [address removed] r11 [address removed] r12 0x2 r13 0xb r14 [address removed] r15 0x0
+  #0  victory-image-b99f876b74d4a77f.dll+0x247af2d
+  #1  victory-image-b99f876b74d4a77f.dll+0x2479430
+  #2  victory-image-b99f876b74d4a77f.dll+0x19f4f54
+  #3  victory-image-b99f876b74d4a77f.dll+0x580437e
+  #4  victory-image-b99f876b74d4a77f.dll+0x43a4911
+  #5  victory-image-b99f876b74d4a77f.dll+0x224070b
+  #6  victory-image-b99f876b74d4a77f.dll+0x23cf00a
+  #7  victory-image-b99f876b74d4a77f.dll+0x2215eca
+  #8  KERNEL32.DLL+0x2dda7
+  #9  ntdll.dll+0xc9c6c
+
+unix time 1795748202, process 13600
+VIctory: unhandled exception 0x80000003 at victory-image-b99f876b74d4a77f.dll+0x56a2afd on thread 2200 ""
+  rax [address removed] rbx 0x940 rcx [address removed] rdx [address removed] rsi 0x30808000 rdi 0xf00000 rsp [address removed] rbp [address removed]
+  r8 [address removed] r9 [address removed] r10 [address removed] r11 [address removed] r12 [address removed] r13 0x0 r14 [address removed] r15 0x80070057
+  #0  victory-image-b99f876b74d4a77f.dll+0x56a2afd
+  #1  victory-image-b99f876b74d4a77f.dll+0x4deb4ef
+  #2  victory.exe+0x4543ef
+  #3  victory.exe+0x3db871
+  #4  victory.exe+0x3dc445
+  #5  victory-image-b99f876b74d4a77f.dll+0x193e1ba
+  #6  victory-image-b99f876b74d4a77f.dll+0x34c001
+  #7  victory-image-b99f876b74d4a77f.dll+0xcc27e9
+  #8  victory-image-b99f876b74d4a77f.dll+0x247aeb6
+  #9  victory-image-b99f876b74d4a77f.dll+0x2479430
+  #10 victory-image-b99f876b74d4a77f.dll+0x19f4f54
+  #11 victory-image-b99f876b74d4a77f.dll+0x580437e
+  #12 victory-image-b99f876b74d4a77f.dll+0x43a4911
+  #13 victory-image-b99f876b74d4a77f.dll+0x224070b
+  #14 victory-image-b99f876b74d4a77f.dll+0x23cf00a
+  #15 victory-image-b99f876b74d4a77f.dll+0x2215eca
+  #16 KERNEL32.DLL+0x2dda7
+  #17 ntdll.dll+0xc9c6c
+
+unix time 1795748401, process 10656
+VIctory: unhandled exception 0x80000003 at victory-image-b99f876b74d4a77f.dll+0x247af2d on thread 1512 ""
+  rax 0x2200000 rbx [address removed] rcx [address removed] rdx 0x0 rsi 0x940 rdi [address removed] rsp [address removed] rbp 0x80
+  r8 [address removed] r9 0x1ce00300 r10 [address removed] r11 [address removed] r12 0x2 r13 0xb r14 [address removed] r15 0x0
+  #0  victory-image-b99f876b74d4a77f.dll+0x247af2d
+  #1  victory-image-b99f876b74d4a77f.dll+0x2479430
+  #2  victory-image-b99f876b74d4a77f.dll+0x19f4f54
+  #3  victory-image-b99f876b74d4a77f.dll+0x580437e
+  #4  victory-image-b99f876b74d4a77f.dll+0x43a4911
+  #5  victory-image-b99f876b74d4a77f.dll+0x224070b
+  #6  victory-image-b99f876b74d4a77f.dll+0x23cf00a
+  #7  victory-image-b99f876b74d4a77f.dll+0x2215eca
+  #8  KERNEL32.DLL+0x2dda7
+  #9  ntdll.dll+0xc9c6c
+

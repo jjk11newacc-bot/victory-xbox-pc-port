@@ -850,6 +850,9 @@ impl State {
             crate::capture::note_target(record.resource);
             Some(host.dsv(texture, record.depth_desc().as_ref()))
         });
+        if self.targets.len() == 6 && self.depth != 0 && crate::host::scene_fallback::enabled() {
+            crate::host::scene_fallback::note(&self.targets, self.depth);
+        }
         // SAFETY: an open list; the views were just made.
         unsafe {
             list.list.OMSetRenderTargets(
@@ -2071,7 +2074,7 @@ impl State {
         // makes room again: so the slots are still looked at (the pass
         // returned here, and a slot whose texture had been streamed out
         // kept its host copy for as long as the card was full).
-        let mut room = crate::resource::room();
+        let mut room = crate::resource::room(host.texture_under_pressure());
         host.set_texture_pressure(!room);
         if !room {
             HEAP_TEXTURES_FULL.fetch_add(1, Ordering::Relaxed);
@@ -2258,7 +2261,7 @@ impl State {
             // Recheck after earlier allocations in this pass; a single stale
             // admission decision can otherwise admit thousands of textures.
             if room && crate::budget::strict_enabled() {
-                room = crate::resource::room();
+                room = crate::resource::room(false);
                 if !room { host.set_texture_pressure(true); }
             }
             let upload = (room || reupload_when_full())
@@ -3043,6 +3046,16 @@ impl State {
         for u in used.iter().filter(tables).filter(|u| u.kind == ResourceType::Cbv) {
             fresh[usize::from(u.slot)] = true;
         }
+        let relative_slot = |state: &Self, index: &RootIndexedView| {
+            let constant = state.user_value(
+                compute,
+                index.constant_slot,
+                RootType::Constants,
+                index.constant_dword,
+            );
+            // Match the shader's 32-bit byte arithmetic.
+            index.byte_offset.wrapping_add(constant << index.shift) / 32
+        };
         // Tables reaching past a host heap smaller than the title's (the
         // host's limit, 1,000,000 views on NVIDIA) are made afresh too: the
         // title's slots there have no host slot of their own.
@@ -3069,6 +3082,49 @@ impl State {
                 self.table_entry(list, u, compute);
             }
         }
+        // Some table slots are selected through root constants, so the
+        // static used-resource list does not name their actual offset.
+        for index in indexed {
+            let slot = usize::from(index.table_slot);
+            if fresh[slot] {
+                continue;
+            }
+            let Some(&Root::Table(table)) = self.roots_ref(compute).get(slot) else {
+                continue;
+            };
+            let Some(heap) = self.heap_of(table) else {
+                continue;
+            };
+            if heap.samplers() || (table - heap.start) % 32 != 0 {
+                continue;
+            }
+            let Some(host) = heap.host() else { continue };
+            let offset = relative_slot(self, index);
+            let Some(handle) = table.checked_add(u64::from(offset) * 32) else { continue };
+            let Some(physical) = heap.index(handle) else {
+                fresh[slot] = true;
+                continue;
+            };
+            if physical >= host.count()
+                || matches!(crate::descriptor::view(handle), Some(View::Constant(..)))
+            {
+                fresh[slot] = true;
+                continue;
+            }
+            if used.iter().filter(tables).any(|u| {
+                u.slot == index.table_slot && u.table_offset_dwords / 8 == offset
+            }) {
+                continue;
+            }
+            if let Some(view) = host.mirror(physical, handle, true)
+                && let Some(kind) = view_kind(&view)
+            {
+                let ready = readable(list, kind, &view);
+                if crate::descriptor::host::is_texture_view(&view) {
+                    host.texture_slot_tabled(physical, ready);
+                }
+            }
+        }
         let mut made = Vec::new();
         for (slot, _) in fresh.into_iter().enumerate().filter(|(_, needed)| *needed) {
             let slot = slot as u8;
@@ -3092,16 +3148,7 @@ impl State {
             let mut selected: Vec<u32> = indexed
                 .iter()
                 .filter(|index| index.table_slot == slot)
-                .map(|index| {
-                    let constant = self.user_value(
-                        compute,
-                        index.constant_slot,
-                        RootType::Constants,
-                        index.constant_dword,
-                    );
-                    // The shader adds i32 byte offsets and shifts by 5.
-                    index.byte_offset.wrapping_add(constant << index.shift) / 32
-                })
+                .map(|index| relative_slot(self, index))
                 .collect();
             selected.sort_unstable();
             selected.dedup();
@@ -3117,6 +3164,7 @@ impl State {
                 || last.and_then(|handle| heap.index(handle)).is_none()
             {
                 once!(slot, n, "fresh descriptor table exceeds the available span");
+                made.push((slot, u32::MAX));
                 continue;
             }
             // The table and what its entries hold (record words).
