@@ -1,2 +1,0 @@
-# Guest memory range scheduling experiment
-Opt in with VICTORY_RANGE_UNION=1. Exact interval complement replaces repeated fragment allocation during snapshot declarations and is shared by refresh scheduling. Original path remains default. No changes to fences, relay declarations, writeback comparisons or shader write semantics. Rust regression test checks byte-level equivalence. This is not a complete synchronization redesign; GPU dirty masks and readback reduction remain outstanding. No compiler or GPU test available.

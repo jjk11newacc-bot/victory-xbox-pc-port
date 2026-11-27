@@ -1,2 +1,0 @@
-# Experimental GPU-only sampled texture revisions
-Enable VICTORY_GPU_ONLY_TEXTURES=1. Release redundant sampled upload leases at sweep only when no list or upload user holds them, the full revision is uploaded and clean, and no inline allocation exists. Preserve fingerprints and watch state. Explicit upload_again invalidates GPU-only metadata to force rebuild. Tests added for metadata invalidation; not compiled or executed. No FPS claim.

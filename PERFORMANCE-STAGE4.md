@@ -1,5 +1,0 @@
-Stage 4 (static source revision, not compiled)
-- Packed linear texture rows now use one contiguous copy per depth slice when both pitches equal the visible row width. Tiled layouts are unchanged. Added a packed-versus-padded regression test.
-- Guarded partially mapped textures can retry after 500 ms even outside the periodic hash turn. Clear partial polling state on the fully mapped path. Missing coarse mip temporarily permits guard checks; the existing partial poll still throttles reads.
-- Low-memory scratch buffers between 64 and 128 MiB can be reused when at least 4 GiB physical RAM is available; larger buffers are released. This can increase retained RAM by up to 128 MiB per participating worker relative to Stage 3, and is not a process-wide cap.
-- No changes to synchronization semantics, unified-memory mapping, wave64, or draw ordering. GPU detiling and dirty-page-only updates remain unimplemented. No claim of 30 FPS. Rust compiler, Windows/D3D12 and game unavailable. Tests not executed.

@@ -1,3 +1,0 @@
-render-XOR: 2,048,408 address/uniqueness checks against transcribed output-bit equations
-cross-wave: 20,000 randomized paired LDS layouts including unmatched halves
-readbacks: 30,000 exact-row dependency checks; enclosing range remains conservative

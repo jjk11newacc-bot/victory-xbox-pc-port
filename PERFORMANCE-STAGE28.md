@@ -1,2 +1,0 @@
-# Stage 28
-Opt-in VICTORY_SPARSE_MERGE=1 skips equal 256-byte blocks during CPU relay merge, preserving the original merge for changed blocks. Added reference parity test covering empty, boundary, sparse and dense cases. Existing ownership, fences and publish behavior unchanged. Aggregate copy diagnostics now also skip whole-copy per-address tracking while retaining WholeUs. No GPU detile or transfer elimination implemented. Dense writes may regress due to additional comparisons. Rust toolchain unavailable; tests added but not executed. No FPS or RAM claims.

@@ -1,2 +1,0 @@
-48,000 synthetic volume axis and destination bounds checks passed
-20,000 synthetic graphics binding events passed

@@ -1,9 +1,0 @@
-20,000 pending-range model events passed
-10,000 flight reference-count model events passed
-6 retirement interleavings passed (serialized enqueue/sweep)
-10,000 hash ordering sequences passed (abstract barriers)
-Stage41 model exit: 0
-48,000 synthetic volume axis and destination bounds checks passed
-20,000 synthetic graphics binding events passed
-Stage39 model exit: 0
-Stage40 model exit: 124

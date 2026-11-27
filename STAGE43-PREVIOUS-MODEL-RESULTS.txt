@@ -1,4 +1,0 @@
-30,000 overlapping hazard-query coverage/generation cases passed
-10,000 bounded changed-run cases and 64 KiB fragmented-page case passed
-15,000 directory lifetime events passed (232 idle reuses, 4892 protected replacements)
-stage42 model exit=0

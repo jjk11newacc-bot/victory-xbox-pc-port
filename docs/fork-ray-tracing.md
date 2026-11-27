@@ -67,7 +67,7 @@ shaders and emulates the one instruction.
 
 - City can take seconds per frame with the builder enabled. Buffer snapshot,
   comparison and CPU/GPU synchronization account for a substantial part of
-  the measured frame time. See the [benchmark report](../BENCHMARK.md).
+  the measured frame time.
 - Five formerly refused shadow compute shaders now create pipelines on the
   test card. Their visual output still needs verification in the affected scenes.
 - An access to a title page that has no host copy is lost (a read gives zero, a
